@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_catalog.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/launch_actions.dart';
+import '../../data/directory_data_store.dart';
 import '../../data/local_directory_store.dart';
 import '../../models/business.dart';
+import '../../models/service_category.dart';
 import '../auth/phone_entry_page.dart';
 import '../directory/category_list_page.dart';
 import '../profile/profile_page.dart';
@@ -21,7 +23,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final LocalDirectoryStore _store = LocalDirectoryStore.instance;
+  final DirectoryDataStore _directoryStore = DirectoryDataStore.instance;
+  final LocalDirectoryStore _profileStore = LocalDirectoryStore.instance;
   final TextEditingController _searchController = TextEditingController();
   final PageController _adPageController = PageController();
 
@@ -31,12 +34,16 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _store.addListener(_handleStoreChanged);
+    _directoryStore.addListener(_handleStoreChanged);
+
+    if (!_directoryStore.hasLoaded) {
+      _directoryStore.load();
+    }
   }
 
   @override
   void dispose() {
-    _store.removeListener(_handleStoreChanged);
+    _directoryStore.removeListener(_handleStoreChanged);
     _searchController.dispose();
     _adPageController.dispose();
     super.dispose();
@@ -48,19 +55,20 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     setState(() {
-      _foundBusinesses = _store.search(_searchQuery);
+      _foundBusinesses = _directoryStore.search(_searchQuery);
     });
   }
 
   void _runFilter(String enteredKeyword) {
     setState(() {
       _searchQuery = enteredKeyword;
-      _foundBusinesses = _store.search(enteredKeyword);
+      _foundBusinesses = _directoryStore.search(enteredKeyword);
     });
   }
 
   void _clearSearch() {
     _searchController.clear();
+
     setState(() {
       _searchQuery = '';
       _foundBusinesses = const [];
@@ -69,6 +77,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isInitialLoading =
+        _directoryStore.isLoading && !_directoryStore.hasLoaded;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       resizeToAvoidBottomInset: false,
@@ -81,10 +92,15 @@ class _HomeScreenState extends State<HomeScreen> {
             onChanged: _runFilter,
             onClear: _clearSearch,
           ),
+          if (_directoryStore.usesLocalFallback) _buildFallbackNotice(),
           Expanded(
-            child: _searchQuery.isNotEmpty
-                ? _buildSearchResults()
-                : _buildMainContent(),
+            child: isInitialLoading
+                ? const Center(
+                    child: CircularProgressIndicator(),
+                  )
+                : _searchQuery.isNotEmpty
+                    ? _buildSearchResults()
+                    : _buildMainContent(),
           ),
         ],
       ),
@@ -99,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         onPressed: _openAccountPage,
         child: Icon(
-          _store.isSubscribed ? Icons.person : Icons.add,
+          _profileStore.isSubscribed ? Icons.person : Icons.add,
           size: 35,
           color: AppColors.primaryTeal,
         ),
@@ -113,12 +129,58 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildFallbackNotice() {
+    return Material(
+      color: Colors.amber.shade100,
+      child: InkWell(
+        onTap: _directoryStore.isLoading ? null : _directoryStore.refresh,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 8,
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.cloud_off_outlined,
+                size: 18,
+                color: Colors.black87,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _directoryStore.fallbackMessage ??
+                      'تُعرض البيانات المحلية مؤقتًا.',
+                  style: const TextStyle(fontSize: 11),
+                ),
+              ),
+              if (_directoryStore.isLoading)
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                  ),
+                )
+              else
+                const Icon(
+                  Icons.refresh,
+                  size: 19,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _openAccountPage() async {
     await Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
-        builder: (context) =>
-            _store.isSubscribed ? const ProfilePage() : const PhoneEntryPage(),
+        builder: (context) => _profileStore.isSubscribed
+            ? const ProfilePage()
+            : const PhoneEntryPage(),
       ),
     );
 
@@ -145,18 +207,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHorizontalCategories() {
+    final categories = _directoryStore.transportCategories;
+
     return SizedBox(
       height: 90,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         reverse: true,
-        itemCount: AppCatalog.transport.length,
+        itemCount: categories.length,
         itemBuilder: (context, index) {
-          final category = AppCatalog.transport[index];
+          final category = categories[index];
 
           return CategoryCircleItem(
             category: category,
-            onTap: () => _openCategory(category.name),
+            onTap: () => _openCategory(category),
           );
         },
       ),
@@ -217,6 +281,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildServiceGrid() {
+    final categories = _directoryStore.serviceCategories;
+
     return GridView.builder(
       padding: const EdgeInsets.all(15),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -224,12 +290,12 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisSpacing: 8,
         crossAxisSpacing: 8,
       ),
-      itemCount: AppCatalog.services.length,
+      itemCount: categories.length,
       itemBuilder: (context, index) {
-        final category = AppCatalog.services[index];
+        final category = categories[index];
 
         return InkWell(
-          onTap: () => _openCategory(category.name),
+          onTap: () => _openCategory(category),
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -245,6 +311,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 Text(
                   category.name,
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
@@ -258,65 +325,81 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _openCategory(String categoryName) {
+  void _openCategory(ServiceCategory category) {
     Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
         builder: (context) => CategoryListPage(
-          categoryName: categoryName,
+          category: category,
         ),
       ),
     );
   }
 
   Widget _buildSearchResults() {
-    return ListView.builder(
-      itemCount: _foundBusinesses.length,
-      itemBuilder: (context, index) {
-        final business = _foundBusinesses[index];
+    if (_foundBusinesses.isEmpty) {
+      return const Center(
+        child: Text(
+          'لم يتم العثور على نتائج مطابقة.',
+          style: TextStyle(
+            color: Colors.black54,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    }
 
-        return Card(
-          margin: const EdgeInsets.symmetric(
-            horizontal: 15,
-            vertical: 5,
-          ),
-          child: ListTile(
-            title: Text(business.name),
-            subtitle: Text(business.category),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.chat,
-                    color: Colors.green,
-                  ),
-                  onPressed: () {
-                    LaunchActions.openWhatsApp(
-                      context,
-                      business.whatsapp.isNotEmpty
-                          ? business.whatsapp
-                          : business.phone,
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.phone,
-                    color: AppColors.primaryTeal,
-                  ),
-                  onPressed: () {
-                    LaunchActions.makePhoneCall(
-                      context,
-                      business.phone,
-                    );
-                  },
-                ),
-              ],
+    return RefreshIndicator(
+      onRefresh: _directoryStore.refresh,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: _foundBusinesses.length,
+        itemBuilder: (context, index) {
+          final business = _foundBusinesses[index];
+
+          return Card(
+            margin: const EdgeInsets.symmetric(
+              horizontal: 15,
+              vertical: 5,
             ),
-          ),
-        );
-      },
+            child: ListTile(
+              title: Text(business.name),
+              subtitle: Text(business.category),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(
+                      Icons.chat,
+                      color: Colors.green,
+                    ),
+                    onPressed: () {
+                      LaunchActions.openWhatsApp(
+                        context,
+                        business.whatsapp.isNotEmpty
+                            ? business.whatsapp
+                            : business.phone,
+                      );
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.phone,
+                      color: AppColors.primaryTeal,
+                    ),
+                    onPressed: () {
+                      LaunchActions.makePhoneCall(
+                        context,
+                        business.phone,
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/constants/app_catalog.dart';
 import '../../core/constants/app_colors.dart';
+import '../../data/directory_data_store.dart';
 import '../../data/local_directory_store.dart';
 import '../../models/business.dart';
 
@@ -554,6 +555,11 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildCategoryDropdown() {
+    final remoteCategories = DirectoryDataStore.instance.categories;
+    final categories = remoteCategories.isNotEmpty
+        ? remoteCategories
+        : AppCatalog.allCategories;
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -566,7 +572,7 @@ class _ProfilePageState extends State<ProfilePage> {
           hint: const Text('اختر النشاط'),
           isExpanded: true,
           value: _selectedCategory,
-          items: AppCatalog.allCategories.map((category) {
+          items: categories.map((category) {
             return DropdownMenuItem<String>(
               value: category.name,
               child: Align(

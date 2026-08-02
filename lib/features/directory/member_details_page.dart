@@ -22,16 +22,7 @@ class MemberDetailsPage extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            Container(
-              height: 200,
-              width: double.infinity,
-              color: AppColors.primaryTeal.withValues(alpha: 0.1),
-              child: const Icon(
-                Icons.person,
-                size: 100,
-                color: AppColors.primaryTeal,
-              ),
-            ),
+            _buildHeaderImage(),
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -112,6 +103,42 @@ class MemberDetailsPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderImage() {
+    final imageUrl = business.preferredImageUrl;
+
+    if (imageUrl.isEmpty) {
+      return Container(
+        height: 200,
+        width: double.infinity,
+        color: AppColors.primaryTeal.withValues(alpha: 0.1),
+        child: const Icon(
+          Icons.storefront,
+          size: 100,
+          color: AppColors.primaryTeal,
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 200,
+      width: double.infinity,
+      child: Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: AppColors.primaryTeal.withValues(alpha: 0.1),
+            child: const Icon(
+              Icons.storefront,
+              size: 100,
+              color: AppColors.primaryTeal,
+            ),
+          );
+        },
       ),
     );
   }

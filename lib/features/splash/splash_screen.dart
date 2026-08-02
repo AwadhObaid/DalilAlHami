@@ -1,8 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../data/directory_data_store.dart';
 import '../home/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -13,33 +12,28 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  Timer? _navigationTimer;
-
   @override
   void initState() {
     super.initState();
-
-    _navigationTimer = Timer(
-      const Duration(seconds: 3),
-      () {
-        if (!mounted) {
-          return;
-        }
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute<void>(
-            builder: (context) => const HomeScreen(),
-          ),
-        );
-      },
-    );
+    _bootstrap();
   }
 
-  @override
-  void dispose() {
-    _navigationTimer?.cancel();
-    super.dispose();
+  Future<void> _bootstrap() async {
+    await Future.wait<void>([
+      DirectoryDataStore.instance.load(),
+      Future<void>.delayed(const Duration(seconds: 3)),
+    ]);
+
+    if (!mounted) {
+      return;
+    }
+
+    await Navigator.pushReplacement<void, void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => const HomeScreen(),
+      ),
+    );
   }
 
   @override
