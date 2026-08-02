@@ -46,3 +46,11 @@ app.*.map.json
 
 # Local Gradle backup files
 android/gradle.properties.backup_before_kotlin_cache_fix_*
+
+# Local Supabase client configuration
+.supabase.local.ps1
+build_logs/
+supabase/.temp/
+
+# Java heap dump files
+*.hprof
