@@ -9,8 +9,9 @@ import '../models/business.dart';
 import '../models/service_category.dart';
 import 'local/database/local_directory_database.dart';
 import 'local_directory_store.dart';
-import 'repositories/directory_repository.dart';
+import 'repositories/directory_sync_repository.dart';
 import 'repositories/supabase_directory_repository.dart';
+import 'sync/directory_sync_delta.dart';
 
 enum DirectoryDataSource {
   supabase,
@@ -34,6 +35,8 @@ class DirectoryDataStore extends ChangeNotifier {
   DirectoryDataSource? _source;
   Object? _lastError;
   DateTime? _lastSyncedAt;
+  int _lastSyncVersion = 0;
+  int _lastSyncChangeCount = 0;
   bool _isLoading = false;
   bool _isSyncing = false;
   bool _hasLoaded = false;
@@ -61,6 +64,10 @@ class DirectoryDataStore extends ChangeNotifier {
   bool get usesLocalFallback => !usesSupabase;
 
   DateTime? get lastSyncedAt => _lastSyncedAt;
+
+  int get lastSyncVersion => _lastSyncVersion;
+
+  int get lastSyncChangeCount => _lastSyncChangeCount;
 
   String? get lastSyncLabel {
     final value = _lastSyncedAt?.toLocal();
@@ -92,7 +99,7 @@ class DirectoryDataStore extends ChangeNotifier {
 
   String get storageStatusTitle {
     return switch (_source) {
-      DirectoryDataSource.supabase => 'متصل ونسخة SQLite محدثة',
+      DirectoryDataSource.supabase => 'متصل والمزامنة التزايدية مكتملة',
       DirectoryDataSource.sqliteCache => 'يعمل من قاعدة SQLite المحلية',
       DirectoryDataSource.bundledSeed => 'بيانات أولية محلية',
       DirectoryDataSource.memoryFallback => 'وضع محلي مؤقت',
@@ -102,12 +109,14 @@ class DirectoryDataStore extends ChangeNotifier {
 
   String get storageStatusSubtitle {
     if (_isSyncing) {
-      return 'جارٍ جلب أحدث البيانات وحفظها على الجهاز.';
+      return 'جارٍ طلب التغييرات الجديدة فقط من Supabase.';
     }
 
     return switch (_source) {
-      DirectoryDataSource.supabase => 'القراءة اليومية من الجهاز، وآخر مزامنة'
-          '${lastSyncLabel == null ? ' مكتملة.' : ': $lastSyncLabel.'}',
+      DirectoryDataSource.supabase =>
+        'إصدار المزامنة: $_lastSyncVersion، وآخر مزامنة'
+            '${lastSyncLabel == null ? ' مكتملة.' : ': $lastSyncLabel.'}'
+            ' التغييرات الأخيرة: $_lastSyncChangeCount.',
       DirectoryDataSource.sqliteCache =>
         fallbackMessage ?? 'تعمل آخر نسخة محفوظة دون إنترنت.',
       DirectoryDataSource.bundledSeed =>
@@ -151,6 +160,8 @@ class DirectoryDataStore extends ChangeNotifier {
     _source = DirectoryDataSource.bundledSeed;
     _lastError = null;
     _lastSyncedAt = null;
+    _lastSyncVersion = 0;
+    _lastSyncChangeCount = 0;
     _isLoading = false;
     _isSyncing = false;
     _hasLoaded = true;
@@ -233,6 +244,7 @@ class DirectoryDataStore extends ChangeNotifier {
           ? DirectoryDataSource.bundledSeed
           : DirectoryDataSource.sqliteCache,
     );
+    _lastSyncChangeCount = 0;
     _lastError = null;
   }
 
@@ -251,37 +263,35 @@ class DirectoryDataStore extends ChangeNotifier {
         );
       }
 
-      final DirectoryRepository repository = SupabaseDirectoryRepository(
+      final DirectorySyncRepository repository = SupabaseDirectoryRepository(
         SupabaseService.client,
       );
 
-      final categoriesFuture = repository.fetchCategories();
-      final businessesFuture = repository.fetchApprovedBusinesses();
+      final delta = await _fetchChangesWithRetry(
+        repository,
+        afterVersion: _lastSyncVersion,
+      );
 
-      final categories = await categoriesFuture;
-      final businesses = await businessesFuture;
-
-      if (categories.isEmpty) {
+      if (delta.isFullSnapshot && delta.categories.isEmpty) {
         throw StateError(
-          'لم تُرجع قاعدة البيانات أي تصنيفات نشطة.',
+          'لم تُرجع المزامنة الكاملة أي تصنيفات نشطة.',
         );
       }
 
-      final syncedAt = DateTime.now().toUtc();
-      final snapshot = await _database.replaceRemoteDirectoryData(
-        categories: categories,
-        businesses: businesses,
-        syncedAt: syncedAt,
+      final snapshot = await _database.applyRemoteChanges(
+        delta: delta,
+        syncedAt: DateTime.now().toUtc(),
       );
 
       _applySnapshot(
         snapshot,
         source: DirectoryDataSource.supabase,
       );
+      _lastSyncChangeCount = delta.changeCount;
       _lastError = null;
     } catch (error, stackTrace) {
       debugPrint(
-        'Supabase directory synchronization failed: '
+        'Supabase incremental synchronization failed: '
         '$error\n$stackTrace',
       );
 
@@ -304,6 +314,36 @@ class DirectoryDataStore extends ChangeNotifier {
     }
   }
 
+  Future<DirectorySyncDelta> _fetchChangesWithRetry(
+    DirectorySyncRepository repository, {
+    required int afterVersion,
+  }) async {
+    Object? lastError;
+    StackTrace? lastStackTrace;
+
+    for (var attempt = 1; attempt <= 2; attempt++) {
+      try {
+        return await repository.fetchChanges(
+          afterVersion: afterVersion,
+        );
+      } catch (error, stackTrace) {
+        lastError = error;
+        lastStackTrace = stackTrace;
+
+        if (attempt < 2) {
+          await Future<void>.delayed(
+            const Duration(milliseconds: 600),
+          );
+        }
+      }
+    }
+
+    Error.throwWithStackTrace(
+      lastError ?? StateError('Incremental synchronization failed.'),
+      lastStackTrace ?? StackTrace.current,
+    );
+  }
+
   void _applySnapshot(
     DirectoryCacheSnapshot snapshot, {
     required DirectoryDataSource source,
@@ -320,6 +360,7 @@ class DirectoryDataStore extends ChangeNotifier {
           : snapshot.advertisements,
     );
     _lastSyncedAt = snapshot.lastSyncedAt;
+    _lastSyncVersion = snapshot.lastSyncVersion;
     _source = source;
   }
 
@@ -335,5 +376,7 @@ class DirectoryDataStore extends ChangeNotifier {
     );
     _source = DirectoryDataSource.memoryFallback;
     _lastError = error;
+    _lastSyncVersion = 0;
+    _lastSyncChangeCount = 0;
   }
 }

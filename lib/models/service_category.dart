@@ -25,6 +25,9 @@ class ServiceCategory {
     required this.sortOrder,
     required this.displayGroup,
     this.imageUrl,
+    this.updatedAt,
+    this.deletedAt,
+    this.syncVersion = 0,
   });
 
   final String id;
@@ -34,10 +37,15 @@ class ServiceCategory {
   final int sortOrder;
   final CategoryDisplayGroup displayGroup;
   final String? imageUrl;
+  final DateTime? updatedAt;
+  final DateTime? deletedAt;
+  final int syncVersion;
 
   IconData get icon => iconFromName(iconName);
 
   bool get isTransport => displayGroup == CategoryDisplayGroup.transport;
+
+  bool get isDeleted => deletedAt != null;
 
   factory ServiceCategory.fromSupabase(
     Map<String, dynamic> data,
@@ -52,6 +60,13 @@ class ServiceCategory {
         data['display_group']?.toString(),
       ),
       imageUrl: _nullableString(data['image_url']),
+      updatedAt: DateTime.tryParse(
+        data['updated_at']?.toString() ?? '',
+      ),
+      deletedAt: DateTime.tryParse(
+        data['deleted_at']?.toString() ?? '',
+      ),
+      syncVersion: _readInteger(data['sync_version']),
     );
   }
 
@@ -82,6 +97,14 @@ class ServiceCategory {
       'motorcycle' => Icons.motorcycle,
       _ => Icons.category,
     };
+  }
+
+  static int _readInteger(Object? value) {
+    if (value is num) {
+      return value.toInt();
+    }
+
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   static String? _nullableString(Object? value) {

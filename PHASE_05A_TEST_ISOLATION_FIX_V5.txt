@@ -1,0 +1,5 @@
+Dalil Al Hami - Phase 05A Test Isolation Fix v5
+- Widget tests do not open SQLite or Supabase
+- SQLite FFI tests use directly injected isolated databases
+- No pumpAndSettle on animated or continuously updating screens
+- Keeps the Phase 05A Offline-First Android runtime implementation

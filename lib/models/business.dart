@@ -15,6 +15,9 @@ class Business {
     this.isFeatured = false,
     this.isRemote = false,
     this.createdAt,
+    this.updatedAt,
+    this.deletedAt,
+    this.syncVersion = 0,
   });
 
   final String id;
@@ -32,6 +35,9 @@ class Business {
   final bool isFeatured;
   final bool isRemote;
   final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final DateTime? deletedAt;
+  final int syncVersion;
 
   String get preferredImageUrl {
     final cover = coverUrl?.trim() ?? '';
@@ -62,6 +68,8 @@ class Business {
   bool get hasPhone => phone.trim().isNotEmpty;
 
   bool get hasWhatsApp => whatsappContact.isNotEmpty;
+
+  bool get isDeleted => deletedAt != null;
 
   String get whatsappContact {
     final value = whatsapp.trim();
@@ -110,6 +118,10 @@ class Business {
     bool? isFeatured,
     bool? isRemote,
     DateTime? createdAt,
+    DateTime? updatedAt,
+    DateTime? deletedAt,
+    bool clearDeletedAt = false,
+    int? syncVersion,
   }) {
     return Business(
       id: id ?? this.id,
@@ -127,6 +139,9 @@ class Business {
       isFeatured: isFeatured ?? this.isFeatured,
       isRemote: isRemote ?? this.isRemote,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: clearDeletedAt ? null : deletedAt ?? this.deletedAt,
+      syncVersion: syncVersion ?? this.syncVersion,
     );
   }
 
@@ -147,6 +162,9 @@ class Business {
       'is_featured': isFeatured,
       'is_remote': isRemote,
       'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+      'deleted_at': deletedAt?.toIso8601String(),
+      'sync_version': syncVersion,
     };
   }
 
@@ -169,6 +187,13 @@ class Business {
       createdAt: DateTime.tryParse(
         map['created_at']?.toString() ?? '',
       ),
+      updatedAt: DateTime.tryParse(
+        map['updated_at']?.toString() ?? '',
+      ),
+      deletedAt: DateTime.tryParse(
+        map['deleted_at']?.toString() ?? '',
+      ),
+      syncVersion: _readInteger(map['sync_version']),
     );
   }
 
@@ -192,11 +217,18 @@ class Business {
       categorySlug: categoryMap['slug']?.toString() ?? '',
       logoUrl: _nullableString(data['logo_url']),
       coverUrl: _nullableString(data['cover_url']),
-      isFeatured: data['is_featured'] == true,
+      isFeatured: _readBoolean(data['is_featured']),
       isRemote: true,
       createdAt: DateTime.tryParse(
         data['created_at']?.toString() ?? '',
       ),
+      updatedAt: DateTime.tryParse(
+        data['updated_at']?.toString() ?? '',
+      ),
+      deletedAt: DateTime.tryParse(
+        data['deleted_at']?.toString() ?? '',
+      ),
+      syncVersion: _readInteger(data['sync_version']),
     );
   }
 
@@ -214,6 +246,14 @@ class Business {
 
   static bool _readBoolean(Object? value) {
     return value == true || value == 1 || value?.toString() == '1';
+  }
+
+  static int _readInteger(Object? value) {
+    if (value is num) {
+      return value.toInt();
+    }
+
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   static String? _nullableString(Object? value) {

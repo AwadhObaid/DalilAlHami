@@ -1,0 +1,5 @@
+Dalil Al Hami - Phase 05A Explicit Test Mode Fix v6
+- Replaces unreliable bool.fromEnvironment('FLUTTER_TEST')
+- Adds explicit bundled-data preparation for widget tests
+- Rebuilds MediaQuery to test keyboard viewInsets deterministically
+- Keeps Android SQLite Offline-First runtime unchanged

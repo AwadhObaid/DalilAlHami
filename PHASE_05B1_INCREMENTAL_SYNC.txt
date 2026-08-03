@@ -1,0 +1,11 @@
+Dalil Al Hami - Phase 05B-1 Incremental Sync
+============================================
+
+- Monotonic Supabase sync versions
+- Full first snapshot followed by incremental changes
+- SQLite schema version 2
+- Category, business, and advertisement upserts
+- Soft-delete and hard-delete tombstones
+- Atomic SQLite transactions
+- Retry once for transient remote failures
+- Server reset detection and safe full resynchronization

@@ -1,0 +1,5 @@
+Dalil Al Hami - Phase 05A SQLite Widget Test Fix v4
+- Isolated in-memory SQLite for widget tests
+- Deterministic directory preload
+- No pumpAndSettle dependency on animated loading indicators
+- Stable navigation and splash tests
