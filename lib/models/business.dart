@@ -33,18 +33,53 @@ class Business {
   final bool isRemote;
   final DateTime? createdAt;
 
-  String get preferredImageUrl => coverUrl ?? logoUrl ?? '';
+  String get preferredImageUrl {
+    final cover = coverUrl?.trim() ?? '';
+    if (cover.isNotEmpty) {
+      return cover;
+    }
+
+    return logoUrl?.trim() ?? '';
+  }
+
+  String get displayName {
+    final value = name.trim();
+    return value.isEmpty ? 'نشاط بدون اسم' : value;
+  }
+
+  String get displayCategory {
+    final value = category.trim();
+    return value.isEmpty ? 'خدمات أخرى' : value;
+  }
+
+  String get displayPlace {
+    final value = place.trim();
+    return value.isEmpty ? 'الحامي' : value;
+  }
+
+  String get displayDetails => details.trim();
+
+  bool get hasPhone => phone.trim().isNotEmpty;
+
+  bool get hasWhatsApp => whatsappContact.isNotEmpty;
+
+  String get whatsappContact {
+    final value = whatsapp.trim();
+    return value.isNotEmpty ? value : phone.trim();
+  }
 
   bool matchesSearch(String query) {
-    final normalizedQuery = query.trim().toLowerCase();
+    final normalizedQuery = _normalizeSearchText(query);
     if (normalizedQuery.isEmpty) {
       return false;
     }
 
-    return name.toLowerCase().contains(normalizedQuery) ||
-        category.toLowerCase().contains(normalizedQuery) ||
-        place.toLowerCase().contains(normalizedQuery) ||
-        details.toLowerCase().contains(normalizedQuery);
+    return _normalizeSearchText(name).contains(normalizedQuery) ||
+        _normalizeSearchText(category).contains(normalizedQuery) ||
+        _normalizeSearchText(place).contains(normalizedQuery) ||
+        _normalizeSearchText(details).contains(normalizedQuery) ||
+        phone.contains(normalizedQuery) ||
+        whatsapp.contains(normalizedQuery);
   }
 
   bool belongsToCategory({
@@ -163,6 +198,18 @@ class Business {
         data['created_at']?.toString() ?? '',
       ),
     );
+  }
+
+  static String _normalizeSearchText(String value) {
+    return value
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[\u064B-\u065F\u0670]'), '')
+        .replaceAll(RegExp('[أإآٱ]'), 'ا')
+        .replaceAll('ى', 'ي')
+        .replaceAll('ؤ', 'و')
+        .replaceAll('ئ', 'ي')
+        .replaceAll('ة', 'ه');
   }
 
   static String? _nullableString(Object? value) {

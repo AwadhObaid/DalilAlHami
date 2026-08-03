@@ -7,6 +7,14 @@ abstract final class LaunchActions {
     BuildContext context,
     String phoneNumber,
   ) async {
+    if (phoneNumber.trim().isEmpty) {
+      _showFailure(
+        context,
+        'لا يتوفر رقم اتصال لهذا النشاط.',
+      );
+      return;
+    }
+
     final opened = await ExternalLauncherService.makePhoneCall(phoneNumber);
 
     if (!context.mounted || opened) {
@@ -21,9 +29,21 @@ abstract final class LaunchActions {
 
   static Future<void> openWhatsApp(
     BuildContext context,
-    String phoneNumber,
-  ) async {
-    final opened = await ExternalLauncherService.openWhatsApp(phoneNumber);
+    String phoneNumber, {
+    String? message,
+  }) async {
+    if (phoneNumber.trim().isEmpty) {
+      _showFailure(
+        context,
+        'لا يتوفر رقم واتساب لهذا النشاط.',
+      );
+      return;
+    }
+
+    final opened = await ExternalLauncherService.openWhatsApp(
+      phoneNumber,
+      message: message,
+    );
 
     if (!context.mounted || opened) {
       return;
@@ -33,6 +53,13 @@ abstract final class LaunchActions {
       context,
       'تعذر فتح واتساب. تأكد من تثبيت التطبيق أو المتصفح.',
     );
+  }
+
+  static void showMessage(
+    BuildContext context,
+    String message,
+  ) {
+    _showFailure(context, message);
   }
 
   static void _showFailure(

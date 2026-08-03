@@ -3,14 +3,17 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_catalog.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
+import '../../core/services/auth_session_store.dart';
 import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/launch_actions.dart';
-import '../../data/local_directory_store.dart';
+import '../../data/directory_data_store.dart';
 import '../../models/business.dart';
-import '../auth/phone_entry_page.dart';
+import '../../models/service_category.dart';
+import '../auth/google_sign_in_page.dart';
 import '../directory/category_list_page.dart';
 import '../directory/member_details_page.dart';
+import '../directory/widgets/business_card.dart';
 import '../profile/profile_page.dart';
 import 'widgets/ad_slider.dart';
 import 'widgets/category_circle_item.dart';
@@ -25,7 +28,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final LocalDirectoryStore _store = LocalDirectoryStore.instance;
+  final DirectoryDataStore _directoryStore = DirectoryDataStore.instance;
+  final AuthSessionStore _authStore = AuthSessionStore.instance;
   final TextEditingController _searchController = TextEditingController();
   final PageController _adPageController = PageController();
 
@@ -35,31 +39,45 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _store.addListener(_handleStoreChanged);
+    _directoryStore.addListener(_handleDirectoryChanged);
+    _authStore.addListener(_handleAuthChanged);
+
+    if (!_directoryStore.hasLoaded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _directoryStore.load();
+      });
+    }
   }
 
   @override
   void dispose() {
-    _store.removeListener(_handleStoreChanged);
+    _directoryStore.removeListener(_handleDirectoryChanged);
+    _authStore.removeListener(_handleAuthChanged);
     _searchController.dispose();
     _adPageController.dispose();
     super.dispose();
   }
 
-  void _handleStoreChanged() {
+  void _handleDirectoryChanged() {
     if (!mounted) {
       return;
     }
 
     setState(() {
-      _foundBusinesses = _store.search(_searchQuery);
+      _foundBusinesses = _directoryStore.search(_searchQuery);
     });
+  }
+
+  void _handleAuthChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _runFilter(String enteredKeyword) {
     setState(() {
       _searchQuery = enteredKeyword;
-      _foundBusinesses = _store.search(enteredKeyword);
+      _foundBusinesses = _directoryStore.search(enteredKeyword);
     });
   }
 
@@ -71,6 +89,16 @@ class _HomeScreenState extends State<HomeScreen> {
       _searchQuery = '';
       _foundBusinesses = const [];
     });
+  }
+
+  List<ServiceCategory> get _serviceCategories {
+    final values = _directoryStore.serviceCategories;
+    return values.isNotEmpty ? values : AppCatalog.services;
+  }
+
+  List<ServiceCategory> get _transportCategories {
+    final values = _directoryStore.transportCategories;
+    return values.isNotEmpty ? values : AppCatalog.transport;
   }
 
   @override
@@ -87,6 +115,8 @@ class _HomeScreenState extends State<HomeScreen> {
             onChanged: _runFilter,
             onClear: _clearSearch,
           ),
+          if (_directoryStore.isLoading)
+            const LinearProgressIndicator(minHeight: 2),
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 220),
@@ -99,7 +129,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(
-        tooltip: _store.isSubscribed ? 'فتح الملف الشخصي' : 'إضافة نشاط جديد',
+        tooltip:
+            _authStore.isAuthenticated ? 'فتح الملف الشخصي' : 'إضافة نشاط جديد',
         shape: const CircleBorder(
           side: BorderSide(
             color: AppColors.white,
@@ -108,8 +139,10 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         onPressed: _openAccountPage,
         child: Icon(
-          _store.isSubscribed ? Icons.person_rounded : Icons.add_rounded,
-          size: 34,
+          _authStore.isAuthenticated
+              ? Icons.person_rounded
+              : Icons.add_business_rounded,
+          size: 31,
         ),
       ),
       bottomNavigationBar: BottomAppBar(
@@ -127,44 +160,90 @@ class _HomeScreenState extends State<HomeScreen> {
     await Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
-        builder: (context) =>
-            _store.isSubscribed ? const ProfilePage() : const PhoneEntryPage(),
+        builder: (context) => _authStore.isAuthenticated
+            ? const ProfilePage()
+            : const GoogleSignInPage(),
       ),
     );
 
-    if (mounted) {
-      setState(() {});
+    if (!mounted) {
+      return;
     }
+
+    await _directoryStore.refresh();
   }
 
   Widget _buildMainContent() {
-    return ListView(
-      key: const ValueKey<String>('home-content'),
-      padding: const EdgeInsets.only(
-        top: AppSpacing.xs,
-        bottom: 96,
+    return RefreshIndicator(
+      onRefresh: _directoryStore.refresh,
+      child: ListView(
+        key: const ValueKey<String>('home-content'),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(
+          top: AppSpacing.xs,
+          bottom: 96,
+        ),
+        children: [
+          if (_directoryStore.fallbackMessage != null) _buildDataSourceNotice(),
+          AdSlider(
+            controller: _adPageController,
+            advertisements: AppCatalog.advertisements,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          _buildSectionHeader(
+            title: 'خدمات النقل',
+            subtitle: 'وصول أسرع للخدمات اليومية',
+            icon: Icons.route_rounded,
+          ),
+          _buildHorizontalCategories(),
+          _buildSuggestionBox(),
+          const SizedBox(height: AppSpacing.xs),
+          _buildSectionHeader(
+            title: 'الخدمات والأنشطة',
+            subtitle: 'اختر القسم الذي تبحث عنه',
+            icon: Icons.grid_view_rounded,
+          ),
+          _buildServiceGrid(),
+        ],
       ),
-      children: [
-        AdSlider(
-          controller: _adPageController,
-          advertisements: AppCatalog.advertisements,
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        _buildSectionHeader(
-          title: 'خدمات النقل',
-          subtitle: 'وصول أسرع للخدمات اليومية',
-          icon: Icons.route_rounded,
-        ),
-        _buildHorizontalCategories(),
-        _buildSuggestionBox(),
-        const SizedBox(height: AppSpacing.xs),
-        _buildSectionHeader(
-          title: 'الخدمات والأنشطة',
-          subtitle: 'اختر القسم الذي تبحث عنه',
-          icon: Icons.grid_view_rounded,
-        ),
-        _buildServiceGrid(),
-      ],
+    );
+  }
+
+  Widget _buildDataSourceNotice() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        0,
+        AppSpacing.md,
+        AppSpacing.sm,
+      ),
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: AppColors.mintSoft,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.cloud_off_outlined,
+            color: AppColors.primaryTeal,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              _directoryStore.fallbackMessage!,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.primaryDark,
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'إعادة المحاولة',
+            onPressed: _directoryStore.refresh,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
     );
   }
 
@@ -209,22 +288,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHorizontalCategories() {
+    final categories = _transportCategories;
+
     return SizedBox(
       height: 106,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
         scrollDirection: Axis.horizontal,
         reverse: true,
-        itemCount: AppCatalog.transport.length,
+        itemCount: categories.length,
         separatorBuilder: (context, index) => const SizedBox(
           width: AppSpacing.xxs,
         ),
         itemBuilder: (context, index) {
-          final category = AppCatalog.transport[index];
+          final category = categories[index];
 
           return CategoryCircleItem(
             category: category,
-            onTap: () => _openCategory(category.name),
+            onTap: () => _openCategory(category),
           );
         },
       ),
@@ -289,6 +370,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 LaunchActions.openWhatsApp(
                   context,
                   '772551846',
+                  message: 'لدي اقتراح لتطوير تطبيق دليل الحامي.',
                 );
               },
               icon: const Icon(Icons.chat_bubble_outline_rounded),
@@ -300,6 +382,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildServiceGrid() {
+    final categories = _serviceCategories;
+
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
@@ -315,9 +399,9 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisSpacing: AppSpacing.sm,
         childAspectRatio: 0.96,
       ),
-      itemCount: AppCatalog.services.length,
+      itemCount: categories.length,
       itemBuilder: (context, index) {
-        final category = AppCatalog.services[index];
+        final category = categories[index];
 
         return Semantics(
           button: true,
@@ -333,7 +417,7 @@ class _HomeScreenState extends State<HomeScreen> {
               color: Colors.transparent,
               borderRadius: BorderRadius.circular(AppRadius.md),
               child: InkWell(
-                onTap: () => _openCategory(category.name),
+                onTap: () => _openCategory(category),
                 borderRadius: BorderRadius.circular(AppRadius.md),
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.xs),
@@ -376,199 +460,115 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _openCategory(String categoryName) {
+  void _openCategory(ServiceCategory category) {
     Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
         builder: (context) => CategoryListPage(
-          categoryName: categoryName,
+          categoryName: category.name,
+          categoryId: category.id,
         ),
       ),
     );
   }
 
   Widget _buildSearchResults() {
+    if (_directoryStore.isLoading && _foundBusinesses.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     if (_foundBusinesses.isEmpty) {
       return _buildEmptySearchState();
     }
 
-    return ListView.separated(
-      key: const ValueKey<String>('search-results'),
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        96,
-      ),
-      itemCount: _foundBusinesses.length,
-      separatorBuilder: (context, index) => const SizedBox(
-        height: AppSpacing.sm,
-      ),
-      itemBuilder: (context, index) {
-        final business = _foundBusinesses[index];
+    return RefreshIndicator(
+      onRefresh: _directoryStore.refresh,
+      child: ListView.separated(
+        key: const ValueKey<String>('search-results'),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          96,
+        ),
+        itemCount: _foundBusinesses.length,
+        separatorBuilder: (context, index) => const SizedBox(
+          height: AppSpacing.sm,
+        ),
+        itemBuilder: (context, index) {
+          final business = _foundBusinesses[index];
 
-        return Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: AppColors.outline),
-            boxShadow: AppShadows.subtle,
-          ),
-          child: Material(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              onTap: () {
-                Navigator.push<void>(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (context) => MemberDetailsPage(
-                      business: business,
-                    ),
-                  ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: const BoxDecoration(
-                        color: AppColors.primarySoft,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.storefront_rounded,
-                        color: AppColors.primaryTeal,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            business.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.titleSmall,
-                          ),
-                          const SizedBox(height: AppSpacing.xxs),
-                          Text(
-                            '${business.category} • ${business.place}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    _buildActionIcon(
-                      tooltip: 'واتساب',
-                      icon: Icons.chat_bubble_outline_rounded,
-                      color: AppColors.whatsapp,
-                      onPressed: () {
-                        LaunchActions.openWhatsApp(
-                          context,
-                          business.whatsapp.isNotEmpty
-                              ? business.whatsapp
-                              : business.phone,
-                        );
-                      },
-                    ),
-                    const SizedBox(width: AppSpacing.xxs),
-                    _buildActionIcon(
-                      tooltip: 'اتصال',
-                      icon: Icons.phone_rounded,
-                      color: AppColors.primaryTeal,
-                      onPressed: () {
-                        LaunchActions.makePhoneCall(
-                          context,
-                          business.phone,
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
+          return BusinessCard(
+            business: business,
+            onOpen: () => _openBusiness(business),
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildActionIcon({
-    required String tooltip,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onPressed,
-  }) {
-    return SizedBox(
-      width: AppSizes.iconButton,
-      height: AppSizes.iconButton,
-      child: IconButton(
-        tooltip: tooltip,
-        onPressed: onPressed,
-        style: IconButton.styleFrom(
-          backgroundColor: color.withValues(alpha: 0.11),
-          foregroundColor: color,
+  void _openBusiness(Business business) {
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => MemberDetailsPage(
+          business: business,
         ),
-        icon: Icon(icon, size: 21),
       ),
     );
   }
 
   Widget _buildEmptySearchState() {
-    return ListView(
-      key: const ValueKey<String>('empty-search'),
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xl,
-        72,
-        AppSpacing.xl,
-        96,
+    return RefreshIndicator(
+      onRefresh: _directoryStore.refresh,
+      child: ListView(
+        key: const ValueKey<String>('empty-search'),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          72,
+          AppSpacing.xl,
+          96,
+        ),
+        children: [
+          Container(
+            width: 90,
+            height: 90,
+            decoration: const BoxDecoration(
+              color: AppColors.primarySoft,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.search_off_rounded,
+              size: 42,
+              color: AppColors.primaryTeal,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            'لم نجد نشاطًا مطابقًا',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.titleLarge,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'جرّب كتابة اسم آخر أو ابحث باسم القسم أو رقم الهاتف.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Center(
+            child: OutlinedButton.icon(
+              onPressed: _clearSearch,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('مسح البحث'),
+            ),
+          ),
+        ],
       ),
-      children: [
-        Container(
-          width: 90,
-          height: 90,
-          decoration: const BoxDecoration(
-            color: AppColors.primarySoft,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.search_off_rounded,
-            size: 42,
-            color: AppColors.primaryTeal,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        Text(
-          'لم نجد نشاطًا مطابقًا',
-          textAlign: TextAlign.center,
-          style: AppTextStyles.titleLarge,
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          'جرّب كتابة اسم آخر أو ابحث باسم القسم.',
-          textAlign: TextAlign.center,
-          style: AppTextStyles.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        Center(
-          child: OutlinedButton.icon(
-            onPressed: _clearSearch,
-            icon: const Icon(Icons.refresh_rounded),
-            label: const Text('مسح البحث'),
-          ),
-        ),
-      ],
     );
   }
 }

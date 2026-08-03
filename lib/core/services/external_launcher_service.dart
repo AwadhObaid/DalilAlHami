@@ -22,14 +22,24 @@ abstract final class ExternalLauncherService {
     }
   }
 
-  static Future<bool> openWhatsApp(String phoneNumber) async {
-    final formattedNumber = _normalizeYemenPhone(phoneNumber);
+  static Future<bool> openWhatsApp(
+    String phoneNumber, {
+    String? message,
+  }) async {
+    final formattedNumber = normalizeYemenPhone(phoneNumber);
     if (formattedNumber.isEmpty) {
       return false;
     }
 
-    final appUri = Uri.parse(
-      'whatsapp://send?phone=$formattedNumber',
+    final queryParameters = <String, String>{
+      'phone': formattedNumber,
+      if (message != null && message.trim().isNotEmpty) 'text': message.trim(),
+    };
+
+    final appUri = Uri(
+      scheme: 'whatsapp',
+      host: 'send',
+      queryParameters: queryParameters,
     );
 
     try {
@@ -41,12 +51,15 @@ abstract final class ExternalLauncherService {
         return true;
       }
     } on Exception {
-      // ننتقل للرابط الخارجي عند عدم توفر التطبيق.
+      // ننتقل إلى الرابط الخارجي عند عدم توفر تطبيق واتساب.
     }
 
     final webUri = Uri.https(
       'wa.me',
       '/$formattedNumber',
+      message != null && message.trim().isNotEmpty
+          ? <String, String>{'text': message.trim()}
+          : null,
     );
 
     try {
@@ -59,7 +72,7 @@ abstract final class ExternalLauncherService {
     }
   }
 
-  static String _normalizeYemenPhone(String phoneNumber) {
+  static String normalizeYemenPhone(String phoneNumber) {
     var digits = phoneNumber.replaceAll(RegExp(r'[^0-9]'), '');
 
     if (digits.startsWith('00')) {
