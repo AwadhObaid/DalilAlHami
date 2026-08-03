@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_dimensions.dart';
+import '../../../core/theme/app_shadows.dart';
 
 class HomeHeader extends StatelessWidget {
   const HomeHeader({super.key});
@@ -8,28 +10,46 @@ class HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(
-        top: 35,
-        bottom: 8,
-      ),
       width: double.infinity,
       decoration: const BoxDecoration(
-        color: AppColors.primaryTeal,
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(35),
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [
+            AppColors.primaryTeal,
+            AppColors.primaryDark,
+          ],
         ),
+        borderRadius: BorderRadius.vertical(
+          bottom: Radius.circular(AppRadius.xl),
+        ),
+        boxShadow: AppShadows.subtle,
       ),
-      child: Center(
-        child: Image.asset(
-          'assets/logo.png',
-          height: 60,
-          errorBuilder: (context, error, stackTrace) {
-            return const Icon(
-              Icons.local_shipping,
-              color: Colors.white,
-              size: 40,
-            );
-          },
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.only(
+            top: AppSpacing.xs,
+            bottom: AppSpacing.md,
+          ),
+          child: Semantics(
+            label: 'شعار تطبيق دليل الحامي',
+            image: true,
+            child: Center(
+              child: Image.asset(
+                'assets/logo.png',
+                height: 58,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(
+                    Icons.location_city_rounded,
+                    color: AppColors.white,
+                    size: 44,
+                  );
+                },
+              ),
+            ),
+          ),
         ),
       ),
     );

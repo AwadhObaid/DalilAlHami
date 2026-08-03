@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_dimensions.dart';
+import '../../core/theme/app_shadows.dart';
+import '../../core/theme/app_text_styles.dart';
 import '../profile/profile_page.dart';
 
 class OtpPage extends StatefulWidget {
@@ -30,7 +33,7 @@ class _OtpPageState extends State<OtpPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'أدخل رمزًا من 4 أرقام.',
+            'أدخل رمزًا مكونًا من 4 أرقام.',
             textAlign: TextAlign.center,
           ),
         ),
@@ -49,150 +52,108 @@ class _OtpPageState extends State<OtpPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 25),
+      appBar: AppBar(title: const Text('التحقق من الرمز')),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.lock_outline,
-                  size: 60,
-                  color: Colors.orange,
-                ),
-              ),
-              const SizedBox(height: 30),
-              const Text(
-                'التحقق من الرمز',
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+              const SizedBox(height: AppSpacing.lg),
+              Center(
+                child: Container(
+                  width: 92,
+                  height: 92,
+                  decoration: const BoxDecoration(
+                    color: AppColors.mintSoft,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.lock_outline_rounded,
+                    size: 44,
+                    color: AppColors.primaryTeal,
+                  ),
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: AppSpacing.xl),
+              Text(
+                'أدخل رمز التحقق',
+                style: AppTextStyles.headlineMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.xs),
               Text.rich(
                 TextSpan(
-                  text: 'تم إرسال الرمز إلى الرقم ',
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 15,
-                    fontFamily: 'Tajawal',
+                  text: 'تم إرسال الرمز إلى ',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                   children: [
                     TextSpan(
                       text: '+967 ${widget.phoneNumber}',
-                      style: const TextStyle(
+                      style: AppTextStyles.titleSmall.copyWith(
                         color: AppColors.primaryTeal,
-                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 40),
-              TextField(
-                controller: _otpController,
-                textAlign: TextAlign.center,
-                maxLength: 4,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(4),
-                ],
-                style: const TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 15,
+              const SizedBox(height: AppSpacing.xxl),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: AppColors.outline),
+                  boxShadow: AppShadows.subtle,
                 ),
-                decoration: InputDecoration(
-                  counterText: '',
-                  hintText: '----',
-                  hintStyle: const TextStyle(
-                    color: Colors.grey,
-                    letterSpacing: 15,
-                  ),
-                  fillColor: Colors.grey[50],
-                  filled: true,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide(
-                      color: Colors.grey.shade300,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: const BorderSide(
-                      color: AppColors.primaryTeal,
-                      width: 2,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 30),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryTeal,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(
-                    double.infinity,
-                    55,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  elevation: 2,
-                ),
-                onPressed: _confirmMockOtp,
-                child: const Text(
-                  'تأكيد الدخول',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'لم يصلك الرمز؟ ',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'تم إعادة إرسال الرمز التجريبي',
-                          ),
-                        ),
-                      );
-                    },
-                    child: const Text(
-                      'أعد الإرسال',
-                      style: TextStyle(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      controller: _otpController,
+                      autofocus: true,
+                      textAlign: TextAlign.center,
+                      maxLength: 4,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(4),
+                      ],
+                      onSubmitted: (_) => _confirmMockOtp(),
+                      style: AppTextStyles.headlineLarge.copyWith(
+                        letterSpacing: 14,
                         color: AppColors.primaryTeal,
-                        fontWeight: FontWeight.bold,
-                        decoration: TextDecoration.underline,
+                      ),
+                      decoration: const InputDecoration(
+                        counterText: '',
+                        hintText: 'ــــ',
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: AppSpacing.lg),
+                    ElevatedButton.icon(
+                      onPressed: _confirmMockOtp,
+                      icon: const Icon(Icons.verified_user_outlined),
+                      label: const Text('تأكيد الدخول'),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    TextButton(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'تمت إعادة إرسال الرمز التجريبي.',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text('إعادة إرسال الرمز'),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

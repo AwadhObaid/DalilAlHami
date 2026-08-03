@@ -16,9 +16,7 @@ enum DirectoryDataSource {
 }
 
 class DirectoryDataStore extends ChangeNotifier {
-  DirectoryDataStore._() {
-    _localStore.addListener(_handleLocalBusinessChanged);
-  }
+  DirectoryDataStore._();
 
   static final DirectoryDataStore instance = DirectoryDataStore._();
 
@@ -68,19 +66,10 @@ class DirectoryDataStore extends ChangeNotifier {
       .toList(growable: false);
 
   UnmodifiableListView<Business> get businesses {
-    final baseBusinesses = usesLocalFallback
-        ? _localStore.businesses.toList(growable: true)
-        : _remoteBusinesses.toList(growable: true);
+    final values =
+        usesLocalFallback ? _localStore.businesses : _remoteBusinesses;
 
-    final localUserBusiness = _localStore.currentUserBusiness;
-    if (localUserBusiness != null &&
-        !baseBusinesses.any(
-          (business) => business.id == localUserBusiness.id,
-        )) {
-      baseBusinesses.add(localUserBusiness);
-    }
-
-    return UnmodifiableListView(baseBusinesses);
+    return UnmodifiableListView(values);
   }
 
   Future<void> load({
@@ -164,11 +153,5 @@ class DirectoryDataStore extends ChangeNotifier {
     _remoteBusinesses = const [];
     _source = DirectoryDataSource.localFallback;
     _lastError = error;
-  }
-
-  void _handleLocalBusinessChanged() {
-    if (_hasLoaded) {
-      notifyListeners();
-    }
   }
 }

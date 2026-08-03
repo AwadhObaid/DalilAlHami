@@ -3,11 +3,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../core/constants/app_catalog.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/services/auth_session_store.dart';
 import '../../data/directory_data_store.dart';
-import '../../data/local_directory_store.dart';
-import '../../models/business.dart';
+import '../../data/repositories/account_repository.dart';
+import '../../models/account_business.dart';
+import '../../models/account_profile.dart';
+import '../../models/service_category.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -17,48 +19,118 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final LocalDirectoryStore _store = LocalDirectoryStore.instance;
+  final AccountRepository _repository = const AccountRepository();
+  final DirectoryDataStore _directoryStore = DirectoryDataStore.instance;
   final ImagePicker _picker = ImagePicker();
 
-  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _businessNameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _whatsappController = TextEditingController();
+  final TextEditingController _addressController =
+      TextEditingController(text: 'الحامي');
   final TextEditingController _descriptionController = TextEditingController();
 
+  AccountProfile? _profile;
+  AccountBusiness? _business;
+  ServiceCategory? _selectedCategory;
+  String? _selectedImagePath;
+
+  bool _isLoading = true;
+  bool _isSaving = false;
   bool _isEditing = false;
-  String? _selectedCategory;
-  String? _imagePath;
+  String? _loadError;
 
   @override
   void initState() {
     super.initState();
-
-    final business = _store.currentUserBusiness;
-    if (business == null) {
-      _isEditing = true;
-      return;
-    }
-
-    _isEditing = false;
-    _loadBusiness(business);
+    _loadAccount();
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _fullNameController.dispose();
+    _businessNameController.dispose();
     _phoneController.dispose();
     _whatsappController.dispose();
+    _addressController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
 
-  void _loadBusiness(Business business) {
-    _nameController.text = business.name;
-    _phoneController.text = business.phone;
-    _whatsappController.text = business.whatsapp;
-    _descriptionController.text = business.details;
-    _selectedCategory = business.category;
-    _imagePath = business.imagePath;
+  Future<void> _loadAccount() async {
+    if (!AuthSessionStore.instance.isAuthenticated) {
+      setState(() {
+        _isLoading = false;
+        _loadError = 'انتهت جلسة تسجيل الدخول.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
+
+    try {
+      if (!_directoryStore.hasLoaded) {
+        await _directoryStore.load();
+      }
+
+      final snapshot = await _repository.loadCurrentAccount();
+
+      if (!mounted) {
+        return;
+      }
+
+      _applySnapshot(snapshot);
+
+      setState(() {
+        _isLoading = false;
+        _isEditing = snapshot.business == null;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isLoading = false;
+        _loadError = _messageForError(error);
+      });
+    }
+  }
+
+  void _applySnapshot(AccountSnapshot snapshot) {
+    _profile = snapshot.profile;
+    _business = snapshot.business;
+
+    _fullNameController.text = snapshot.profile.fullName.isNotEmpty
+        ? snapshot.profile.fullName
+        : snapshot.business?.name ?? '';
+    _businessNameController.text = snapshot.business?.name ?? '';
+    _phoneController.text = snapshot.business?.phone ?? snapshot.profile.phone;
+    _whatsappController.text = snapshot.business?.whatsapp ?? '';
+    _addressController.text = snapshot.business?.address ?? 'الحامي';
+    _descriptionController.text = snapshot.business?.description ?? '';
+    _selectedImagePath = null;
+
+    final categoryId = snapshot.business?.categoryId;
+    _selectedCategory = _findCategory(categoryId);
+  }
+
+  ServiceCategory? _findCategory(String? categoryId) {
+    if (categoryId == null || categoryId.isEmpty) {
+      return null;
+    }
+
+    for (final category in _directoryStore.categories) {
+      if (category.id == categoryId) {
+        return category;
+      }
+    }
+
+    return null;
   }
 
   Future<void> _pickImage() async {
@@ -73,58 +145,244 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     setState(() {
-      _imagePath = selectedImage.path;
+      _selectedImagePath = selectedImage.path;
     });
   }
 
-  void _saveBusiness() {
-    if (_nameController.text.trim().isEmpty || _selectedCategory == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'يرجى إكمال الاسم واختيار القسم',
-          ),
-        ),
+  Future<void> _saveAccount() async {
+    if (_isSaving) {
+      return;
+    }
+
+    final selectedCategory = _selectedCategory;
+
+    if (_fullNameController.text.trim().isEmpty ||
+        _businessNameController.text.trim().isEmpty ||
+        _phoneController.text.trim().isEmpty ||
+        selectedCategory == null) {
+      _showMessage(
+        'أكمل الاسم التجاري ورقم الهاتف واختر التصنيف.',
+        isError: true,
       );
       return;
     }
 
-    _store.saveCurrentUserBusiness(
-      name: _nameController.text,
-      phone: _phoneController.text,
-      whatsapp: _whatsappController.text,
-      category: _selectedCategory!,
-      details: _descriptionController.text,
-      imagePath: _imagePath,
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final result = await _repository.saveAccount(
+        fullName: _fullNameController.text,
+        categoryId: selectedCategory.id,
+        businessName: _businessNameController.text,
+        businessPhone: _phoneController.text,
+        whatsapp: _whatsappController.text,
+        description: _descriptionController.text,
+        address: _addressController.text,
+        businessId: _business?.id,
+        selectedImagePath: _selectedImagePath,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      _applySnapshot(result.snapshot);
+
+      setState(() {
+        _isEditing = false;
+      });
+
+      await _directoryStore.refresh();
+
+      if (!mounted) {
+        return;
+      }
+
+      _showMessage(
+        result.imageWarning ?? 'تم إرسال النشاط للمراجعة بنجاح.',
+        isError: result.imageWarning != null,
+      );
+    } catch (error) {
+      _showMessage(
+        _messageForError(error),
+        isError: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _signOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('تسجيل الخروج'),
+          content: const Text(
+            'هل تريد تسجيل الخروج من هذا الجهاز؟',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              child: const Text('تسجيل الخروج'),
+            ),
+          ],
+        );
+      },
     );
 
+    if (confirmed != true) {
+      return;
+    }
+
+    try {
+      await AuthSessionStore.instance.signOut();
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(context).popUntil(
+        (route) => route.isFirst,
+      );
+    } catch (error) {
+      _showMessage(
+        _messageForError(error),
+        isError: true,
+      );
+    }
+  }
+
+  Future<void> _deleteBusiness() async {
+    final business = _business;
+    if (business == null) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('حذف النشاط'),
+          content: const Text(
+            'سيتم حذف بيانات النشاط من الدليل، '
+            'لكن حساب تسجيل الدخول سيبقى موجودًا.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              child: const Text('حذف النشاط'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) {
+      return;
+    }
+
     setState(() {
-      _isEditing = false;
+      _isSaving = true;
     });
+
+    try {
+      await _repository.deleteOwnedBusiness(business.id);
+      await _directoryStore.refresh();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _business = null;
+        _businessNameController.clear();
+        _whatsappController.clear();
+        _descriptionController.clear();
+        _selectedCategory = null;
+        _selectedImagePath = null;
+        _isEditing = true;
+      });
+
+      _showMessage('تم حذف النشاط.');
+    } catch (error) {
+      _showMessage(
+        _messageForError(error),
+        isError: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  String _messageForError(Object error) {
+    if (error is AccountFailure) {
+      return error.message;
+    }
+
+    final text = error.toString();
+
+    if (text.contains('row-level security')) {
+      return 'لم تسمح صلاحيات قاعدة البيانات بتنفيذ العملية.';
+    }
+
+    if (text.contains('network') ||
+        text.contains('SocketException') ||
+        text.contains('Failed host lookup')) {
+      return 'تعذر الاتصال بالإنترنت.';
+    }
+
+    return text.replaceFirst('Exception: ', '');
+  }
+
+  void _showMessage(
+    String message, {
+    bool isError = false,
+  }) {
+    if (!mounted) {
+      return;
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text(
-          'تم حفظ الملف الشخصي بنجاح',
+        content: Text(
+          message,
           textAlign: TextAlign.center,
         ),
-        backgroundColor: Colors.green,
+        backgroundColor: isError ? Colors.red.shade700 : Colors.green,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
       ),
     );
-  }
-
-  void _deleteBusiness(BuildContext dialogContext) {
-    _store.deleteCurrentUserBusiness();
-
-    Navigator.of(dialogContext).pop();
-
-    if (mounted) {
-      Navigator.of(context).pop();
-    }
   }
 
   @override
@@ -133,18 +391,63 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(
         title: Text(
-          _isEditing ? 'تعديل البيانات' : 'الملف الشخصي',
+          _isEditing ? 'بيانات النشاط' : 'الملف الشخصي',
           style: const TextStyle(
             fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
         backgroundColor: AppColors.primaryTeal,
-        elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'تسجيل الخروج',
+            onPressed: _isSaving ? null : _signOut,
+            icon: const Icon(Icons.logout),
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        child: _isEditing ? _buildEditForm() : _buildProfileView(),
-      ),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    if (_loadError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 52,
+                color: Colors.red,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _loadError!,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _loadAccount,
+                icon: const Icon(Icons.refresh),
+                label: const Text('إعادة المحاولة'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      child: _isEditing ? _buildEditForm() : _buildProfileView(),
     );
   }
 
@@ -152,35 +455,45 @@ class _ProfilePageState extends State<ProfilePage> {
     return Column(
       children: [
         _buildHeaderImage(isEditable: true),
-        const SizedBox(height: 40),
+        const SizedBox(height: 44),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
-              _buildSectionTitle('بياناتك'),
+              _buildSectionTitle('بيانات الحساب'),
               _buildInputCard([
                 _buildCustomField(
-                  'الاسم التجاري / الشخصي',
-                  _nameController,
+                  'الاسم الشخصي',
+                  _fullNameController,
                   Icons.person_outline,
                 ),
+              ]),
+              const SizedBox(height: 20),
+              _buildSectionTitle('تفاصيل النشاط'),
+              _buildInputCard([
                 _buildCustomField(
-                  'رقم الجوال',
+                  'اسم النشاط',
+                  _businessNameController,
+                  Icons.storefront_outlined,
+                ),
+                _buildCustomField(
+                  'رقم هاتف النشاط',
                   _phoneController,
-                  Icons.phone_android,
+                  Icons.phone_outlined,
                   isPhone: true,
                 ),
+                _buildCategoryDropdown(),
                 _buildCustomField(
                   'رقم الواتساب',
                   _whatsappController,
                   Icons.chat_outlined,
                   isPhone: true,
                 ),
-              ]),
-              const SizedBox(height: 20),
-              _buildSectionTitle('تفاصيل النشاط'),
-              _buildInputCard([
-                _buildCategoryDropdown(),
+                _buildCustomField(
+                  'العنوان',
+                  _addressController,
+                  Icons.location_on_outlined,
+                ),
                 _buildCustomField(
                   'وصف الخدمة',
                   _descriptionController,
@@ -188,48 +501,60 @@ class _ProfilePageState extends State<ProfilePage> {
                   lines: 3,
                 ),
               ]),
-              const SizedBox(height: 30),
+              const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryTeal,
+                    foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
                   ),
-                  onPressed: _saveBusiness,
-                  icon: const Icon(
-                    Icons.save,
-                    color: Colors.white,
-                  ),
-                  label: const Text(
-                    'حفظ البيانات',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
+                  onPressed: _isSaving ? null : _saveAccount,
+                  icon: _isSaving
+                      ? const SizedBox(
+                          width: 21,
+                          height: 21,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.3,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.send),
+                  label: Text(
+                    _business == null
+                        ? 'إرسال النشاط للمراجعة'
+                        : 'حفظ وإعادة الإرسال للمراجعة',
+                    style: const TextStyle(
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 15),
-              TextButton.icon(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(
-                  Icons.home,
-                  color: Colors.grey,
+              if (_business != null) ...[
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: _isSaving
+                      ? null
+                      : () {
+                          _applySnapshot(
+                            AccountSnapshot(
+                              profile: _profile!,
+                              business: _business,
+                            ),
+                          );
+                          setState(() {
+                            _isEditing = false;
+                          });
+                        },
+                  child: const Text('إلغاء التعديل'),
                 ),
-                label: const Text(
-                  'إلغاء والعودة للرئيسية',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 40),
+              ],
+              const SizedBox(height: 35),
             ],
           ),
         ),
@@ -238,26 +563,55 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildProfileView() {
+    final business = _business;
+
+    if (business == null) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       children: [
         _buildHeaderImage(isEditable: false),
-        const SizedBox(height: 20),
+        const SizedBox(height: 45),
         Text(
-          _nameController.text,
+          business.name,
+          textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
             color: AppColors.primaryTeal,
           ),
         ),
+        const SizedBox(height: 4),
         Text(
-          _selectedCategory ?? 'غير محدد',
+          business.categoryName,
           style: const TextStyle(
             fontSize: 16,
             color: Colors.grey,
           ),
         ),
-        const SizedBox(height: 30),
+        const SizedBox(height: 12),
+        _buildStatusChip(business),
+        if (business.rejectionReason != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.red.shade200),
+            ),
+            child: Text(
+              'سبب الرفض: ${business.rejectionReason}',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.red.shade800,
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 24),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Container(
@@ -275,29 +629,35 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               children: [
                 _buildInfoRow(
-                  Icons.phone,
-                  'رقم الجوال',
-                  _phoneController.text,
+                  Icons.person,
+                  'صاحب الحساب',
+                  _profile?.fullName ?? '',
                 ),
                 const Divider(),
                 _buildInfoRow(
-                  Icons.description,
-                  'الوصف',
-                  _descriptionController.text.isEmpty
-                      ? 'لا يوجد وصف'
-                      : _descriptionController.text,
+                  Icons.phone,
+                  'رقم الهاتف',
+                  business.phone,
                 ),
                 const Divider(),
                 _buildInfoRow(
                   Icons.location_on,
                   'العنوان',
-                  'الحامي',
+                  business.address,
+                ),
+                const Divider(),
+                _buildInfoRow(
+                  Icons.description,
+                  'الوصف',
+                  business.description.isEmpty
+                      ? 'لا يوجد وصف'
+                      : business.description,
                 ),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 30),
+        const SizedBox(height: 26),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
@@ -306,51 +666,37 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(0, 50),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    minimumSize: const Size(0, 50),
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _isEditing = true;
-                    });
-                  },
-                  icon: const Icon(
-                    Icons.edit,
-                    color: Colors.white,
-                  ),
-                  label: const Text(
-                    'تعديل',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  onPressed: _isSaving
+                      ? null
+                      : () {
+                          setState(() {
+                            _isEditing = true;
+                          });
+                        },
+                  icon: const Icon(Icons.edit),
+                  label: const Text('تعديل النشاط'),
                 ),
               ),
-              const SizedBox(width: 15),
+              const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.red),
+                    foregroundColor: Colors.red,
+                    minimumSize: const Size(0, 50),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    minimumSize: const Size(0, 50),
                   ),
-                  onPressed: _showDeleteDialog,
-                  icon: const Icon(
-                    Icons.delete,
-                    color: Colors.red,
-                  ),
-                  label: const Text(
-                    'حذف الحساب',
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  onPressed: _isSaving ? null : _deleteBusiness,
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('حذف النشاط'),
                 ),
               ),
             ],
@@ -361,17 +707,49 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Widget _buildStatusChip(AccountBusiness business) {
+    final color = switch (business.status) {
+      'approved' => Colors.green,
+      'rejected' => Colors.red,
+      'suspended' => Colors.deepOrange,
+      'pending' => Colors.orange,
+      _ => Colors.blueGrey,
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 7,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: color.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Text(
+        business.statusLabel,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
   Widget _buildHeaderImage({
     required bool isEditable,
   }) {
     ImageProvider<Object>? imageProvider;
 
-    if (_imagePath != null &&
-        _imagePath!.isNotEmpty &&
-        File(_imagePath!).existsSync()) {
-      imageProvider = FileImage(
-        File(_imagePath!),
-      );
+    final selectedImagePath = _selectedImagePath;
+    if (selectedImagePath != null &&
+        selectedImagePath.isNotEmpty &&
+        File(selectedImagePath).existsSync()) {
+      imageProvider = FileImage(File(selectedImagePath));
+    } else if (_business?.logoUrl != null) {
+      imageProvider = NetworkImage(_business!.logoUrl!);
     }
 
     return Stack(
@@ -379,7 +757,7 @@ class _ProfilePageState extends State<ProfilePage> {
       clipBehavior: Clip.none,
       children: [
         Container(
-          height: 100,
+          height: 105,
           decoration: const BoxDecoration(
             color: AppColors.primaryTeal,
             borderRadius: BorderRadius.vertical(
@@ -388,7 +766,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
         Positioned(
-          top: 40,
+          top: 42,
           child: Stack(
             children: [
               Container(
@@ -406,13 +784,13 @@ class _ProfilePageState extends State<ProfilePage> {
                   ],
                 ),
                 child: CircleAvatar(
-                  radius: 55,
+                  radius: 57,
                   backgroundColor: Colors.grey[200],
                   backgroundImage: imageProvider,
                   child: imageProvider == null
                       ? const Icon(
-                          Icons.person,
-                          size: 60,
+                          Icons.storefront,
+                          size: 58,
                           color: Colors.grey,
                         )
                       : null,
@@ -423,13 +801,13 @@ class _ProfilePageState extends State<ProfilePage> {
                   bottom: 0,
                   right: 0,
                   child: InkWell(
-                    onTap: _pickImage,
+                    onTap: _isSaving ? null : _pickImage,
                     child: const CircleAvatar(
-                      radius: 18,
+                      radius: 19,
                       backgroundColor: AppColors.lightTeal,
                       child: Icon(
                         Icons.camera_alt,
-                        size: 16,
+                        size: 17,
                         color: Colors.white,
                       ),
                     ),
@@ -442,13 +820,85 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Widget _buildCategoryDropdown() {
+    final categories = _directoryStore.categories;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<ServiceCategory>(
+          hint: const Text('اختر النشاط'),
+          isExpanded: true,
+          value: _selectedCategory,
+          items: categories.map((category) {
+            return DropdownMenuItem<ServiceCategory>(
+              value: category,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Text(category.name),
+              ),
+            );
+          }).toList(),
+          onChanged: _isSaving
+              ? null
+              : (value) {
+                  setState(() {
+                    _selectedCategory = value;
+                  });
+                },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomField(
+    String label,
+    TextEditingController controller,
+    IconData icon, {
+    int lines = 1,
+    bool isPhone = false,
+    bool enabled = true,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: TextField(
+        controller: controller,
+        enabled: enabled && !_isSaving,
+        maxLines: lines,
+        keyboardType: isPhone
+            ? TextInputType.phone
+            : lines > 1
+                ? TextInputType.multiline
+                : TextInputType.text,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(
+            icon,
+            color: AppColors.primaryTeal,
+          ),
+          filled: true,
+          fillColor: Colors.grey[50],
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildInfoRow(
     IconData icon,
     String label,
     String value,
   ) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 9),
       child: Row(
         children: [
           Icon(
@@ -456,7 +906,7 @@ class _ProfilePageState extends State<ProfilePage> {
             color: AppColors.primaryTeal,
             size: 24,
           ),
-          const SizedBox(width: 15),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,9 +919,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
                 Text(
-                  value,
+                  value.isEmpty ? 'غير محدد' : value,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
@@ -512,119 +962,12 @@ class _ProfilePageState extends State<ProfilePage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 9,
           ),
         ],
       ),
       child: Column(children: children),
-    );
-  }
-
-  Widget _buildCustomField(
-    String label,
-    TextEditingController controller,
-    IconData icon, {
-    int lines = 1,
-    bool isPhone = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: TextField(
-        controller: controller,
-        maxLines: lines,
-        textAlign: TextAlign.right,
-        keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
-        decoration: InputDecoration(
-          labelText: label,
-          prefixIcon: Icon(
-            icon,
-            color: AppColors.primaryTeal,
-            size: 22,
-          ),
-          filled: true,
-          fillColor: Colors.grey[50],
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryDropdown() {
-    final remoteCategories = DirectoryDataStore.instance.categories;
-    final categories = remoteCategories.isNotEmpty
-        ? remoteCategories
-        : AppCatalog.allCategories;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          hint: const Text('اختر النشاط'),
-          isExpanded: true,
-          value: _selectedCategory,
-          items: categories.map((category) {
-            return DropdownMenuItem<String>(
-              value: category.name,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: Text(category.name),
-              ),
-            );
-          }).toList(),
-          onChanged: (value) {
-            setState(() {
-              _selectedCategory = value;
-            });
-          },
-        ),
-      ),
-    );
-  }
-
-  void _showDeleteDialog() {
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text(
-            'هل أنت متأكد؟',
-            textAlign: TextAlign.center,
-          ),
-          content: const Text(
-            'سيتم حذف جميع بياناتك ولن تظهر في الدليل بعد الآن.',
-            textAlign: TextAlign.center,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('تراجع'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
-              onPressed: () => _deleteBusiness(dialogContext),
-              child: const Text(
-                'نعم، احذف',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 }

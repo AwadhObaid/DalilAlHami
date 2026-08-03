@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_dimensions.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
 import '../../../models/service_category.dart';
 
 class CategoryCircleItem extends StatelessWidget {
@@ -15,30 +18,64 @@ class CategoryCircleItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
+    return Semantics(
+      button: true,
+      label: 'فتح قسم ${category.name}',
       child: SizedBox(
-        width: 75,
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: 30,
-              backgroundColor: AppColors.primaryTeal,
-              child: Icon(
-                category.icon,
-                color: Colors.white,
-                size: 28,
+        width: 82,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xxs,
+                vertical: AppSpacing.xxs,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: AppSizes.categoryIcon,
+                    height: AppSizes.categoryIcon,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topRight,
+                        end: Alignment.bottomLeft,
+                        colors: [
+                          AppColors.primaryTeal,
+                          AppColors.primaryDark,
+                        ],
+                      ),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.white,
+                        width: 2,
+                      ),
+                      boxShadow: AppShadows.subtle,
+                    ),
+                    child: Icon(
+                      category.icon,
+                      color: AppColors.white,
+                      size: 27,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    category.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.textPrimary,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
               ),
             ),
-            Text(
-              category.name,
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primaryTeal,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

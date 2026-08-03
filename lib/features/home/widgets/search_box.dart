@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_dimensions.dart';
+import '../../../core/theme/app_shadows.dart';
+import '../../../core/theme/app_text_styles.dart';
 
 class SearchBox extends StatelessWidget {
   const SearchBox({
@@ -19,53 +22,52 @@ class SearchBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 15,
-        vertical: 8,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        AppSpacing.xs,
       ),
-      child: Container(
+      child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
-            ),
-          ],
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.outline),
+          boxShadow: AppShadows.card,
         ),
         child: TextField(
           controller: controller,
           onChanged: onChanged,
+          onSubmitted: onChanged,
           textAlign: TextAlign.right,
+          textInputAction: TextInputAction.search,
+          style: AppTextStyles.bodyLarge,
           decoration: InputDecoration(
-            hintText: 'ابحث عن خدمة أو محل...',
-            hintStyle: const TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
+            hintText: 'ابحث عن مطعم، صيدلية، ورشة أو اسم نشاط…',
+            hintStyle: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textMuted,
             ),
-            prefixIcon: query.isNotEmpty
-                ? IconButton(
-                    icon: const Icon(
-                      Icons.arrow_back,
-                      color: AppColors.primaryTeal,
-                    ),
+            prefixIcon: const Icon(
+              Icons.search_rounded,
+              color: AppColors.primaryTeal,
+              size: 27,
+            ),
+            suffixIcon: query.isEmpty
+                ? null
+                : IconButton(
+                    tooltip: 'مسح البحث',
                     onPressed: onClear,
-                  )
-                : const Padding(
-                    padding: EdgeInsets.only(
-                      left: 15,
-                      right: 10,
-                    ),
-                    child: Icon(
-                      Icons.search,
-                      color: AppColors.primaryTeal,
-                      size: 28,
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: AppColors.textSecondary,
                     ),
                   ),
+            filled: false,
             border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
               vertical: 15,
             ),
           ),

@@ -54,3 +54,11 @@ supabase/.temp/
 
 # Java heap dump files
 *.hprof
+
+# Local phase backup files
+*.backup_before_*
+build_logs/
+
+# Local phase backup files
+*.backup_before_*
+build_logs/
