@@ -293,18 +293,16 @@ class _AccountHubPageState extends State<AccountHubPage>
 
   Widget _buildConnectionCard() {
     final isOnline = _directoryStore.usesSupabase;
-    final title = _directoryStore.isLoading
-        ? 'جارٍ تحديث بيانات الدليل'
-        : isOnline
-            ? 'متصل بخدمة Supabase'
-            : 'البيانات المحلية الاحتياطية';
-    final subtitle = _directoryStore.isLoading
-        ? 'يتم جلب أحدث البيانات الآن.'
-        : isOnline
-            ? 'الأقسام والأنشطة محدثة من قاعدة البيانات.'
-            : _directoryStore.fallbackMessage ??
-                'لم يتم تحميل مصدر البيانات بعد.';
-    final color = isOnline ? AppColors.success : AppColors.warning;
+    final usesSqlite = _directoryStore.usesSqliteCache;
+    final title = _directoryStore.isRefreshing
+        ? 'جارٍ مزامنة بيانات الدليل'
+        : _directoryStore.storageStatusTitle;
+    final subtitle = _directoryStore.storageStatusSubtitle;
+    final color = isOnline
+        ? AppColors.success
+        : usesSqlite
+            ? AppColors.primaryTeal
+            : AppColors.warning;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -319,7 +317,13 @@ class _AccountHubPageState extends State<AccountHubPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            isOnline ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
+            _directoryStore.isRefreshing
+                ? Icons.sync_rounded
+                : isOnline
+                    ? Icons.cloud_done_outlined
+                    : usesSqlite
+                        ? Icons.storage_rounded
+                        : Icons.cloud_off_outlined,
             color: color,
           ),
           const SizedBox(width: AppSpacing.sm),

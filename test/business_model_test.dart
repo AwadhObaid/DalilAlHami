@@ -27,4 +27,19 @@ void main() {
 
     expect(business.matchesSearch('الامانه'), isTrue);
   });
+
+  test('يقرأ القيم المنطقية المخزنة كأرقام في SQLite', () {
+    final business = Business.fromMap({
+      'id': 'sqlite-business',
+      'name': 'نشاط محلي',
+      'phone': '777000111',
+      'category': 'خدمات',
+      'place': 'الحامي',
+      'is_featured': 1,
+      'is_remote': 1,
+    });
+
+    expect(business.isFeatured, isTrue);
+    expect(business.isRemote, isTrue);
+  });
 }

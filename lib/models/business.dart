@@ -164,8 +164,8 @@ class Business {
       categorySlug: map['category_slug']?.toString() ?? '',
       logoUrl: _nullableString(map['logo_url']),
       coverUrl: _nullableString(map['cover_url']),
-      isFeatured: map['is_featured'] == true,
-      isRemote: map['is_remote'] == true,
+      isFeatured: _readBoolean(map['is_featured']),
+      isRemote: _readBoolean(map['is_remote']),
       createdAt: DateTime.tryParse(
         map['created_at']?.toString() ?? '',
       ),
@@ -210,6 +210,10 @@ class Business {
         .replaceAll('ؤ', 'و')
         .replaceAll('ئ', 'ي')
         .replaceAll('ة', 'ه');
+  }
+
+  static bool _readBoolean(Object? value) {
+    return value == true || value == 1 || value?.toString() == '1';
   }
 
   static String? _nullableString(Object? value) {

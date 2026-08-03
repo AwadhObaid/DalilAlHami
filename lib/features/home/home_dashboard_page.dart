@@ -108,7 +108,7 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
           ),
           StickyAdvertisementHeader(
             controller: _adPageController,
-            advertisements: AppCatalog.advertisements,
+            advertisements: _directoryStore.advertisements,
           ),
           const SliverToBoxAdapter(
             child: SizedBox(height: AppSpacing.lg),

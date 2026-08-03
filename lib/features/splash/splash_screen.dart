@@ -88,7 +88,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'جارٍ تجهيز أحدث بيانات الدليل…',
+                  'جارٍ فتح قاعدة الدليل المحلية…',
                   textAlign: TextAlign.center,
                   style: AppTextStyles.bodySmall.copyWith(
                     color: AppColors.white.withValues(alpha: 0.8),
