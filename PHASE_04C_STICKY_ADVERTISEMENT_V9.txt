@@ -1,0 +1,10 @@
+Dalil Al Hami - Phase 04C sticky advertisement enhancement v9
+================================================================
+
+- The advertisement starts as the existing full-size panel.
+- It collapses into a compact pinned banner while the user scrolls.
+- It expands again when the user returns to the top.
+- The pinned banner remains part of the scroll layout and does not cover cards.
+- The layout adapts to narrow screens and enlarged system text.
+- Pull-to-refresh and PageStorage scroll preservation remain enabled.
+- Supabase, authentication, business cards, and navigation are unchanged.

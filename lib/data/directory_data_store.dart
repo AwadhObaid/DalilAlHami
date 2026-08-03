@@ -32,7 +32,13 @@ class DirectoryDataStore extends ChangeNotifier {
 
   bool get isLoading => _isLoading;
 
+  bool get isInitialLoading => _isLoading && !_hasLoaded;
+
+  bool get isRefreshing => _isLoading && _hasLoaded;
+
   bool get hasLoaded => _hasLoaded;
+
+  bool get hasData => _categories.isNotEmpty || businesses.isNotEmpty;
 
   DirectoryDataSource? get source => _source;
 

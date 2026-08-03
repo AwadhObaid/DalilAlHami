@@ -1,0 +1,8 @@
+Dalil Al Hami - Phase 04C keyboard/category fix v7
+=====================================================
+
+Fixes:
+- Widget tests now emulate keyboard viewInsets explicitly.
+- Category card is public and tested independently from Supabase loading.
+- Category test uses the longest local category name at 125% text scale.
+- No production behavior is removed from v5/v6.

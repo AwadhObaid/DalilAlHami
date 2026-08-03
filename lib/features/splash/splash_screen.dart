@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_dimensions.dart';
+import '../../core/theme/app_text_styles.dart';
 import '../../data/directory_data_store.dart';
 import '../home/home_screen.dart';
 
@@ -21,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> _bootstrap() async {
     await Future.wait<void>([
       DirectoryDataStore.instance.load(),
-      Future<void>.delayed(const Duration(seconds: 3)),
+      Future<void>.delayed(const Duration(milliseconds: 1200)),
     ]);
 
     if (!mounted) {
@@ -40,46 +42,60 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.primaryTeal,
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                'assets/logo.png',
-                height: 120,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(
-                    Icons.store,
-                    size: 80,
-                    color: Colors.white,
-                  );
-                },
-              ),
-              const SizedBox(height: 15),
-              const Text(
-                'أهلاً بك في التطبيق',
-                style: TextStyle(
-                  color: Colors.yellow,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xl,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset(
+                  'assets/logo.png',
+                  height: 120,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.location_city_rounded,
+                      size: 80,
+                      color: AppColors.white,
+                    );
+                  },
                 ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'دليلك السريع للوصول إلى الأرقام بكل سهولة',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'أهلاً بك في التطبيق',
+                  style: AppTextStyles.titleLarge.copyWith(
+                    color: Colors.yellow,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 40),
-              const CircularProgressIndicator(
-                color: AppColors.lightTeal,
-              ),
-            ],
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  'دليلك السريع للوصول إلى الأرقام بكل سهولة',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.white,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xxl),
+                const SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: CircularProgressIndicator(
+                    color: AppColors.lightTeal,
+                    strokeWidth: 3,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'جارٍ تجهيز أحدث بيانات الدليل…',
+                  textAlign: TextAlign.center,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.white.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

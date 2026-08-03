@@ -34,7 +34,8 @@ class CategoryCircleItem extends StatelessWidget {
                 vertical: AppSpacing.xxs,
               ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
+                mainAxisSize: MainAxisSize.max,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
                     width: AppSizes.categoryIcon,
@@ -62,14 +63,18 @@ class CategoryCircleItem extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xxs),
-                  Text(
-                    category.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.textPrimary,
-                      height: 1.2,
+                  Flexible(
+                    child: Center(
+                      child: Text(
+                        category.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.textPrimary,
+                          height: 1.15,
+                        ),
+                      ),
                     ),
                   ),
                 ],

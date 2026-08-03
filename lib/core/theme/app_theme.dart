@@ -154,6 +154,31 @@ abstract final class AppTheme {
           ),
         ),
       ),
+      navigationBarTheme: NavigationBarThemeData(
+        height: 72,
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 8,
+        indicatorColor: AppColors.primarySoft,
+        iconTheme: WidgetStateProperty.resolveWith<IconThemeData>(
+          (states) {
+            final selected = states.contains(WidgetState.selected);
+            return IconThemeData(
+              color: selected ? AppColors.primaryTeal : AppColors.textMuted,
+              size: selected ? 25 : 23,
+            );
+          },
+        ),
+        labelTextStyle: WidgetStateProperty.resolveWith<TextStyle>(
+          (states) {
+            final selected = states.contains(WidgetState.selected);
+            return AppTextStyles.labelSmall.copyWith(
+              color: selected ? AppColors.primaryTeal : AppColors.textSecondary,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+            );
+          },
+        ),
+      ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: AppColors.lightTeal,
         foregroundColor: AppColors.primaryDark,

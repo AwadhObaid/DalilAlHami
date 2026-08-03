@@ -1,0 +1,12 @@
+Dalil Al Hami - Phase 04C responsive fix v4
+================================================
+
+Fixes:
+- Replaces Material NavigationBar internal fixed destination layout.
+- Clamps text scaling only inside bottom navigation labels.
+- Keeps full system text scaling across the rest of the app.
+- Makes the advertising slider height responsive.
+- Makes horizontal transport categories responsive.
+- Makes category labels flexible inside bounded cards.
+- Makes the service grid taller when system text is enlarged.
+- Adds separate narrow-screen tests for navigation and home content.

@@ -1,0 +1,6 @@
+Dalil Al Hami - Phase 04C keyboard/category fix v8
+
+Fix:
+- Added the named super.key parameter to CategoryOverviewCard.
+- Resolves the use_key_in_widget_constructors analyzer rule.
+- Keeps all v5-v7 keyboard and category layout fixes unchanged.
