@@ -1,0 +1,3 @@
+Dalil Al Hami - Phase 05B-2A Import Fix v2
+Removed the unused sync_queue_item.dart import from sync_queue_processor.dart.
+No runtime logic, SQLite schema, retry policy, or Supabase migration was changed.

@@ -1,0 +1,20 @@
+Dalil Al Hami - Phase 05B-2A Offline Sync Queue
+================================================
+
+SQLite schema version: 3
+Supabase migration: 20260804003000_offline_sync_queue.sql
+
+Implemented:
+- Durable per-user local queue for business create/update/delete/review operations.
+- SQLite v2-to-v3 upgrade without deleting cached directory data.
+- Deduplication keys and idempotent operation IDs.
+- Sequential queue processing with one active worker.
+- Exponential retry schedule and maximum-attempt protection.
+- Permanent server-error classification without pointless retries.
+- Recovery of operations interrupted while the app was closed.
+- Supabase RPC with authenticated ownership checks.
+- Server-side operation receipts to prevent duplicate execution.
+- Queue processing before incremental directory synchronization.
+
+This phase provides the infrastructure only. User-facing create/edit screens
+will be connected to the queue in Phase 05B-2B.

@@ -12,6 +12,9 @@ import 'local_directory_store.dart';
 import 'repositories/directory_sync_repository.dart';
 import 'repositories/supabase_directory_repository.dart';
 import 'sync/directory_sync_delta.dart';
+import 'sync_queue/supabase_sync_queue_gateway.dart';
+import 'sync_queue/sync_queue_item.dart';
+import 'sync_queue/sync_queue_processor.dart';
 
 enum DirectoryDataSource {
   supabase,
@@ -41,6 +44,9 @@ class DirectoryDataStore extends ChangeNotifier {
   bool _isSyncing = false;
   bool _hasLoaded = false;
   Future<void>? _activeSync;
+  SyncQueueSummary _syncQueueSummary = const SyncQueueSummary();
+  SyncQueueProcessReport? _lastQueueReport;
+  bool _isQueueProcessing = false;
 
   bool get isLoading => _isLoading || _isSyncing;
 
@@ -68,6 +74,16 @@ class DirectoryDataStore extends ChangeNotifier {
   int get lastSyncVersion => _lastSyncVersion;
 
   int get lastSyncChangeCount => _lastSyncChangeCount;
+
+  SyncQueueSummary get syncQueueSummary => _syncQueueSummary;
+
+  SyncQueueProcessReport? get lastQueueReport => _lastQueueReport;
+
+  bool get isQueueProcessing => _isQueueProcessing;
+
+  int get pendingSyncOperationCount => _syncQueueSummary.actionable;
+
+  int get failedSyncOperationCount => _syncQueueSummary.failed;
 
   String? get lastSyncLabel {
     final value = _lastSyncedAt?.toLocal();
@@ -108,23 +124,44 @@ class DirectoryDataStore extends ChangeNotifier {
   }
 
   String get storageStatusSubtitle {
+    final queueSuffix = _queueStatusSuffix;
+
     if (_isSyncing) {
-      return 'جارٍ طلب التغييرات الجديدة فقط من Supabase.';
+      return 'جارٍ إرسال العمليات المحلية وطلب التغييرات الجديدة فقط '
+          'من Supabase.$queueSuffix';
     }
 
     return switch (_source) {
       DirectoryDataSource.supabase =>
         'إصدار المزامنة: $_lastSyncVersion، وآخر مزامنة'
             '${lastSyncLabel == null ? ' مكتملة.' : ': $lastSyncLabel.'}'
-            ' التغييرات الأخيرة: $_lastSyncChangeCount.',
+            ' التغييرات الأخيرة: $_lastSyncChangeCount.$queueSuffix',
       DirectoryDataSource.sqliteCache =>
-        fallbackMessage ?? 'تعمل آخر نسخة محفوظة دون إنترنت.',
+        '${fallbackMessage ?? 'تعمل آخر نسخة محفوظة دون إنترنت.'}'
+            '$queueSuffix',
       DirectoryDataSource.bundledSeed =>
-        fallbackMessage ?? 'تعمل البيانات المرفقة مع التطبيق.',
+        '${fallbackMessage ?? 'تعمل البيانات المرفقة مع التطبيق.'}'
+            '$queueSuffix',
       DirectoryDataSource.memoryFallback =>
-        fallbackMessage ?? 'تعمل بيانات مؤقتة في الذاكرة.',
-      null => 'لم يتم تحميل البيانات بعد.',
+        '${fallbackMessage ?? 'تعمل بيانات مؤقتة في الذاكرة.'}'
+            '$queueSuffix',
+      null => 'لم يتم تحميل البيانات بعد.$queueSuffix',
     };
+  }
+
+  String get _queueStatusSuffix {
+    if (_isQueueProcessing) {
+      return ' جارٍ معالجة طابور العمليات.';
+    }
+    if (_syncQueueSummary.exhausted > 0) {
+      return ' توجد ${_syncQueueSummary.exhausted} عملية متوقفة '
+          'بعد استنفاد المحاولات.';
+    }
+    if (_syncQueueSummary.actionable > 0) {
+      return ' توجد ${_syncQueueSummary.actionable} عملية محلية '
+          'بانتظار المزامنة.';
+    }
+    return '';
   }
 
   Object? get lastError => _lastError;
@@ -166,6 +203,9 @@ class DirectoryDataStore extends ChangeNotifier {
     _isSyncing = false;
     _hasLoaded = true;
     _activeSync = null;
+    _syncQueueSummary = const SyncQueueSummary();
+    _lastQueueReport = null;
+    _isQueueProcessing = false;
   }
 
   Future<void> load({
@@ -197,7 +237,7 @@ class DirectoryDataStore extends ChangeNotifier {
     }
 
     if (SupabaseService.isInitialized) {
-      unawaited(_synchronizeFromSupabase());
+      unawaited(_flushQueueThenSynchronize());
     }
   }
 
@@ -207,7 +247,7 @@ class DirectoryDataStore extends ChangeNotifier {
       return existing;
     }
 
-    final operation = _synchronizeFromSupabase();
+    final operation = _flushQueueThenSynchronize();
     _activeSync = operation;
 
     return operation.whenComplete(() {
@@ -215,6 +255,72 @@ class DirectoryDataStore extends ChangeNotifier {
         _activeSync = null;
       }
     });
+  }
+
+  Future<SyncQueueItem> enqueueBusinessOperation({
+    required SyncQueueOperationType operationType,
+    required Map<String, dynamic> payload,
+    String? entityId,
+    String? operationId,
+    String? deduplicationKey,
+    int maxAttempts = 5,
+    int priority = 0,
+    bool processWhenOnline = true,
+  }) async {
+    final userId = SupabaseService.isInitialized
+        ? SupabaseService.client.auth.currentUser?.id
+        : null;
+    if (userId == null || userId.isEmpty) {
+      throw StateError(
+        'يجب تسجيل الدخول قبل حفظ عملية مزامنة محلية.',
+      );
+    }
+
+    final resolvedOperationId = operationId ?? SyncQueueOperationId.create();
+    final item = await _database.enqueueSyncOperation(
+      SyncQueueEnqueueRequest(
+        userId: userId,
+        operationId: resolvedOperationId,
+        deduplicationKey: deduplicationKey ?? resolvedOperationId,
+        entityType: SyncQueueEntityType.business,
+        operationType: operationType,
+        entityId: entityId,
+        payload: payload,
+        maxAttempts: maxAttempts,
+        priority: priority,
+      ),
+    );
+
+    await _refreshQueueSummary();
+    notifyListeners();
+
+    if (processWhenOnline && SupabaseService.isInitialized) {
+      unawaited(refresh());
+    }
+
+    return item;
+  }
+
+  Future<void> retryFailedSyncOperations({
+    String? operationId,
+  }) async {
+    final userId = SupabaseService.isInitialized
+        ? SupabaseService.client.auth.currentUser?.id
+        : null;
+    if (userId == null || userId.isEmpty) {
+      return;
+    }
+
+    await _database.retryFailedSyncOperations(
+      userId: userId,
+      operationId: operationId,
+    );
+    await _refreshQueueSummary();
+    notifyListeners();
+
+    if (SupabaseService.isInitialized) {
+      await refresh();
+    }
   }
 
   List<Business> search(String query) {
@@ -246,6 +352,64 @@ class DirectoryDataStore extends ChangeNotifier {
     );
     _lastSyncChangeCount = 0;
     _lastError = null;
+    await _refreshQueueSummary();
+  }
+
+  Future<void> _flushQueueThenSynchronize() async {
+    try {
+      await _processSyncQueue();
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Offline sync queue processing failed: $error\n$stackTrace',
+      );
+    }
+
+    await _synchronizeFromSupabase();
+  }
+
+  Future<void> _processSyncQueue() async {
+    if (!SupabaseService.isInitialized || _isQueueProcessing) {
+      await _refreshQueueSummary();
+      return;
+    }
+
+    final userId = SupabaseService.client.auth.currentUser?.id;
+    if (userId == null || userId.isEmpty) {
+      await _refreshQueueSummary();
+      return;
+    }
+
+    _isQueueProcessing = true;
+    notifyListeners();
+
+    try {
+      final processor = SyncQueueProcessor(
+        database: _database,
+        gateway: SupabaseSyncQueueGateway(
+          SupabaseService.client,
+        ),
+        userId: userId,
+      );
+      _lastQueueReport = await processor.processPending();
+    } finally {
+      await _refreshQueueSummary();
+      _isQueueProcessing = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _refreshQueueSummary() async {
+    final userId = SupabaseService.isInitialized
+        ? SupabaseService.client.auth.currentUser?.id
+        : null;
+    if (userId == null || userId.isEmpty) {
+      _syncQueueSummary = const SyncQueueSummary();
+      return;
+    }
+
+    _syncQueueSummary = await _database.readSyncQueueSummary(
+      userId: userId,
+    );
   }
 
   Future<void> _synchronizeFromSupabase() async {
@@ -288,6 +452,7 @@ class DirectoryDataStore extends ChangeNotifier {
         source: DirectoryDataSource.supabase,
       );
       _lastSyncChangeCount = delta.changeCount;
+      await _refreshQueueSummary();
       _lastError = null;
     } catch (error, stackTrace) {
       debugPrint(
@@ -378,5 +543,6 @@ class DirectoryDataStore extends ChangeNotifier {
     _lastError = error;
     _lastSyncVersion = 0;
     _lastSyncChangeCount = 0;
+    _syncQueueSummary = const SyncQueueSummary();
   }
 }

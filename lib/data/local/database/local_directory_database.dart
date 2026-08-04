@@ -6,6 +6,7 @@ import '../../../models/directory_advertisement.dart';
 import '../../../models/service_category.dart';
 import '../../local_directory_store.dart';
 import '../../sync/directory_sync_delta.dart';
+import '../../sync_queue/sync_queue_item.dart';
 import 'directory_database_platform.dart';
 
 class DirectoryCacheSnapshot {
@@ -39,12 +40,13 @@ class LocalDirectoryDatabase {
 
   static final LocalDirectoryDatabase instance = LocalDirectoryDatabase();
 
-  static const int schemaVersion = 2;
+  static const int schemaVersion = 3;
 
   static const String _categoriesTable = 'directory_categories';
   static const String _businessesTable = 'directory_businesses';
   static const String _advertisementsTable = 'directory_advertisements';
   static const String _metadataTable = 'directory_metadata';
+  static const String _syncQueueTable = 'directory_sync_queue';
 
   static const String _initializedKey = 'cache_initialized';
   static const String _cacheKindKey = 'cache_kind';
@@ -167,6 +169,8 @@ class LocalDirectoryDatabase {
       )
       ''',
     );
+
+    await _createSyncQueueSchema(database);
   }
 
   Future<void> _upgradeSchema(
@@ -174,63 +178,125 @@ class LocalDirectoryDatabase {
     int oldVersion,
     int newVersion,
   ) async {
-    if (oldVersion >= 2) {
-      return;
+    if (oldVersion < 2) {
+      await database.execute(
+        'ALTER TABLE $_categoriesTable ADD COLUMN updated_at TEXT',
+      );
+      await database.execute(
+        'ALTER TABLE $_categoriesTable ADD COLUMN deleted_at TEXT',
+      );
+      await database.execute(
+        'ALTER TABLE $_categoriesTable '
+        'ADD COLUMN sync_version INTEGER NOT NULL DEFAULT 0',
+      );
+
+      await database.execute(
+        'ALTER TABLE $_businessesTable ADD COLUMN updated_at TEXT',
+      );
+      await database.execute(
+        'ALTER TABLE $_businessesTable ADD COLUMN deleted_at TEXT',
+      );
+      await database.execute(
+        'ALTER TABLE $_businessesTable '
+        'ADD COLUMN sync_version INTEGER NOT NULL DEFAULT 0',
+      );
+
+      await database.execute(
+        'ALTER TABLE $_advertisementsTable ADD COLUMN image_path TEXT',
+      );
+      await database.execute(
+        'ALTER TABLE $_advertisementsTable ADD COLUMN target_url TEXT',
+      );
+      await database.execute(
+        'ALTER TABLE $_advertisementsTable '
+        'ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1',
+      );
+      await database.execute(
+        'ALTER TABLE $_advertisementsTable ADD COLUMN starts_at TEXT',
+      );
+      await database.execute(
+        'ALTER TABLE $_advertisementsTable ADD COLUMN ends_at TEXT',
+      );
+      await database.execute(
+        'ALTER TABLE $_advertisementsTable ADD COLUMN updated_at TEXT',
+      );
+      await database.execute(
+        'ALTER TABLE $_advertisementsTable ADD COLUMN deleted_at TEXT',
+      );
+      await database.execute(
+        'ALTER TABLE $_advertisementsTable '
+        'ADD COLUMN sync_version INTEGER NOT NULL DEFAULT 0',
+      );
+
+      await _writeMetadata(
+        database,
+        _lastSyncVersionKey,
+        '0',
+      );
     }
 
+    if (oldVersion < 3) {
+      await _createSyncQueueSchema(database);
+    }
+  }
+
+  static Future<void> _createSyncQueueSchema(
+    DatabaseExecutor database,
+  ) async {
     await database.execute(
-      'ALTER TABLE $_categoriesTable ADD COLUMN updated_at TEXT',
-    );
-    await database.execute(
-      'ALTER TABLE $_categoriesTable ADD COLUMN deleted_at TEXT',
-    );
-    await database.execute(
-      'ALTER TABLE $_categoriesTable '
-      'ADD COLUMN sync_version INTEGER NOT NULL DEFAULT 0',
+      '''
+      CREATE TABLE IF NOT EXISTS $_syncQueueTable (
+        id TEXT PRIMARY KEY,
+        deduplication_key TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT,
+        operation_type TEXT NOT NULL,
+        payload_json TEXT NOT NULL DEFAULT '{}',
+        status TEXT NOT NULL DEFAULT 'pending'
+          CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+        attempt_count INTEGER NOT NULL DEFAULT 0,
+        max_attempts INTEGER NOT NULL DEFAULT 5,
+        priority INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        next_attempt_at TEXT,
+        last_attempt_at TEXT,
+        completed_at TEXT,
+        last_error TEXT,
+        remote_result_json TEXT,
+        CHECK (entity_type IN ('business')),
+        CHECK (operation_type IN (
+          'create',
+          'update',
+          'delete',
+          'submit_for_review'
+        )),
+        CHECK (attempt_count >= 0),
+        CHECK (max_attempts >= 1)
+      )
+      ''',
     );
 
     await database.execute(
-      'ALTER TABLE $_businessesTable ADD COLUMN updated_at TEXT',
-    );
-    await database.execute(
-      'ALTER TABLE $_businessesTable ADD COLUMN deleted_at TEXT',
-    );
-    await database.execute(
-      'ALTER TABLE $_businessesTable '
-      'ADD COLUMN sync_version INTEGER NOT NULL DEFAULT 0',
+      '''
+      CREATE UNIQUE INDEX IF NOT EXISTS directory_sync_queue_user_dedupe_idx
+      ON $_syncQueueTable(user_id, deduplication_key)
+      ''',
     );
 
     await database.execute(
-      'ALTER TABLE $_advertisementsTable ADD COLUMN image_path TEXT',
-    );
-    await database.execute(
-      'ALTER TABLE $_advertisementsTable ADD COLUMN target_url TEXT',
-    );
-    await database.execute(
-      'ALTER TABLE $_advertisementsTable '
-      'ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1',
-    );
-    await database.execute(
-      'ALTER TABLE $_advertisementsTable ADD COLUMN starts_at TEXT',
-    );
-    await database.execute(
-      'ALTER TABLE $_advertisementsTable ADD COLUMN ends_at TEXT',
-    );
-    await database.execute(
-      'ALTER TABLE $_advertisementsTable ADD COLUMN updated_at TEXT',
-    );
-    await database.execute(
-      'ALTER TABLE $_advertisementsTable ADD COLUMN deleted_at TEXT',
-    );
-    await database.execute(
-      'ALTER TABLE $_advertisementsTable '
-      'ADD COLUMN sync_version INTEGER NOT NULL DEFAULT 0',
+      '''
+      CREATE INDEX IF NOT EXISTS directory_sync_queue_due_idx
+      ON $_syncQueueTable(user_id, status, next_attempt_at, priority, created_at)
+      ''',
     );
 
-    await _writeMetadata(
-      database,
-      _lastSyncVersionKey,
-      '0',
+    await database.execute(
+      '''
+      CREATE INDEX IF NOT EXISTS directory_sync_queue_entity_idx
+      ON $_syncQueueTable(entity_type, entity_id, created_at)
+      ''',
     );
   }
 
@@ -526,6 +592,364 @@ class LocalDirectoryDatabase {
     });
 
     return readSnapshot();
+  }
+
+  Future<SyncQueueItem> enqueueSyncOperation(
+    SyncQueueEnqueueRequest request,
+  ) async {
+    request.validate();
+    final database = await this.database;
+
+    return database.transaction((transaction) async {
+      final existingRows = await transaction.query(
+        _syncQueueTable,
+        where: 'user_id = ? AND deduplication_key = ?',
+        whereArgs: [request.userId, request.deduplicationKey],
+        limit: 1,
+      );
+      if (existingRows.isNotEmpty) {
+        return SyncQueueItem.fromDatabaseRow(existingRows.first);
+      }
+
+      final createdAt = request.createdAt.toUtc();
+      final item = SyncQueueItem(
+        id: request.operationId,
+        deduplicationKey: request.deduplicationKey,
+        userId: request.userId,
+        entityType: request.entityType,
+        entityId: request.entityId,
+        operationType: request.operationType,
+        payload: Map<String, dynamic>.unmodifiable(request.payload),
+        status: SyncQueueStatus.pending,
+        attemptCount: 0,
+        maxAttempts: request.maxAttempts,
+        priority: request.priority,
+        createdAt: createdAt,
+        updatedAt: createdAt,
+        nextAttemptAt: createdAt,
+      );
+
+      await transaction.insert(
+        _syncQueueTable,
+        item.toDatabaseRow(),
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+
+      final storedRows = await transaction.query(
+        _syncQueueTable,
+        where: 'user_id = ? AND deduplication_key = ?',
+        whereArgs: [request.userId, request.deduplicationKey],
+        limit: 1,
+      );
+      if (storedRows.isEmpty) {
+        throw StateError(
+          'The sync queue operation could not be stored.',
+        );
+      }
+
+      return SyncQueueItem.fromDatabaseRow(storedRows.first);
+    });
+  }
+
+  Future<List<SyncQueueItem>> readDueSyncOperations({
+    required String userId,
+    required DateTime now,
+    int limit = 20,
+  }) async {
+    final database = await this.database;
+    final rows = await database.query(
+      _syncQueueTable,
+      where: '''
+        user_id = ?
+        AND status IN ('pending', 'failed')
+        AND attempt_count < max_attempts
+        AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
+      ''',
+      whereArgs: [
+        userId,
+        now.toUtc().toIso8601String(),
+      ],
+      orderBy: 'priority DESC, created_at ASC',
+      limit: limit,
+    );
+
+    return rows.map(SyncQueueItem.fromDatabaseRow).toList(growable: false);
+  }
+
+  Future<List<SyncQueueItem>> readSyncOperations({
+    required String userId,
+    int limit = 100,
+  }) async {
+    final database = await this.database;
+    final rows = await database.query(
+      _syncQueueTable,
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'created_at DESC',
+      limit: limit,
+    );
+
+    return rows.map(SyncQueueItem.fromDatabaseRow).toList(growable: false);
+  }
+
+  Future<SyncQueueItem?> claimSyncOperation(
+    String operationId, {
+    required String userId,
+    required DateTime now,
+  }) async {
+    final database = await this.database;
+    final utcNow = now.toUtc();
+
+    return database.transaction((transaction) async {
+      final updated = await transaction.rawUpdate(
+        '''
+        UPDATE $_syncQueueTable
+        SET
+          status = 'processing',
+          attempt_count = attempt_count + 1,
+          last_attempt_at = ?,
+          updated_at = ?,
+          last_error = NULL
+        WHERE id = ?
+          AND user_id = ?
+          AND status IN ('pending', 'failed')
+          AND attempt_count < max_attempts
+          AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
+        ''',
+        [
+          utcNow.toIso8601String(),
+          utcNow.toIso8601String(),
+          operationId,
+          userId,
+          utcNow.toIso8601String(),
+        ],
+      );
+
+      if (updated != 1) {
+        return null;
+      }
+
+      final rows = await transaction.query(
+        _syncQueueTable,
+        where: 'id = ? AND user_id = ?',
+        whereArgs: [operationId, userId],
+        limit: 1,
+      );
+      return rows.isEmpty ? null : SyncQueueItem.fromDatabaseRow(rows.first);
+    });
+  }
+
+  Future<void> markSyncOperationCompleted(
+    String operationId, {
+    required String userId,
+    required DateTime completedAt,
+    required Map<String, dynamic> remoteResult,
+  }) async {
+    final database = await this.database;
+    final utcCompletedAt = completedAt.toUtc();
+    final current = await _readSyncOperationById(
+      database,
+      operationId,
+      userId: userId,
+    );
+    if (current == null) {
+      throw StateError('Sync queue operation was not found.');
+    }
+
+    final completed = current.copyWith(
+      status: SyncQueueStatus.completed,
+      updatedAt: utcCompletedAt,
+      nextAttemptAt: null,
+      completedAt: utcCompletedAt,
+      lastError: null,
+      remoteResult: Map<String, dynamic>.unmodifiable(remoteResult),
+    );
+
+    await database.update(
+      _syncQueueTable,
+      completed.toDatabaseRow(),
+      where: 'id = ? AND user_id = ?',
+      whereArgs: [operationId, userId],
+    );
+  }
+
+  Future<void> markSyncOperationFailed(
+    String operationId, {
+    required String userId,
+    required DateTime failedAt,
+    required Object error,
+    DateTime? nextAttemptAt,
+    bool exhaust = false,
+  }) async {
+    final database = await this.database;
+    final utcFailedAt = failedAt.toUtc();
+    final message = error.toString();
+    final safeMessage =
+        message.length <= 2000 ? message : message.substring(0, 2000);
+
+    if (exhaust) {
+      await database.rawUpdate(
+        '''
+        UPDATE $_syncQueueTable
+        SET
+          status = ?,
+          attempt_count = max_attempts,
+          updated_at = ?,
+          next_attempt_at = NULL,
+          completed_at = NULL,
+          last_error = ?
+        WHERE id = ? AND user_id = ? AND status = ?
+        ''',
+        [
+          SyncQueueStatus.failed.databaseValue,
+          utcFailedAt.toIso8601String(),
+          safeMessage,
+          operationId,
+          userId,
+          SyncQueueStatus.processing.databaseValue,
+        ],
+      );
+      return;
+    }
+
+    await database.update(
+      _syncQueueTable,
+      {
+        'status': SyncQueueStatus.failed.databaseValue,
+        'updated_at': utcFailedAt.toIso8601String(),
+        'next_attempt_at': nextAttemptAt?.toUtc().toIso8601String(),
+        'completed_at': null,
+        'last_error': safeMessage,
+      },
+      where: 'id = ? AND user_id = ? AND status = ?',
+      whereArgs: [
+        operationId,
+        userId,
+        SyncQueueStatus.processing.databaseValue,
+      ],
+    );
+  }
+
+  Future<int> recoverInterruptedSyncOperations({
+    required String userId,
+    required DateTime now,
+    required Duration processingTimeout,
+  }) async {
+    final database = await this.database;
+    final utcNow = now.toUtc();
+    final cutoff = utcNow.subtract(processingTimeout);
+
+    return database.rawUpdate(
+      '''
+      UPDATE $_syncQueueTable
+      SET
+        status = 'failed',
+        updated_at = ?,
+        next_attempt_at = ?,
+        last_error = 'Recovered after an interrupted queue attempt.'
+      WHERE user_id = ?
+        AND status = 'processing'
+        AND (last_attempt_at IS NULL OR last_attempt_at <= ?)
+      ''',
+      [
+        utcNow.toIso8601String(),
+        utcNow.toIso8601String(),
+        userId,
+        cutoff.toIso8601String(),
+      ],
+    );
+  }
+
+  Future<int> retryFailedSyncOperations({
+    required String userId,
+    String? operationId,
+    DateTime? now,
+  }) async {
+    final database = await this.database;
+    final utcNow = (now ?? DateTime.now()).toUtc();
+    final where = StringBuffer(
+      "user_id = ? AND status = 'failed' "
+      "AND attempt_count < max_attempts",
+    );
+    final whereArgs = <Object?>[userId];
+
+    if (operationId != null && operationId.trim().isNotEmpty) {
+      where.write(' AND id = ?');
+      whereArgs.add(operationId);
+    }
+
+    return database.update(
+      _syncQueueTable,
+      {
+        'status': SyncQueueStatus.pending.databaseValue,
+        'updated_at': utcNow.toIso8601String(),
+        'next_attempt_at': utcNow.toIso8601String(),
+        'last_error': null,
+      },
+      where: where.toString(),
+      whereArgs: whereArgs,
+    );
+  }
+
+  Future<SyncQueueSummary> readSyncQueueSummary({
+    required String userId,
+  }) async {
+    final database = await this.database;
+    final rows = await database.rawQuery(
+      '''
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending,
+        SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) AS processing,
+        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed,
+        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed,
+        SUM(
+          CASE
+            WHEN status = 'failed' AND attempt_count >= max_attempts
+              THEN 1
+            ELSE 0
+          END
+        ) AS exhausted
+      FROM $_syncQueueTable
+      WHERE user_id = ?
+      ''',
+      [userId],
+    );
+
+    return rows.isEmpty
+        ? const SyncQueueSummary()
+        : SyncQueueSummary.fromAggregateRow(rows.first);
+  }
+
+  Future<int> pruneCompletedSyncOperations({
+    required String userId,
+    required DateTime olderThan,
+  }) async {
+    final database = await this.database;
+    return database.delete(
+      _syncQueueTable,
+      where: 'user_id = ? AND status = ? AND completed_at < ?',
+      whereArgs: [
+        userId,
+        SyncQueueStatus.completed.databaseValue,
+        olderThan.toUtc().toIso8601String(),
+      ],
+    );
+  }
+
+  Future<SyncQueueItem?> _readSyncOperationById(
+    DatabaseExecutor database,
+    String operationId, {
+    required String userId,
+  }) async {
+    final rows = await database.query(
+      _syncQueueTable,
+      where: 'id = ? AND user_id = ?',
+      whereArgs: [operationId, userId],
+      limit: 1,
+    );
+
+    return rows.isEmpty ? null : SyncQueueItem.fromDatabaseRow(rows.first);
   }
 
   Future<void> close() async {
