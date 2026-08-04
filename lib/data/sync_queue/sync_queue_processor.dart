@@ -95,7 +95,7 @@ class SyncQueueProcessor {
     await _database.recoverInterruptedSyncOperations(
       userId: _userId,
       now: startedAt,
-      processingTimeout: const Duration(minutes: 5),
+      processingTimeout: Duration.zero,
     );
 
     final candidates = await _database.readDueSyncOperations(

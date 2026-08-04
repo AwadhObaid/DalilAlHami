@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/services/auth_session_store.dart';
+import '../../core/services/automatic_sync_coordinator.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../data/directory_data_store.dart';
 import '../auth/google_sign_in_page.dart';
@@ -11,6 +12,7 @@ import '../profile/account_hub_page.dart';
 import '../profile/profile_page.dart';
 import '../search/directory_search_page.dart';
 import 'home_dashboard_page.dart';
+import 'widgets/automatic_sync_status_banner.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -27,9 +29,12 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final AuthSessionStore _authStore = AuthSessionStore.instance;
   final DirectoryDataStore _directoryStore = DirectoryDataStore.instance;
+  final AutomaticSyncCoordinator _syncCoordinator =
+      AutomaticSyncCoordinator.instance;
 
   late int _currentIndex;
   late final List<Widget> _pages;
+  int _lastAnnouncedSyncEvent = 0;
 
   @override
   void initState() {
@@ -51,6 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     _authStore.addListener(_handleAuthChanged);
+    _syncCoordinator.addListener(_handleAutomaticSyncChanged);
 
     if (!_directoryStore.hasLoaded) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -62,6 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _authStore.removeListener(_handleAuthChanged);
+    _syncCoordinator.removeListener(_handleAutomaticSyncChanged);
     super.dispose();
   }
 
@@ -69,6 +76,35 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) {
       setState(() {});
     }
+  }
+
+  void _handleAutomaticSyncChanged() {
+    if (!mounted) {
+      return;
+    }
+
+    final snapshot = _syncCoordinator.snapshot;
+    setState(() {});
+
+    if (!snapshot.announce || snapshot.eventId == _lastAnnouncedSyncEvent) {
+      return;
+    }
+
+    _lastAnnouncedSyncEvent = snapshot.eventId;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      final isAttention =
+          snapshot.phase == AutomaticSyncPhase.attentionRequired;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(snapshot.message),
+          backgroundColor: isAttention ? AppColors.danger : AppColors.success,
+        ),
+      );
+    });
   }
 
   void _selectTab(int index) {
@@ -102,19 +138,30 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final isKeyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
 
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       resizeToAvoidBottomInset: true,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
+      body: Column(
+        children: <Widget>[
+          AutomaticSyncStatusBanner(
+            coordinator: _syncCoordinator,
+          ),
+          Expanded(
+            child: IndexedStack(
+              index: _currentIndex,
+              children: _pages,
+            ),
+          ),
+        ],
       ),
-      floatingActionButton: keyboardVisible
+      floatingActionButton: isKeyboardVisible
           ? null
           : FloatingActionButton.extended(
-              key: const ValueKey<String>('business-action-button'),
+              key: const ValueKey<String>(
+                'business-action-button',
+              ),
               onPressed: _openAccountFlow,
               icon: Icon(
                 _authStore.isAuthenticated

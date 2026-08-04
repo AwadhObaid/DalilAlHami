@@ -1,0 +1,9 @@
+Dalil Al Hami - Phase 05B-4 Automatic Sync and Recovery
+- Automatic synchronization starts on app launch, sign-in, resume, and queue changes.
+- A single active run prevents duplicate concurrent synchronization.
+- Interrupted processing operations continue through the existing queue recovery.
+- Network checks use a platform-safe reachability adapter without a new package.
+- Retry delay increases gradually and is capped to protect battery and data usage.
+- A compact global banner reports syncing, offline, retry, completion, and attention states.
+- The Sync Queue page displays automatic status and still supports manual synchronization.
+- No Supabase migration or SQLite schema upgrade is required.

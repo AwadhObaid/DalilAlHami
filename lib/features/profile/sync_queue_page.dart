@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
+import '../../core/services/automatic_sync_coordinator.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../data/directory_data_store.dart';
 import '../../data/sync_queue/sync_conflict.dart';
@@ -16,6 +19,8 @@ class SyncQueuePage extends StatefulWidget {
 
 class _SyncQueuePageState extends State<SyncQueuePage> {
   final DirectoryDataStore _store = DirectoryDataStore.instance;
+  final AutomaticSyncCoordinator _syncCoordinator =
+      AutomaticSyncCoordinator.instance;
 
   List<SyncQueueItem> _items = const <SyncQueueItem>[];
   Map<String, SyncConflict> _conflictsByOperation =
@@ -29,12 +34,14 @@ class _SyncQueuePageState extends State<SyncQueuePage> {
   void initState() {
     super.initState();
     _store.addListener(_handleStoreChanged);
+    _syncCoordinator.addListener(_handleAutomaticSyncChanged);
     _load();
   }
 
   @override
   void dispose() {
     _store.removeListener(_handleStoreChanged);
+    _syncCoordinator.removeListener(_handleAutomaticSyncChanged);
     super.dispose();
   }
 
@@ -44,11 +51,26 @@ class _SyncQueuePageState extends State<SyncQueuePage> {
     }
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  void _handleAutomaticSyncChanged() {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {});
+    final phase = _syncCoordinator.snapshot.phase;
+    if (phase == AutomaticSyncPhase.completed ||
+        phase == AutomaticSyncPhase.attentionRequired) {
+      unawaited(_load(showLoading: false));
+    }
+  }
+
+  Future<void> _load({bool showLoading = true}) async {
+    if (showLoading) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
 
     try {
       final items = await _store.readCurrentUserSyncOperations();
@@ -73,7 +95,9 @@ class _SyncQueuePageState extends State<SyncQueuePage> {
     } finally {
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          if (showLoading) {
+            _isLoading = false;
+          }
         });
       }
     }
@@ -89,7 +113,9 @@ class _SyncQueuePageState extends State<SyncQueuePage> {
     });
 
     try {
-      await _store.processSyncQueueNow();
+      await _syncCoordinator.runNow(
+        trigger: AutomaticSyncTrigger.manual,
+      );
       await _load();
     } finally {
       if (mounted) {
@@ -186,6 +212,7 @@ class _SyncQueuePageState extends State<SyncQueuePage> {
       ),
       body: Column(
         children: <Widget>[
+          _buildAutomaticSyncCard(),
           _buildSummary(),
           Expanded(child: _buildBody()),
         ],
@@ -208,6 +235,71 @@ class _SyncQueuePageState extends State<SyncQueuePage> {
             _isProcessing ? 'جارٍ تنفيذ العمليات' : 'مزامنة الآن',
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildAutomaticSyncCard() {
+    final snapshot = _syncCoordinator.snapshot;
+    final retryLabel = snapshot.nextRetryLabel;
+    final color = switch (snapshot.phase) {
+      AutomaticSyncPhase.attentionRequired => AppColors.danger,
+      AutomaticSyncPhase.offline ||
+      AutomaticSyncPhase.waitingRetry =>
+        AppColors.warning,
+      AutomaticSyncPhase.completed => AppColors.success,
+      _ => AppColors.primaryTeal,
+    };
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+        0,
+      ),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: <Widget>[
+          if (snapshot.isBusy)
+            SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: color,
+              ),
+            )
+          else
+            Icon(Icons.sync_rounded, color: color),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'المزامنة التلقائية',
+                  style: AppTextStyles.titleSmall.copyWith(
+                    color: color,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  retryLabel == null
+                      ? snapshot.message
+                      : '${snapshot.message} الموعد التالي: $retryLabel',
+                  style: AppTextStyles.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
