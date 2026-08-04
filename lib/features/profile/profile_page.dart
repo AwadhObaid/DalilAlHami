@@ -206,6 +206,7 @@ class _ProfilePageState extends State<ProfilePage> {
         description: _descriptionController.text,
         address: _addressController.text,
         businessId: _business?.id,
+        baseSyncVersion: _business?.syncVersion,
         selectedImagePath: _selectedImagePath,
       );
 

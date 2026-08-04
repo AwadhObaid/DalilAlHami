@@ -139,6 +139,7 @@ class AccountRepository {
     required String description,
     required String address,
     String? businessId,
+    int? baseSyncVersion,
     String? selectedImagePath,
   }) async {
     final user = _user;
@@ -193,6 +194,7 @@ class AccountRepository {
       status: 'local_pending',
       isActive: true,
       localLogoPath: localLogoPath,
+      syncVersion: baseSyncVersion ?? 0,
     );
     await _database.upsertOwnedBusinessCache(localBusiness);
 
@@ -205,7 +207,8 @@ class AccountRepository {
       'address': normalizedAddress,
       if (localLogoPath != null)
         SupabaseSyncQueueGateway.localLogoPathKey: localLogoPath,
-      if (isCreate) 'submit_for_review': true,
+      if (!isCreate) '_base_sync_version': baseSyncVersion ?? 0,
+      'submit_for_review': true,
     };
 
     await _directoryStore.enqueueBusinessOperation(
@@ -217,16 +220,7 @@ class AccountRepository {
       priority: 10,
     );
 
-    var queuedOperationCount = 1;
-    if (!isCreate) {
-      await _directoryStore.enqueueBusinessOperation(
-        operationType: SyncQueueOperationType.submitForReview,
-        entityId: savedBusinessId,
-        payload: const <String, dynamic>{},
-        priority: 9,
-      );
-      queuedOperationCount++;
-    }
+    const queuedOperationCount = 1;
 
     final cachedBusinesses = await _database.readOwnedBusinessesCache(
       userId: user.id,
@@ -259,10 +253,16 @@ class AccountRepository {
     String businessId,
   ) async {
     final user = _user;
+    final cachedBusiness = await _database.readOwnedBusinessCacheById(
+      userId: user.id,
+      businessId: businessId,
+    );
     final item = await _directoryStore.enqueueBusinessOperation(
       operationType: SyncQueueOperationType.deleteEntity,
       entityId: businessId,
-      payload: const <String, dynamic>{},
+      payload: <String, dynamic>{
+        '_base_sync_version': cachedBusiness?.syncVersion ?? 0,
+      },
       priority: 20,
     );
     await _database.deleteOwnedBusinessCache(
@@ -343,7 +343,7 @@ class AccountRepository {
         .select(
           'id, owner_id, category_id, name, description, phone, '
           'whatsapp, address, logo_url, status, rejection_reason, '
-          'is_active, created_at, updated_at, '
+          'is_active, sync_version, created_at, updated_at, '
           'categories!businesses_category_id_fkey(id, name_ar, slug)',
         )
         .eq('owner_id', userId)

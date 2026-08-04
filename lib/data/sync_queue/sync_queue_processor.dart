@@ -1,4 +1,5 @@
 import '../local/database/local_directory_database.dart';
+import 'sync_conflict.dart';
 import 'sync_queue_remote_gateway.dart';
 
 class SyncQueueBackoff {
@@ -23,6 +24,7 @@ class SyncQueueProcessReport {
     this.completed = 0,
     this.failed = 0,
     this.exhausted = 0,
+    this.conflicts = 0,
     this.skipped = 0,
     this.lastError,
   });
@@ -33,12 +35,13 @@ class SyncQueueProcessReport {
   final int completed;
   final int failed;
   final int exhausted;
+  final int conflicts;
   final int skipped;
   final Object? lastError;
 
   bool get hasWork => claimed > 0;
 
-  bool get isSuccessful => failed == 0 && exhausted == 0;
+  bool get isSuccessful => failed == 0 && exhausted == 0 && conflicts == 0;
 }
 
 class SyncQueueProcessor {
@@ -105,6 +108,7 @@ class SyncQueueProcessor {
     var completedCount = 0;
     var failedCount = 0;
     var exhaustedCount = 0;
+    var conflictCount = 0;
     var skippedCount = 0;
     Object? lastError;
 
@@ -125,6 +129,61 @@ class SyncQueueProcessor {
 
       try {
         final result = await _gateway.execute(claimed);
+
+        if (result.isConflict) {
+          final conflictId = result.conflictId;
+          final serverSnapshot = result.serverSnapshot;
+          final serverVersion = result.serverSyncVersion;
+
+          if (conflictId == null ||
+              serverSnapshot == null ||
+              serverVersion == null) {
+            throw const FormatException(
+              'Supabase returned an incomplete conflict response.',
+            );
+          }
+
+          final detectedAt = _clock().toUtc();
+          await _database.upsertSyncConflict(
+            SyncConflict(
+              id: conflictId,
+              operationId: claimed.id,
+              userId: _userId,
+              entityType: claimed.entityType,
+              operationType: claimed.operationType,
+              entityId: claimed.entityId ?? '',
+              localPayload: claimed.payload,
+              serverSnapshot: serverSnapshot,
+              expectedSyncVersion: result.expectedSyncVersion ?? 0,
+              serverSyncVersion: serverVersion,
+              status: SyncConflictStatus.pending,
+              createdAt: detectedAt,
+              updatedAt: detectedAt,
+            ),
+          );
+          await _database.markSyncOperationFailed(
+            claimed.id,
+            userId: _userId,
+            failedAt: detectedAt,
+            error: const SyncQueueExecutionException(
+              message: 'A remote synchronization conflict requires a decision.',
+              code: 'SYNC_CONFLICT',
+              isRetryable: false,
+            ),
+            exhaust: true,
+            remoteResult: result.raw,
+          );
+          conflictCount++;
+          continue;
+        }
+
+        await _database.applySuccessfulBusinessSync(
+          userId: _userId,
+          entityId: claimed.entityId ?? result.entityId ?? '',
+          operationType: claimed.operationType,
+          serverSnapshot: result.serverSnapshot,
+          serverSyncVersion: result.serverSyncVersion,
+        );
         await _database.markSyncOperationCompleted(
           claimed.id,
           userId: _userId,
@@ -170,6 +229,7 @@ class SyncQueueProcessor {
       completed: completedCount,
       failed: failedCount,
       exhausted: exhaustedCount,
+      conflicts: conflictCount,
       skipped: skippedCount,
       lastError: lastError,
     );

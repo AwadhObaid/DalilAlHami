@@ -14,6 +14,8 @@ class AccountBusiness {
     this.logoUrl,
     this.localLogoPath,
     this.rejectionReason,
+    this.syncVersion = 0,
+    this.updatedAt,
   });
 
   final String id;
@@ -30,6 +32,8 @@ class AccountBusiness {
   final String? logoUrl;
   final String? localLogoPath;
   final String? rejectionReason;
+  final int syncVersion;
+  final DateTime? updatedAt;
 
   bool get isApproved => status == 'approved';
 
@@ -65,6 +69,8 @@ class AccountBusiness {
     String? logoUrl,
     String? localLogoPath,
     String? rejectionReason,
+    int? syncVersion,
+    DateTime? updatedAt,
   }) {
     return AccountBusiness(
       id: id ?? this.id,
@@ -81,6 +87,8 @@ class AccountBusiness {
       logoUrl: logoUrl ?? this.logoUrl,
       localLogoPath: localLogoPath ?? this.localLogoPath,
       rejectionReason: rejectionReason ?? this.rejectionReason,
+      syncVersion: syncVersion ?? this.syncVersion,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -109,7 +117,18 @@ class AccountBusiness {
       logoUrl: _nullableText(data['logo_url']),
       localLogoPath: _nullableText(data['local_logo_path']),
       rejectionReason: _nullableText(data['rejection_reason']),
+      syncVersion: _readInteger(data['sync_version']),
+      updatedAt: DateTime.tryParse(
+        data['updated_at']?.toString() ?? '',
+      )?.toUtc(),
     );
+  }
+
+  static int _readInteger(Object? value) {
+    if (value is num) {
+      return value.toInt();
+    }
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   static String? _nullableText(Object? value) {

@@ -13,6 +13,7 @@ import 'repositories/directory_sync_repository.dart';
 import 'repositories/supabase_directory_repository.dart';
 import 'sync/directory_sync_delta.dart';
 import 'sync_queue/supabase_sync_queue_gateway.dart';
+import 'sync_queue/sync_conflict.dart';
 import 'sync_queue/sync_queue_item.dart';
 import 'sync_queue/sync_queue_processor.dart';
 
@@ -47,6 +48,7 @@ class DirectoryDataStore extends ChangeNotifier {
   SyncQueueSummary _syncQueueSummary = const SyncQueueSummary();
   SyncQueueProcessReport? _lastQueueReport;
   bool _isQueueProcessing = false;
+  int _pendingSyncConflictCount = 0;
 
   bool get isLoading => _isLoading || _isSyncing;
 
@@ -84,6 +86,8 @@ class DirectoryDataStore extends ChangeNotifier {
   int get pendingSyncOperationCount => _syncQueueSummary.actionable;
 
   int get failedSyncOperationCount => _syncQueueSummary.failed;
+
+  int get pendingSyncConflictCount => _pendingSyncConflictCount;
 
   String? get lastSyncLabel {
     final value = _lastSyncedAt?.toLocal();
@@ -153,6 +157,10 @@ class DirectoryDataStore extends ChangeNotifier {
     if (_isQueueProcessing) {
       return ' جارٍ معالجة طابور العمليات.';
     }
+    if (_pendingSyncConflictCount > 0) {
+      return ' توجد $_pendingSyncConflictCount تعارضات مزامنة '
+          'تحتاج إلى قرار.';
+    }
     if (_syncQueueSummary.exhausted > 0) {
       return ' توجد ${_syncQueueSummary.exhausted} عملية متوقفة '
           'بعد استنفاد المحاولات.';
@@ -206,6 +214,7 @@ class DirectoryDataStore extends ChangeNotifier {
     _syncQueueSummary = const SyncQueueSummary();
     _lastQueueReport = null;
     _isQueueProcessing = false;
+    _pendingSyncConflictCount = 0;
   }
 
   Future<void> load({
@@ -339,6 +348,116 @@ class DirectoryDataStore extends ChangeNotifier {
     );
   }
 
+  Future<List<SyncConflict>> readCurrentUserSyncConflicts({
+    bool pendingOnly = false,
+    int limit = 100,
+  }) async {
+    final userId = SupabaseService.isInitialized
+        ? SupabaseService.client.auth.currentUser?.id
+        : null;
+    if (userId == null || userId.isEmpty) {
+      return const <SyncConflict>[];
+    }
+
+    return _database.readSyncConflicts(
+      userId: userId,
+      pendingOnly: pendingOnly,
+      limit: limit,
+    );
+  }
+
+  Future<void> resolveSyncConflictUseServer(
+    SyncConflict conflict,
+  ) async {
+    final userId = SupabaseService.isInitialized
+        ? SupabaseService.client.auth.currentUser?.id
+        : null;
+    if (userId == null || userId != conflict.userId) {
+      throw StateError('لا يمكن حل تعارض تابع لحساب آخر.');
+    }
+
+    await _database.applyServerConflictSnapshot(conflict);
+    final resolvedAt = DateTime.now().toUtc();
+    await _database.resolveSyncConflict(
+      conflict: conflict,
+      resolution: SyncConflictStatus.resolvedUseServer,
+      resolvedAt: resolvedAt,
+    );
+    await _notifyRemoteConflictResolution(
+      conflict: conflict,
+      resolution: SyncConflictStatus.resolvedUseServer,
+    );
+    await _refreshQueueSummary();
+    notifyListeners();
+  }
+
+  Future<void> resolveSyncConflictKeepLocal(
+    SyncConflict conflict,
+  ) async {
+    final userId = SupabaseService.isInitialized
+        ? SupabaseService.client.auth.currentUser?.id
+        : null;
+    if (userId == null || userId != conflict.userId) {
+      throw StateError('لا يمكن حل تعارض تابع لحساب آخر.');
+    }
+
+    final payload = <String, dynamic>{
+      ...conflict.localPayload,
+      '_base_sync_version': conflict.serverSyncVersion,
+    };
+    final resolutionOperation = await enqueueBusinessOperation(
+      operationType: conflict.operationType,
+      entityId: conflict.entityId,
+      payload: payload,
+      priority: 30,
+      processWhenOnline: false,
+    );
+
+    final resolvedAt = DateTime.now().toUtc();
+    await _database.resolveSyncConflict(
+      conflict: conflict,
+      resolution: SyncConflictStatus.resolvedKeepLocal,
+      resolvedAt: resolvedAt,
+      resolutionOperationId: resolutionOperation.id,
+    );
+    await _notifyRemoteConflictResolution(
+      conflict: conflict,
+      resolution: SyncConflictStatus.resolvedKeepLocal,
+      resolutionOperationId: resolutionOperation.id,
+    );
+    await _refreshQueueSummary();
+    notifyListeners();
+
+    if (SupabaseService.isInitialized) {
+      await refresh();
+    }
+  }
+
+  Future<void> _notifyRemoteConflictResolution({
+    required SyncConflict conflict,
+    required SyncConflictStatus resolution,
+    String? resolutionOperationId,
+  }) async {
+    if (!SupabaseService.isInitialized) {
+      return;
+    }
+
+    try {
+      await SupabaseService.client.rpc(
+        'resolve_directory_sync_conflict',
+        params: <String, dynamic>{
+          'p_conflict_id': conflict.id,
+          'p_resolution': resolution.databaseValue,
+          'p_resolution_operation_id': resolutionOperationId,
+        },
+      );
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Remote conflict audit update failed: $error\n$stackTrace',
+      );
+    }
+  }
+
   Future<void> refreshSyncQueueState() async {
     await _refreshQueueSummary();
     notifyListeners();
@@ -429,12 +548,19 @@ class DirectoryDataStore extends ChangeNotifier {
         : null;
     if (userId == null || userId.isEmpty) {
       _syncQueueSummary = const SyncQueueSummary();
+      _pendingSyncConflictCount = 0;
       return;
     }
 
     _syncQueueSummary = await _database.readSyncQueueSummary(
       userId: userId,
     );
+    final conflicts = await _database.readSyncConflicts(
+      userId: userId,
+      pendingOnly: true,
+      limit: 1000,
+    );
+    _pendingSyncConflictCount = conflicts.length;
   }
 
   Future<void> _synchronizeFromSupabase() async {
@@ -569,5 +695,6 @@ class DirectoryDataStore extends ChangeNotifier {
     _lastSyncVersion = 0;
     _lastSyncChangeCount = 0;
     _syncQueueSummary = const SyncQueueSummary();
+    _pendingSyncConflictCount = 0;
   }
 }

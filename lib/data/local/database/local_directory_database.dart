@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:sqflite_common/sqlite_api.dart';
 
 import '../../../core/constants/app_catalog.dart';
@@ -8,6 +10,7 @@ import '../../../models/directory_advertisement.dart';
 import '../../../models/service_category.dart';
 import '../../local_directory_store.dart';
 import '../../sync/directory_sync_delta.dart';
+import '../../sync_queue/sync_conflict.dart';
 import '../../sync_queue/sync_queue_item.dart';
 import 'directory_database_platform.dart';
 
@@ -42,13 +45,14 @@ class LocalDirectoryDatabase {
 
   static final LocalDirectoryDatabase instance = LocalDirectoryDatabase();
 
-  static const int schemaVersion = 5;
+  static const int schemaVersion = 6;
 
   static const String _categoriesTable = 'directory_categories';
   static const String _businessesTable = 'directory_businesses';
   static const String _advertisementsTable = 'directory_advertisements';
   static const String _metadataTable = 'directory_metadata';
   static const String _syncQueueTable = 'directory_sync_queue';
+  static const String _syncConflictsTable = 'directory_sync_conflicts';
   static const String _accountProfilesTable = 'account_profiles_cache';
   static const String _accountBusinessesTable = 'account_businesses_cache';
 
@@ -175,6 +179,7 @@ class LocalDirectoryDatabase {
     );
 
     await _createSyncQueueSchema(database);
+    await _createSyncConflictSchema(database);
     await _createAccountCacheSchema(database);
   }
 
@@ -251,6 +256,17 @@ class LocalDirectoryDatabase {
     if (oldVersion < 5) {
       await _migrateAccountBusinessesToMultiple(database);
     }
+
+    if (oldVersion >= 5 && oldVersion < 6) {
+      await database.execute(
+        'ALTER TABLE $_accountBusinessesTable '
+        'ADD COLUMN sync_version INTEGER NOT NULL DEFAULT 0',
+      );
+    }
+
+    if (oldVersion < 6) {
+      await _createSyncConflictSchema(database);
+    }
   }
 
   static Future<void> _createSyncQueueSchema(
@@ -313,6 +329,51 @@ class LocalDirectoryDatabase {
     );
   }
 
+  static Future<void> _createSyncConflictSchema(
+    DatabaseExecutor database,
+  ) async {
+    await database.execute(
+      '''
+      CREATE TABLE IF NOT EXISTS $_syncConflictsTable (
+        id TEXT PRIMARY KEY,
+        operation_id TEXT NOT NULL UNIQUE,
+        user_id TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        operation_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        local_payload_json TEXT NOT NULL DEFAULT '{}',
+        server_snapshot_json TEXT NOT NULL DEFAULT '{}',
+        expected_sync_version INTEGER NOT NULL DEFAULT 0,
+        server_sync_version INTEGER NOT NULL DEFAULT 0,
+        status TEXT NOT NULL DEFAULT 'pending'
+          CHECK (status IN (
+            'pending',
+            'resolved_keep_local',
+            'resolved_use_server'
+          )),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        resolved_at TEXT,
+        resolution_operation_id TEXT,
+        CHECK (entity_type IN ('business')),
+        CHECK (operation_type IN (
+          'create',
+          'update',
+          'delete',
+          'submit_for_review'
+        ))
+      )
+      ''',
+    );
+
+    await database.execute(
+      '''
+      CREATE INDEX IF NOT EXISTS directory_sync_conflicts_user_status_idx
+      ON $_syncConflictsTable(user_id, status, created_at DESC)
+      ''',
+    );
+  }
+
   static Future<void> _migrateAccountBusinessesToMultiple(
     DatabaseExecutor database,
   ) async {
@@ -339,6 +400,7 @@ class LocalDirectoryDatabase {
         status TEXT NOT NULL DEFAULT 'draft',
         rejection_reason TEXT,
         is_active INTEGER NOT NULL DEFAULT 1,
+        sync_version INTEGER NOT NULL DEFAULT 0,
         updated_at TEXT NOT NULL
       )
       ''',
@@ -348,12 +410,12 @@ class LocalDirectoryDatabase {
       INSERT OR REPLACE INTO $_accountBusinessesTable (
         id, user_id, category_id, category_name, name, description,
         phone, whatsapp, address, logo_url, local_logo_path, status,
-        rejection_reason, is_active, updated_at
+        rejection_reason, is_active, sync_version, updated_at
       )
       SELECT
         id, user_id, category_id, category_name, name, description,
         phone, whatsapp, address, logo_url, local_logo_path, status,
-        rejection_reason, is_active, updated_at
+        rejection_reason, is_active, 0, updated_at
       FROM $previousTable
       ''',
     );
@@ -401,6 +463,7 @@ class LocalDirectoryDatabase {
         status TEXT NOT NULL DEFAULT 'draft',
         rejection_reason TEXT,
         is_active INTEGER NOT NULL DEFAULT 1,
+        sync_version INTEGER NOT NULL DEFAULT 0,
         updated_at TEXT NOT NULL
       )
       ''',
@@ -777,7 +840,10 @@ class LocalDirectoryDatabase {
         'status': business.status,
         'rejection_reason': business.rejectionReason,
         'is_active': business.isActive ? 1 : 0,
-        'updated_at': (updatedAt ?? DateTime.now()).toUtc().toIso8601String(),
+        'sync_version': business.syncVersion,
+        'updated_at': (updatedAt ?? business.updatedAt ?? DateTime.now())
+            .toUtc()
+            .toIso8601String(),
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -804,6 +870,20 @@ class LocalDirectoryDatabase {
     return businesses.isEmpty ? null : businesses.first;
   }
 
+  Future<AccountBusiness?> readOwnedBusinessCacheById({
+    required String userId,
+    required String businessId,
+  }) async {
+    final database = await this.database;
+    final rows = await database.query(
+      _accountBusinessesTable,
+      where: 'user_id = ? AND id = ?',
+      whereArgs: <Object?>[userId, businessId],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : _accountBusinessFromRow(rows.first);
+  }
+
   static AccountBusiness _accountBusinessFromRow(
     Map<String, Object?> row,
   ) {
@@ -822,6 +902,10 @@ class LocalDirectoryDatabase {
       logoUrl: _nullableString(row['logo_url']),
       localLogoPath: _nullableString(row['local_logo_path']),
       rejectionReason: _nullableString(row['rejection_reason']),
+      syncVersion: _readInteger(row['sync_version']),
+      updatedAt: DateTime.tryParse(
+        row['updated_at']?.toString() ?? '',
+      )?.toUtc(),
     );
   }
 
@@ -1031,6 +1115,7 @@ class LocalDirectoryDatabase {
     required Object error,
     DateTime? nextAttemptAt,
     bool exhaust = false,
+    Map<String, dynamic>? remoteResult,
   }) async {
     final database = await this.database;
     final utcFailedAt = failedAt.toUtc();
@@ -1048,13 +1133,15 @@ class LocalDirectoryDatabase {
           updated_at = ?,
           next_attempt_at = NULL,
           completed_at = NULL,
-          last_error = ?
+          last_error = ?,
+          remote_result_json = ?
         WHERE id = ? AND user_id = ? AND status = ?
         ''',
         [
           SyncQueueStatus.failed.databaseValue,
           utcFailedAt.toIso8601String(),
           safeMessage,
+          remoteResult == null ? null : jsonEncode(remoteResult),
           operationId,
           userId,
           SyncQueueStatus.processing.databaseValue,
@@ -1109,6 +1196,153 @@ class LocalDirectoryDatabase {
         cutoff.toIso8601String(),
       ],
     );
+  }
+
+  Future<void> upsertSyncConflict(SyncConflict conflict) async {
+    final database = await this.database;
+    await database.insert(
+      _syncConflictsTable,
+      conflict.toDatabaseRow(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<SyncConflict>> readSyncConflicts({
+    required String userId,
+    bool pendingOnly = false,
+    int limit = 100,
+  }) async {
+    final database = await this.database;
+    final rows = await database.query(
+      _syncConflictsTable,
+      where: pendingOnly ? "user_id = ? AND status = 'pending'" : 'user_id = ?',
+      whereArgs: <Object?>[userId],
+      orderBy: 'created_at DESC',
+      limit: limit,
+    );
+    return rows.map(SyncConflict.fromDatabaseRow).toList(growable: false);
+  }
+
+  Future<SyncConflict?> readSyncConflictByOperation({
+    required String userId,
+    required String operationId,
+  }) async {
+    final database = await this.database;
+    final rows = await database.query(
+      _syncConflictsTable,
+      where: 'user_id = ? AND operation_id = ?',
+      whereArgs: <Object?>[userId, operationId],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : SyncConflict.fromDatabaseRow(rows.first);
+  }
+
+  Future<void> resolveSyncConflict({
+    required SyncConflict conflict,
+    required SyncConflictStatus resolution,
+    required DateTime resolvedAt,
+    String? resolutionOperationId,
+  }) async {
+    if (resolution == SyncConflictStatus.pending) {
+      throw ArgumentError.value(
+        resolution,
+        'resolution',
+        'A resolved conflict cannot remain pending.',
+      );
+    }
+
+    final database = await this.database;
+    final utcResolvedAt = resolvedAt.toUtc();
+    await database.transaction((transaction) async {
+      await transaction.update(
+        _syncConflictsTable,
+        <String, Object?>{
+          'status': resolution.databaseValue,
+          'updated_at': utcResolvedAt.toIso8601String(),
+          'resolved_at': utcResolvedAt.toIso8601String(),
+          'resolution_operation_id': resolutionOperationId,
+        },
+        where: 'id = ? AND user_id = ?',
+        whereArgs: <Object?>[conflict.id, conflict.userId],
+      );
+
+      final operation = await _readSyncOperationById(
+        transaction,
+        conflict.operationId,
+        userId: conflict.userId,
+      );
+      if (operation != null) {
+        final result = <String, dynamic>{
+          ...?operation.remoteResult,
+          'conflict_resolution': resolution.databaseValue,
+          if (resolutionOperationId != null)
+            'resolution_operation_id': resolutionOperationId,
+        };
+        final completed = operation.copyWith(
+          status: SyncQueueStatus.completed,
+          updatedAt: utcResolvedAt,
+          nextAttemptAt: null,
+          completedAt: utcResolvedAt,
+          lastError: null,
+          remoteResult: result,
+        );
+        await transaction.update(
+          _syncQueueTable,
+          completed.toDatabaseRow(),
+          where: 'id = ? AND user_id = ?',
+          whereArgs: <Object?>[operation.id, conflict.userId],
+        );
+      }
+    });
+  }
+
+  Future<void> applySuccessfulBusinessSync({
+    required String userId,
+    required String entityId,
+    required SyncQueueOperationType operationType,
+    required Map<String, dynamic>? serverSnapshot,
+    required int? serverSyncVersion,
+  }) async {
+    if (operationType == SyncQueueOperationType.deleteEntity) {
+      await deleteOwnedBusinessCache(
+        userId: userId,
+        businessId: entityId,
+      );
+      return;
+    }
+
+    if (serverSnapshot == null) {
+      return;
+    }
+
+    final business = AccountBusiness.fromMap(
+      <String, dynamic>{
+        ...serverSnapshot,
+        'id': entityId,
+        'owner_id': userId,
+        if (serverSyncVersion != null) 'sync_version': serverSyncVersion,
+      },
+    );
+    await upsertOwnedBusinessCache(business);
+  }
+
+  Future<void> applyServerConflictSnapshot(
+    SyncConflict conflict,
+  ) async {
+    if (conflict.entityType != SyncQueueEntityType.business) {
+      return;
+    }
+
+    final snapshot = conflict.serverSnapshot;
+    final business = AccountBusiness.fromMap(
+      <String, dynamic>{
+        ...snapshot,
+        'id': conflict.entityId,
+        'owner_id': conflict.userId,
+        'sync_version': conflict.serverSyncVersion,
+      },
+    );
+    await upsertOwnedBusinessCache(business);
   }
 
   Future<int> retryFailedSyncOperations({

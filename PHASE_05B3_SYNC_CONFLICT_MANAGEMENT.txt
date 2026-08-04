@@ -1,0 +1,13 @@
+Dalil Al Hami - Phase 05B-3 Sync Conflict Management
+
+Features:
+- Optimistic concurrency based on businesses.sync_version.
+- Local and remote snapshots are preserved when versions diverge.
+- SQLite conflict registry survives restarts and offline periods.
+- Sync Queue shows conflicts separately from ordinary failures.
+- Users can keep local edits or adopt the server copy.
+- Keeping local edits creates a new guarded operation from the latest server version.
+- Adopting the server copy updates the local account cache safely.
+- Supabase stores an auditable conflict record and resolution.
+- SQLite schema version: 6.
+- Supabase migration: 20260804193000_sync_conflict_management.sql.

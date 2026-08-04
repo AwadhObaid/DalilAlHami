@@ -32,6 +32,10 @@ class SyncQueueRemoteResult {
     required this.raw,
     this.entityId,
     this.replayed = false,
+    this.conflictId,
+    this.expectedSyncVersion,
+    this.serverSyncVersion,
+    this.serverSnapshot,
   });
 
   final String operationId;
@@ -39,7 +43,13 @@ class SyncQueueRemoteResult {
   final String? entityId;
   final String remoteStatus;
   final bool replayed;
+  final String? conflictId;
+  final int? expectedSyncVersion;
+  final int? serverSyncVersion;
+  final Map<String, dynamic>? serverSnapshot;
   final Map<String, dynamic> raw;
+
+  bool get isConflict => remoteStatus == 'conflict';
 
   factory SyncQueueRemoteResult.fromRpc(Object? response) {
     final map = _readMap(response);
@@ -50,6 +60,14 @@ class SyncQueueRemoteResult {
       entityId: _nullableText(map['entity_id']),
       remoteStatus: map['remote_status']?.toString() ?? 'processed',
       replayed: _readBoolean(map['replayed']),
+      conflictId: _nullableText(map['conflict_id']),
+      expectedSyncVersion: _readNullableInteger(
+        map['expected_sync_version'],
+      ),
+      serverSyncVersion: _readNullableInteger(
+        map['server_sync_version'],
+      ),
+      serverSnapshot: _readNullableMap(map['server_snapshot']),
       raw: Map<String, dynamic>.unmodifiable(map),
     );
   }
@@ -69,6 +87,31 @@ class SyncQueueRemoteResult {
 
   static bool _readBoolean(Object? value) {
     return value == true || value == 1 || value?.toString() == '1';
+  }
+
+  static int? _readNullableInteger(Object? value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    return int.tryParse(value.toString());
+  }
+
+  static Map<String, dynamic>? _readNullableMap(Object? value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is Map<String, dynamic>) {
+      return Map<String, dynamic>.unmodifiable(value);
+    }
+    if (value is Map) {
+      return Map<String, dynamic>.unmodifiable(
+        Map<String, dynamic>.from(value),
+      );
+    }
+    return null;
   }
 
   static String? _nullableText(Object? value) {
