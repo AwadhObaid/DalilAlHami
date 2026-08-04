@@ -1,6 +1,8 @@
 import 'package:sqflite_common/sqlite_api.dart';
 
 import '../../../core/constants/app_catalog.dart';
+import '../../../models/account_business.dart';
+import '../../../models/account_profile.dart';
 import '../../../models/business.dart';
 import '../../../models/directory_advertisement.dart';
 import '../../../models/service_category.dart';
@@ -40,13 +42,15 @@ class LocalDirectoryDatabase {
 
   static final LocalDirectoryDatabase instance = LocalDirectoryDatabase();
 
-  static const int schemaVersion = 3;
+  static const int schemaVersion = 5;
 
   static const String _categoriesTable = 'directory_categories';
   static const String _businessesTable = 'directory_businesses';
   static const String _advertisementsTable = 'directory_advertisements';
   static const String _metadataTable = 'directory_metadata';
   static const String _syncQueueTable = 'directory_sync_queue';
+  static const String _accountProfilesTable = 'account_profiles_cache';
+  static const String _accountBusinessesTable = 'account_businesses_cache';
 
   static const String _initializedKey = 'cache_initialized';
   static const String _cacheKindKey = 'cache_kind';
@@ -171,6 +175,7 @@ class LocalDirectoryDatabase {
     );
 
     await _createSyncQueueSchema(database);
+    await _createAccountCacheSchema(database);
   }
 
   Future<void> _upgradeSchema(
@@ -238,6 +243,14 @@ class LocalDirectoryDatabase {
     if (oldVersion < 3) {
       await _createSyncQueueSchema(database);
     }
+
+    if (oldVersion < 4) {
+      await _createAccountCacheSchema(database);
+    }
+
+    if (oldVersion < 5) {
+      await _migrateAccountBusinessesToMultiple(database);
+    }
   }
 
   static Future<void> _createSyncQueueSchema(
@@ -296,6 +309,107 @@ class LocalDirectoryDatabase {
       '''
       CREATE INDEX IF NOT EXISTS directory_sync_queue_entity_idx
       ON $_syncQueueTable(entity_type, entity_id, created_at)
+      ''',
+    );
+  }
+
+  static Future<void> _migrateAccountBusinessesToMultiple(
+    DatabaseExecutor database,
+  ) async {
+    const previousTable = 'account_businesses_cache_single_owner_v4';
+
+    await database.execute('DROP TABLE IF EXISTS $previousTable');
+    await database.execute(
+      'ALTER TABLE $_accountBusinessesTable RENAME TO $previousTable',
+    );
+    await database.execute(
+      '''
+      CREATE TABLE $_accountBusinessesTable (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        category_id TEXT NOT NULL DEFAULT '',
+        category_name TEXT NOT NULL DEFAULT '',
+        name TEXT NOT NULL DEFAULT '',
+        description TEXT NOT NULL DEFAULT '',
+        phone TEXT NOT NULL DEFAULT '',
+        whatsapp TEXT NOT NULL DEFAULT '',
+        address TEXT NOT NULL DEFAULT 'الحامي',
+        logo_url TEXT,
+        local_logo_path TEXT,
+        status TEXT NOT NULL DEFAULT 'draft',
+        rejection_reason TEXT,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        updated_at TEXT NOT NULL
+      )
+      ''',
+    );
+    await database.execute(
+      '''
+      INSERT OR REPLACE INTO $_accountBusinessesTable (
+        id, user_id, category_id, category_name, name, description,
+        phone, whatsapp, address, logo_url, local_logo_path, status,
+        rejection_reason, is_active, updated_at
+      )
+      SELECT
+        id, user_id, category_id, category_name, name, description,
+        phone, whatsapp, address, logo_url, local_logo_path, status,
+        rejection_reason, is_active, updated_at
+      FROM $previousTable
+      ''',
+    );
+    await database.execute('DROP TABLE $previousTable');
+    await database.execute(
+      '''
+      CREATE INDEX IF NOT EXISTS account_businesses_cache_user_idx
+      ON $_accountBusinessesTable(user_id, updated_at DESC)
+      ''',
+    );
+  }
+
+  static Future<void> _createAccountCacheSchema(
+    DatabaseExecutor database,
+  ) async {
+    await database.execute(
+      '''
+      CREATE TABLE IF NOT EXISTS $_accountProfilesTable (
+        user_id TEXT PRIMARY KEY,
+        full_name TEXT NOT NULL DEFAULT '',
+        email TEXT,
+        phone TEXT NOT NULL DEFAULT '',
+        avatar_url TEXT,
+        role TEXT NOT NULL DEFAULT 'user',
+        is_active INTEGER NOT NULL DEFAULT 1,
+        updated_at TEXT NOT NULL
+      )
+      ''',
+    );
+
+    await database.execute(
+      '''
+      CREATE TABLE IF NOT EXISTS $_accountBusinessesTable (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        category_id TEXT NOT NULL DEFAULT '',
+        category_name TEXT NOT NULL DEFAULT '',
+        name TEXT NOT NULL DEFAULT '',
+        description TEXT NOT NULL DEFAULT '',
+        phone TEXT NOT NULL DEFAULT '',
+        whatsapp TEXT NOT NULL DEFAULT '',
+        address TEXT NOT NULL DEFAULT 'الحامي',
+        logo_url TEXT,
+        local_logo_path TEXT,
+        status TEXT NOT NULL DEFAULT 'draft',
+        rejection_reason TEXT,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        updated_at TEXT NOT NULL
+      )
+      ''',
+    );
+
+    await database.execute(
+      '''
+      CREATE INDEX IF NOT EXISTS account_businesses_cache_user_idx
+      ON $_accountBusinessesTable(user_id, updated_at DESC)
       ''',
     );
   }
@@ -594,6 +708,143 @@ class LocalDirectoryDatabase {
     return readSnapshot();
   }
 
+  Future<void> upsertAccountProfile(
+    AccountProfile profile, {
+    DateTime? updatedAt,
+  }) async {
+    final database = await this.database;
+    await database.insert(
+      _accountProfilesTable,
+      <String, Object?>{
+        'user_id': profile.id,
+        'full_name': profile.fullName,
+        'email': profile.email,
+        'phone': profile.phone,
+        'avatar_url': profile.avatarUrl,
+        'role': profile.role,
+        'is_active': profile.isActive ? 1 : 0,
+        'updated_at': (updatedAt ?? DateTime.now()).toUtc().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<AccountProfile?> readAccountProfile({
+    required String userId,
+  }) async {
+    final database = await this.database;
+    final rows = await database.query(
+      _accountProfilesTable,
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      return null;
+    }
+
+    final row = rows.first;
+    return AccountProfile(
+      id: row['user_id']?.toString() ?? '',
+      fullName: row['full_name']?.toString() ?? '',
+      phone: row['phone']?.toString() ?? '',
+      role: row['role']?.toString() ?? 'user',
+      isActive: _readBoolean(row['is_active']),
+      email: _nullableString(row['email']),
+      avatarUrl: _nullableString(row['avatar_url']),
+    );
+  }
+
+  Future<void> upsertOwnedBusinessCache(
+    AccountBusiness business, {
+    DateTime? updatedAt,
+  }) async {
+    final database = await this.database;
+    await database.insert(
+      _accountBusinessesTable,
+      <String, Object?>{
+        'id': business.id,
+        'user_id': business.ownerId,
+        'category_id': business.categoryId,
+        'category_name': business.categoryName,
+        'name': business.name,
+        'description': business.description,
+        'phone': business.phone,
+        'whatsapp': business.whatsapp,
+        'address': business.address,
+        'logo_url': business.logoUrl,
+        'local_logo_path': business.localLogoPath,
+        'status': business.status,
+        'rejection_reason': business.rejectionReason,
+        'is_active': business.isActive ? 1 : 0,
+        'updated_at': (updatedAt ?? DateTime.now()).toUtc().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<AccountBusiness>> readOwnedBusinessesCache({
+    required String userId,
+  }) async {
+    final database = await this.database;
+    final rows = await database.query(
+      _accountBusinessesTable,
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'updated_at DESC',
+    );
+
+    return rows.map(_accountBusinessFromRow).toList(growable: false);
+  }
+
+  Future<AccountBusiness?> readOwnedBusinessCache({
+    required String userId,
+  }) async {
+    final businesses = await readOwnedBusinessesCache(userId: userId);
+    return businesses.isEmpty ? null : businesses.first;
+  }
+
+  static AccountBusiness _accountBusinessFromRow(
+    Map<String, Object?> row,
+  ) {
+    return AccountBusiness(
+      id: row['id']?.toString() ?? '',
+      ownerId: row['user_id']?.toString() ?? '',
+      categoryId: row['category_id']?.toString() ?? '',
+      categoryName: row['category_name']?.toString() ?? '',
+      name: row['name']?.toString() ?? '',
+      description: row['description']?.toString() ?? '',
+      phone: row['phone']?.toString() ?? '',
+      whatsapp: row['whatsapp']?.toString() ?? '',
+      address: row['address']?.toString() ?? 'الحامي',
+      status: row['status']?.toString() ?? 'draft',
+      isActive: _readBoolean(row['is_active']),
+      logoUrl: _nullableString(row['logo_url']),
+      localLogoPath: _nullableString(row['local_logo_path']),
+      rejectionReason: _nullableString(row['rejection_reason']),
+    );
+  }
+
+  Future<int> deleteOwnedBusinessCache({
+    required String userId,
+    String? businessId,
+  }) async {
+    final database = await this.database;
+    if (businessId == null || businessId.trim().isEmpty) {
+      return database.delete(
+        _accountBusinessesTable,
+        where: 'user_id = ?',
+        whereArgs: [userId],
+      );
+    }
+
+    return database.delete(
+      _accountBusinessesTable,
+      where: 'user_id = ? AND id = ?',
+      whereArgs: [userId, businessId],
+    );
+  }
+
   Future<SyncQueueItem> enqueueSyncOperation(
     SyncQueueEnqueueRequest request,
   ) async {
@@ -867,10 +1118,7 @@ class LocalDirectoryDatabase {
   }) async {
     final database = await this.database;
     final utcNow = (now ?? DateTime.now()).toUtc();
-    final where = StringBuffer(
-      "user_id = ? AND status = 'failed' "
-      "AND attempt_count < max_attempts",
-    );
+    final where = StringBuffer("user_id = ? AND status = 'failed'");
     final whereArgs = <Object?>[userId];
 
     if (operationId != null && operationId.trim().isNotEmpty) {
@@ -882,8 +1130,11 @@ class LocalDirectoryDatabase {
       _syncQueueTable,
       {
         'status': SyncQueueStatus.pending.databaseValue,
+        'attempt_count': 0,
         'updated_at': utcNow.toIso8601String(),
         'next_attempt_at': utcNow.toIso8601String(),
+        'last_attempt_at': null,
+        'completed_at': null,
         'last_error': null,
       },
       where: where.toString(),

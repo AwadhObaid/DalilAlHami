@@ -33,6 +33,13 @@ enum SyncQueueOperationType {
         SyncQueueOperationType.submitForReview => 'submit_for_review',
       };
 
+  String get label => switch (this) {
+        SyncQueueOperationType.create => 'إضافة نشاط',
+        SyncQueueOperationType.update => 'تعديل نشاط',
+        SyncQueueOperationType.deleteEntity => 'حذف نشاط',
+        SyncQueueOperationType.submitForReview => 'إرسال للمراجعة',
+      };
+
   static SyncQueueOperationType fromDatabase(Object? value) {
     return switch (value?.toString()) {
       'create' => SyncQueueOperationType.create,
@@ -53,6 +60,13 @@ enum SyncQueueStatus {
   failed;
 
   String get databaseValue => name;
+
+  String get label => switch (this) {
+        SyncQueueStatus.pending => 'بانتظار المزامنة',
+        SyncQueueStatus.processing => 'جارٍ الإرسال',
+        SyncQueueStatus.completed => 'تمت المزامنة',
+        SyncQueueStatus.failed => 'فشلت المزامنة',
+      };
 
   static SyncQueueStatus fromDatabase(Object? value) {
     return switch (value?.toString()) {

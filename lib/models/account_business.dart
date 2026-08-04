@@ -12,6 +12,7 @@ class AccountBusiness {
     required this.status,
     required this.isActive,
     this.logoUrl,
+    this.localLogoPath,
     this.rejectionReason,
   });
 
@@ -27,12 +28,19 @@ class AccountBusiness {
   final String status;
   final bool isActive;
   final String? logoUrl;
+  final String? localLogoPath;
   final String? rejectionReason;
 
   bool get isApproved => status == 'approved';
 
+  bool get isWaitingForSync => status == 'local_pending';
+
+  bool get hasSyncFailure => status == 'sync_failed';
+
   String get statusLabel {
     return switch (status) {
+      'local_pending' => 'بانتظار المزامنة',
+      'sync_failed' => 'تعذرت المزامنة',
       'draft' => 'مسودة',
       'pending' => 'قيد المراجعة',
       'approved' => 'معتمد',
@@ -40,6 +48,40 @@ class AccountBusiness {
       'suspended' => 'موقوف',
       _ => 'غير محدد',
     };
+  }
+
+  AccountBusiness copyWith({
+    String? id,
+    String? ownerId,
+    String? categoryId,
+    String? categoryName,
+    String? name,
+    String? description,
+    String? phone,
+    String? whatsapp,
+    String? address,
+    String? status,
+    bool? isActive,
+    String? logoUrl,
+    String? localLogoPath,
+    String? rejectionReason,
+  }) {
+    return AccountBusiness(
+      id: id ?? this.id,
+      ownerId: ownerId ?? this.ownerId,
+      categoryId: categoryId ?? this.categoryId,
+      categoryName: categoryName ?? this.categoryName,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      phone: phone ?? this.phone,
+      whatsapp: whatsapp ?? this.whatsapp,
+      address: address ?? this.address,
+      status: status ?? this.status,
+      isActive: isActive ?? this.isActive,
+      logoUrl: logoUrl ?? this.logoUrl,
+      localLogoPath: localLogoPath ?? this.localLogoPath,
+      rejectionReason: rejectionReason ?? this.rejectionReason,
+    );
   }
 
   factory AccountBusiness.fromMap(Map<String, dynamic> data) {
@@ -54,7 +96,9 @@ class AccountBusiness {
       id: data['id']?.toString() ?? '',
       ownerId: data['owner_id']?.toString() ?? '',
       categoryId: data['category_id']?.toString() ?? '',
-      categoryName: category['name_ar']?.toString() ?? '',
+      categoryName: category['name_ar']?.toString() ??
+          data['category_name']?.toString() ??
+          '',
       name: data['name']?.toString() ?? '',
       description: data['description']?.toString() ?? '',
       phone: data['phone']?.toString() ?? '',
@@ -63,6 +107,7 @@ class AccountBusiness {
       status: data['status']?.toString() ?? 'draft',
       isActive: data['is_active'] != false,
       logoUrl: _nullableText(data['logo_url']),
+      localLogoPath: _nullableText(data['local_logo_path']),
       rejectionReason: _nullableText(data['rejection_reason']),
     );
   }

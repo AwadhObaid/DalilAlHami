@@ -1,60 +1,138 @@
-import 'dart:io';
+import 'dart:async';
+import 'dart:math';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/services/supabase_service.dart';
 import '../../models/account_business.dart';
 import '../../models/account_profile.dart';
+import '../directory_data_store.dart';
+import '../local/database/local_directory_database.dart';
+import '../sync_queue/supabase_sync_queue_gateway.dart';
+import '../sync_queue/sync_queue_item.dart';
 
 class AccountSnapshot {
   const AccountSnapshot({
     required this.profile,
-    required this.business,
+    this.business,
+    this.businesses = const <AccountBusiness>[],
+    this.isOffline = false,
   });
 
   final AccountProfile profile;
   final AccountBusiness? business;
+  final List<AccountBusiness> businesses;
+  final bool isOffline;
+
+  List<AccountBusiness> get allBusinesses {
+    if (businesses.isNotEmpty) {
+      return businesses;
+    }
+    final selected = business;
+    return selected == null
+        ? const <AccountBusiness>[]
+        : <AccountBusiness>[selected];
+  }
 }
 
 class AccountSaveResult {
   const AccountSaveResult({
     required this.snapshot,
+    required this.queuedOperationCount,
+    required this.message,
     this.imageWarning,
   });
 
   final AccountSnapshot snapshot;
+  final int queuedOperationCount;
+  final String message;
   final String? imageWarning;
+
+  bool get wasQueued => queuedOperationCount > 0;
+}
+
+class AccountDeleteResult {
+  const AccountDeleteResult({
+    required this.message,
+    required this.operationId,
+  });
+
+  final String message;
+  final String operationId;
 }
 
 class AccountRepository {
-  const AccountRepository();
+  AccountRepository({
+    LocalDirectoryDatabase? database,
+    DirectoryDataStore? directoryStore,
+  })  : _database = database ?? LocalDirectoryDatabase.instance,
+        _directoryStore = directoryStore ?? DirectoryDataStore.instance;
+
+  final LocalDirectoryDatabase _database;
+  final DirectoryDataStore _directoryStore;
 
   SupabaseClient get _client => SupabaseService.client;
 
   User get _user {
     final user = _client.auth.currentUser;
     if (user == null) {
-      throw const AccountFailure(
-        'يجب تسجيل الدخول أولًا.',
-      );
+      throw const AccountFailure('يجب تسجيل الدخول أولًا.');
     }
     return user;
   }
 
-  Future<AccountSnapshot> loadCurrentAccount() async {
+  Future<AccountSnapshot> loadCurrentAccount({
+    String? preferredBusinessId,
+  }) async {
     final user = _user;
-    final profile = await _loadOrCreateProfile(user);
-    final business = await _loadOwnedBusiness(user.id);
-
-    return AccountSnapshot(
-      profile: profile,
-      business: business,
+    final cachedProfile = await _database.readAccountProfile(
+      userId: user.id,
     );
+    final cachedBusinesses = await _database.readOwnedBusinessesCache(
+      userId: user.id,
+    );
+    final fallbackProfile = cachedProfile ?? _profileFromUser(user);
+
+    try {
+      final profile = await _loadOrCreateProfile(user);
+      final remoteBusinesses = await _loadOwnedBusinesses(user.id);
+      await _database.upsertAccountProfile(profile);
+
+      final remoteIds = remoteBusinesses.map((business) => business.id).toSet();
+      final localOnly = cachedBusinesses.where((business) {
+        return !remoteIds.contains(business.id) &&
+            (business.isWaitingForSync || business.hasSyncFailure);
+      }).toList(growable: false);
+      final merged = <AccountBusiness>[
+        ...localOnly,
+        ...remoteBusinesses,
+      ];
+
+      await _database.deleteOwnedBusinessCache(userId: user.id);
+      for (final business in merged) {
+        await _database.upsertOwnedBusinessCache(business);
+      }
+
+      return AccountSnapshot(
+        profile: profile,
+        business: _selectBusiness(merged, preferredBusinessId),
+        businesses: List<AccountBusiness>.unmodifiable(merged),
+      );
+    } catch (_) {
+      await _database.upsertAccountProfile(fallbackProfile);
+      return AccountSnapshot(
+        profile: fallbackProfile,
+        business: _selectBusiness(cachedBusinesses, preferredBusinessId),
+        businesses: List<AccountBusiness>.unmodifiable(cachedBusinesses),
+        isOffline: true,
+      );
+    }
   }
 
   Future<AccountSaveResult> saveAccount({
     required String fullName,
     required String categoryId,
+    required String categoryName,
     required String businessName,
     required String businessPhone,
     required String whatsapp,
@@ -81,107 +159,156 @@ class AccountRepository {
       );
     }
 
-    final profileData = <String, dynamic>{
-      'id': user.id,
-      'full_name': normalizedName,
-      'phone': user.phone,
-      'email': user.email,
-    };
+    final profile = AccountProfile(
+      id: user.id,
+      fullName: normalizedName,
+      phone: user.phone ?? '',
+      role: 'user',
+      isActive: true,
+      email: user.email,
+      avatarUrl: user.userMetadata?['avatar_url']?.toString() ??
+          user.userMetadata?['picture']?.toString(),
+    );
+    await _database.upsertAccountProfile(profile);
+    unawaited(_trySaveProfileOnline(profile));
 
-    await _client.from('profiles').upsert(
-          profileData,
-          onConflict: 'id',
-        );
+    final savedBusinessId = businessId?.trim().isNotEmpty == true
+        ? businessId!.trim()
+        : _createUuidV4();
+    final isCreate = businessId == null || businessId.trim().isEmpty;
+    final localLogoPath = selectedImagePath?.trim().isNotEmpty == true
+        ? selectedImagePath!.trim()
+        : null;
 
-    try {
-      await _client.auth.updateUser(
-        UserAttributes(
-          data: <String, dynamic>{
-            'full_name': normalizedName,
-          },
-        ),
-      );
-    } catch (_) {
-      // فشل تحديث metadata لا يمنع حفظ ملف التطبيق.
-    }
+    final localBusiness = AccountBusiness(
+      id: savedBusinessId,
+      ownerId: user.id,
+      categoryId: categoryId.trim(),
+      categoryName: categoryName.trim(),
+      name: normalizedBusinessName,
+      description: description.trim(),
+      phone: normalizedBusinessPhone,
+      whatsapp: normalizedWhatsApp,
+      address: normalizedAddress,
+      status: 'local_pending',
+      isActive: true,
+      localLogoPath: localLogoPath,
+    );
+    await _database.upsertOwnedBusinessCache(localBusiness);
 
-    final businessData = <String, dynamic>{
-      'owner_id': user.id,
-      'category_id': categoryId,
+    final payload = <String, dynamic>{
+      'category_id': categoryId.trim(),
       'name': normalizedBusinessName,
       'description': description.trim(),
       'phone': normalizedBusinessPhone,
       'whatsapp': normalizedWhatsApp,
       'address': normalizedAddress,
-      'status': 'pending',
+      if (localLogoPath != null)
+        SupabaseSyncQueueGateway.localLogoPathKey: localLogoPath,
+      if (isCreate) 'submit_for_review': true,
     };
 
-    String savedBusinessId;
+    await _directoryStore.enqueueBusinessOperation(
+      operationType: isCreate
+          ? SyncQueueOperationType.create
+          : SyncQueueOperationType.update,
+      entityId: savedBusinessId,
+      payload: payload,
+      priority: 10,
+    );
 
-    if (businessId == null || businessId.isEmpty) {
-      final inserted = await _client
-          .from('businesses')
-          .insert(businessData)
-          .select('id')
-          .single();
-
-      savedBusinessId = inserted['id'].toString();
-    } else {
-      await _client
-          .from('businesses')
-          .update(businessData)
-          .eq('id', businessId)
-          .eq('owner_id', user.id);
-
-      savedBusinessId = businessId;
+    var queuedOperationCount = 1;
+    if (!isCreate) {
+      await _directoryStore.enqueueBusinessOperation(
+        operationType: SyncQueueOperationType.submitForReview,
+        entityId: savedBusinessId,
+        payload: const <String, dynamic>{},
+        priority: 9,
+      );
+      queuedOperationCount++;
     }
 
-    String? imageWarning;
-
-    if (selectedImagePath != null && selectedImagePath.trim().isNotEmpty) {
-      try {
-        final logoUrl = await _uploadBusinessLogo(
-          businessId: savedBusinessId,
-          localPath: selectedImagePath,
-        );
-
-        await _client
-            .from('businesses')
-            .update(<String, dynamic>{
-              'logo_url': logoUrl,
-            })
-            .eq('id', savedBusinessId)
-            .eq('owner_id', user.id);
-      } catch (_) {
-        imageWarning =
-            'تم حفظ النشاط، لكن تعذر رفع الصورة. يمكنك إعادة اختيارها لاحقًا.';
-      }
-    }
-
-    final snapshot = await loadCurrentAccount();
+    final cachedBusinesses = await _database.readOwnedBusinessesCache(
+      userId: user.id,
+    );
+    final orderedBusinesses = <AccountBusiness>[
+      localBusiness,
+      ...cachedBusinesses.where(
+        (business) => business.id != localBusiness.id,
+      ),
+    ];
 
     return AccountSaveResult(
-      snapshot: snapshot,
-      imageWarning: imageWarning,
+      snapshot: AccountSnapshot(
+        profile: profile,
+        business: localBusiness,
+        businesses: List<AccountBusiness>.unmodifiable(orderedBusinesses),
+        isOffline: !_directoryStore.usesSupabase,
+      ),
+      queuedOperationCount: queuedOperationCount,
+      message: _directoryStore.usesSupabase
+          ? 'تم حفظ النشاط وسيُرسل للمراجعة تلقائيًا.'
+          : 'تم حفظ النشاط في الجهاز وسيُرسل عند عودة الإنترنت.',
+      imageWarning: localLogoPath == null
+          ? null
+          : 'ستُرفع الصورة تلقائيًا مع عملية المزامنة.',
     );
   }
 
-  Future<void> deleteOwnedBusiness(String businessId) async {
+  Future<AccountDeleteResult> deleteOwnedBusiness(
+    String businessId,
+  ) async {
     final user = _user;
+    final item = await _directoryStore.enqueueBusinessOperation(
+      operationType: SyncQueueOperationType.deleteEntity,
+      entityId: businessId,
+      payload: const <String, dynamic>{},
+      priority: 20,
+    );
+    await _database.deleteOwnedBusinessCache(
+      userId: user.id,
+      businessId: businessId,
+    );
 
-    await _client
-        .from('businesses')
-        .delete()
-        .eq('id', businessId)
-        .eq('owner_id', user.id);
+    return AccountDeleteResult(
+      operationId: item.id,
+      message: _directoryStore.usesSupabase
+          ? 'تم إرسال طلب حذف النشاط.'
+          : 'تم حفظ طلب الحذف وسيُرسل عند عودة الإنترنت.',
+    );
+  }
+
+  Future<void> _trySaveProfileOnline(AccountProfile profile) async {
+    try {
+      await _client.from('profiles').upsert(
+        <String, dynamic>{
+          'id': profile.id,
+          'full_name': profile.fullName,
+          'phone': profile.phone,
+          'email': profile.email,
+        },
+        onConflict: 'id',
+      );
+      try {
+        await _client.auth.updateUser(
+          UserAttributes(
+            data: <String, dynamic>{
+              'full_name': profile.fullName,
+            },
+          ),
+        );
+      } catch (_) {
+        // Local profile remains available when metadata update fails.
+      }
+    } catch (_) {
+      // Business data is still safely queued locally.
+    }
   }
 
   Future<AccountProfile> _loadOrCreateProfile(User user) async {
     final rows = await _client
         .from('profiles')
-        .select(
-          'id, full_name, email, phone, avatar_url, role, is_active',
-        )
+        .select('id, full_name, email, phone, avatar_url, role, is_active')
         .eq('id', user.id)
         .limit(1);
 
@@ -204,84 +331,70 @@ class AccountRepository {
           },
           onConflict: 'id',
         )
-        .select(
-          'id, full_name, email, phone, avatar_url, role, is_active',
-        )
+        .select('id, full_name, email, phone, avatar_url, role, is_active')
         .single();
 
     return AccountProfile.fromMap(inserted);
   }
 
-  Future<AccountBusiness?> _loadOwnedBusiness(
-    String userId,
-  ) async {
+  Future<List<AccountBusiness>> _loadOwnedBusinesses(String userId) async {
     final rows = await _client
         .from('businesses')
         .select(
           'id, owner_id, category_id, name, description, phone, '
           'whatsapp, address, logo_url, status, rejection_reason, '
-          'is_active, categories!businesses_category_id_fkey('
-          'id, name_ar, slug'
-          ')',
+          'is_active, created_at, updated_at, '
+          'categories!businesses_category_id_fkey(id, name_ar, slug)',
         )
         .eq('owner_id', userId)
-        .order('created_at', ascending: false)
-        .limit(1);
+        .order('created_at', ascending: false);
 
-    if (rows.isEmpty) {
-      return null;
+    return rows.map(AccountBusiness.fromMap).toList(growable: false);
+  }
+
+  AccountBusiness? _selectBusiness(
+    List<AccountBusiness> businesses,
+    String? preferredBusinessId,
+  ) {
+    final preferred = preferredBusinessId?.trim();
+    if (preferred != null && preferred.isNotEmpty) {
+      for (final business in businesses) {
+        if (business.id == preferred) {
+          return business;
+        }
+      }
     }
-
-    return AccountBusiness.fromMap(rows.first);
+    return businesses.isEmpty ? null : businesses.first;
   }
 
-  Future<String> _uploadBusinessLogo({
-    required String businessId,
-    required String localPath,
-  }) async {
-    final file = File(localPath);
-
-    if (!await file.exists()) {
-      throw const AccountFailure(
-        'ملف الصورة المختارة غير موجود.',
-      );
-    }
-
-    final extension = _safeImageExtension(localPath);
-    final storagePath =
-        '$businessId/logo_${DateTime.now().millisecondsSinceEpoch}'
-        '.$extension';
-
-    await _client.storage.from('business-media').upload(
-          storagePath,
-          file,
-          fileOptions: FileOptions(
-            cacheControl: '3600',
-            upsert: false,
-            contentType: _contentTypeFor(extension),
-          ),
-        );
-
-    return _client.storage.from('business-media').getPublicUrl(storagePath);
+  AccountProfile _profileFromUser(User user) {
+    return AccountProfile(
+      id: user.id,
+      fullName: user.userMetadata?['full_name']?.toString() ??
+          user.userMetadata?['name']?.toString() ??
+          user.email?.split('@').first ??
+          '',
+      phone: user.phone ?? '',
+      role: 'user',
+      isActive: true,
+      email: user.email,
+      avatarUrl: user.userMetadata?['avatar_url']?.toString() ??
+          user.userMetadata?['picture']?.toString(),
+    );
   }
 
-  String _safeImageExtension(String path) {
-    final match = RegExp(r'\.([a-zA-Z0-9]+)$').firstMatch(path);
-    final extension = match?.group(1)?.toLowerCase();
-
-    return switch (extension) {
-      'png' => 'png',
-      'webp' => 'webp',
-      _ => 'jpg',
-    };
-  }
-
-  String _contentTypeFor(String extension) {
-    return switch (extension) {
-      'png' => 'image/png',
-      'webp' => 'image/webp',
-      _ => 'image/jpeg',
-    };
+  String _createUuidV4() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    String hex(int value) => value.toRadixString(16).padLeft(2, '0');
+    final value = bytes.map(hex).join();
+    return '${value.substring(0, 8)}-'
+        '${value.substring(8, 12)}-'
+        '${value.substring(12, 16)}-'
+        '${value.substring(16, 20)}-'
+        '${value.substring(20)}';
   }
 }
 

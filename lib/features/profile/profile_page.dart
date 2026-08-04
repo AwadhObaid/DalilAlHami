@@ -10,16 +10,25 @@ import '../../data/repositories/account_repository.dart';
 import '../../models/account_business.dart';
 import '../../models/account_profile.dart';
 import '../../models/service_category.dart';
+import 'widgets/add_business_button.dart';
+import 'widgets/empty_owned_business_state.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  const ProfilePage({
+    this.startInCreateMode = false,
+    this.businessId,
+    super.key,
+  });
+
+  final bool startInCreateMode;
+  final String? businessId;
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final AccountRepository _repository = const AccountRepository();
+  final AccountRepository _repository = AccountRepository();
   final DirectoryDataStore _directoryStore = DirectoryDataStore.instance;
   final ImagePicker _picker = ImagePicker();
 
@@ -33,6 +42,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   AccountProfile? _profile;
   AccountBusiness? _business;
+  AccountBusiness? _businessBeforeCreate;
   ServiceCategory? _selectedCategory;
   String? _selectedImagePath;
 
@@ -44,6 +54,7 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
+    _directoryStore.addListener(_handleDirectoryChanged);
     _loadAccount();
   }
 
@@ -55,7 +66,14 @@ class _ProfilePageState extends State<ProfilePage> {
     _whatsappController.dispose();
     _addressController.dispose();
     _descriptionController.dispose();
+    _directoryStore.removeListener(_handleDirectoryChanged);
     super.dispose();
+  }
+
+  void _handleDirectoryChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _loadAccount() async {
@@ -77,7 +95,9 @@ class _ProfilePageState extends State<ProfilePage> {
         await _directoryStore.load();
       }
 
-      final snapshot = await _repository.loadCurrentAccount();
+      final snapshot = await _repository.loadCurrentAccount(
+        preferredBusinessId: widget.businessId,
+      );
 
       if (!mounted) {
         return;
@@ -85,9 +105,13 @@ class _ProfilePageState extends State<ProfilePage> {
 
       _applySnapshot(snapshot);
 
+      if (widget.startInCreateMode) {
+        _prepareCreateForm();
+      }
+
       setState(() {
         _isLoading = false;
-        _isEditing = snapshot.business == null;
+        _isEditing = widget.startInCreateMode;
       });
     } catch (error) {
       if (!mounted) {
@@ -175,6 +199,7 @@ class _ProfilePageState extends State<ProfilePage> {
       final result = await _repository.saveAccount(
         fullName: _fullNameController.text,
         categoryId: selectedCategory.id,
+        categoryName: selectedCategory.name,
         businessName: _businessNameController.text,
         businessPhone: _phoneController.text,
         whatsapp: _whatsappController.text,
@@ -189,21 +214,16 @@ class _ProfilePageState extends State<ProfilePage> {
       }
 
       _applySnapshot(result.snapshot);
+      _businessBeforeCreate = null;
 
       setState(() {
         _isEditing = false;
       });
 
-      await _directoryStore.refresh();
-
-      if (!mounted) {
-        return;
+      _showMessage(result.message);
+      if (result.imageWarning != null) {
+        _showMessage(result.imageWarning!);
       }
-
-      _showMessage(
-        result.imageWarning ?? 'تم إرسال النشاط للمراجعة بنجاح.',
-        isError: result.imageWarning != null,
-      );
     } catch (error) {
       _showMessage(
         _messageForError(error),
@@ -313,24 +333,14 @@ class _ProfilePageState extends State<ProfilePage> {
     });
 
     try {
-      await _repository.deleteOwnedBusiness(business.id);
-      await _directoryStore.refresh();
+      final result = await _repository.deleteOwnedBusiness(business.id);
 
       if (!mounted) {
         return;
       }
 
-      setState(() {
-        _business = null;
-        _businessNameController.clear();
-        _whatsappController.clear();
-        _descriptionController.clear();
-        _selectedCategory = null;
-        _selectedImagePath = null;
-        _isEditing = true;
-      });
-
-      _showMessage('تم حذف النشاط.');
+      _showMessage(result.message);
+      Navigator.of(context).pop(true);
     } catch (error) {
       _showMessage(
         _messageForError(error),
@@ -385,13 +395,69 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  String get _pageTitle {
+    if (_business == null) {
+      return _isEditing ? 'إضافة نشاط جديد' : 'إدارة نشاطي';
+    }
+
+    return _isEditing ? 'تعديل النشاط' : 'إدارة نشاطي';
+  }
+
+  void _prepareCreateForm() {
+    _businessBeforeCreate ??= _business;
+    _business = null;
+    _businessNameController.clear();
+    _phoneController.text = _profile?.phone ?? '';
+    _whatsappController.clear();
+    _addressController.text = 'الحامي';
+    _descriptionController.clear();
+    _selectedCategory = null;
+    _selectedImagePath = null;
+  }
+
+  void _startCreatingBusiness() {
+    setState(() {
+      _prepareCreateForm();
+      _isEditing = true;
+    });
+  }
+
+  void _cancelEditing() {
+    final profile = _profile;
+    final previousBusiness = _businessBeforeCreate;
+
+    if (_business == null && previousBusiness != null && profile != null) {
+      _applySnapshot(
+        AccountSnapshot(
+          profile: profile,
+          business: previousBusiness,
+        ),
+      );
+      _businessBeforeCreate = null;
+    } else {
+      final business = _business;
+      if (business != null && profile != null) {
+        _applySnapshot(
+          AccountSnapshot(
+            profile: profile,
+            business: business,
+          ),
+        );
+      }
+    }
+
+    setState(() {
+      _isEditing = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(
         title: Text(
-          _isEditing ? 'بيانات النشاط' : 'الملف الشخصي',
+          _pageTitle,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
           ),
@@ -447,7 +513,14 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     return SingleChildScrollView(
-      child: _isEditing ? _buildEditForm() : _buildProfileView(),
+      child: Column(
+        children: [
+          if (_directoryStore.pendingSyncOperationCount > 0 ||
+              _directoryStore.failedSyncOperationCount > 0)
+            _buildQueueStatusBanner(),
+          _isEditing ? _buildEditForm() : _buildProfileView(),
+        ],
+      ),
     );
   }
 
@@ -535,25 +608,16 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
               ),
-              if (_business != null) ...[
-                const SizedBox(height: 10),
-                TextButton(
-                  onPressed: _isSaving
-                      ? null
-                      : () {
-                          _applySnapshot(
-                            AccountSnapshot(
-                              profile: _profile!,
-                              business: _business,
-                            ),
-                          );
-                          setState(() {
-                            _isEditing = false;
-                          });
-                        },
-                  child: const Text('إلغاء التعديل'),
+              const SizedBox(height: 10),
+              TextButton.icon(
+                onPressed: _isSaving ? null : _cancelEditing,
+                icon: const Icon(Icons.arrow_back_rounded),
+                label: Text(
+                  _business == null
+                      ? 'العودة إلى إدارة نشاطي'
+                      : 'إلغاء التعديل',
                 ),
-              ],
+              ),
               const SizedBox(height: 35),
             ],
           ),
@@ -566,7 +630,9 @@ class _ProfilePageState extends State<ProfilePage> {
     final business = _business;
 
     if (business == null) {
-      return const SizedBox.shrink();
+      return EmptyOwnedBusinessState(
+        onAddPressed: _startCreatingBusiness,
+      );
     }
 
     return Column(
@@ -657,7 +723,17 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
         ),
-        const SizedBox(height: 26),
+        const SizedBox(height: 20),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: AddBusinessButton(
+            buttonKey: const ValueKey<String>(
+              'manage-add-business-button',
+            ),
+            onPressed: _isSaving ? null : _startCreatingBusiness,
+          ),
+        ),
+        const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(
@@ -707,6 +783,43 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Widget _buildQueueStatusBanner() {
+    final failed = _directoryStore.failedSyncOperationCount;
+    final pending = _directoryStore.pendingSyncOperationCount;
+    final hasFailure = failed > 0;
+    final color = hasFailure ? Colors.red : Colors.orange;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            hasFailure
+                ? Icons.sync_problem_rounded
+                : Icons.cloud_upload_outlined,
+            color: color,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              hasFailure
+                  ? 'توجد $failed عملية تعذر إرسالها. أعد المحاولة من صفحة حسابي.'
+                  : 'توجد $pending عملية محفوظة وستُرسل تلقائيًا عند توفر الإنترنت.',
+              style: TextStyle(color: color.shade700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStatusChip(AccountBusiness business) {
     final color = switch (business.status) {
       'approved' => Colors.green,
@@ -748,6 +861,9 @@ class _ProfilePageState extends State<ProfilePage> {
         selectedImagePath.isNotEmpty &&
         File(selectedImagePath).existsSync()) {
       imageProvider = FileImage(File(selectedImagePath));
+    } else if (_business?.localLogoPath != null &&
+        File(_business!.localLogoPath!).existsSync()) {
+      imageProvider = FileImage(File(_business!.localLogoPath!));
     } else if (_business?.logoUrl != null) {
       imageProvider = NetworkImage(_business!.logoUrl!);
     }

@@ -323,6 +323,31 @@ class DirectoryDataStore extends ChangeNotifier {
     }
   }
 
+  Future<List<SyncQueueItem>> readCurrentUserSyncOperations({
+    int limit = 100,
+  }) async {
+    final userId = SupabaseService.isInitialized
+        ? SupabaseService.client.auth.currentUser?.id
+        : null;
+    if (userId == null || userId.isEmpty) {
+      return const <SyncQueueItem>[];
+    }
+
+    return _database.readSyncOperations(
+      userId: userId,
+      limit: limit,
+    );
+  }
+
+  Future<void> refreshSyncQueueState() async {
+    await _refreshQueueSummary();
+    notifyListeners();
+  }
+
+  Future<void> processSyncQueueNow() async {
+    await refresh();
+  }
+
   List<Business> search(String query) {
     return _businesses
         .where((business) => business.matchesSearch(query))

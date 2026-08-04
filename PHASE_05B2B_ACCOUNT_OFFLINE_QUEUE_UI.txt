@@ -1,0 +1,6 @@
+Dalil Al Hami - Phase 05B-2B
+- Connects the existing account business form to the SQLite sync queue.
+- Saves account profile and owned business cache locally.
+- Supports offline create, update, submit-for-review, delete, and queued image upload.
+- Adds account queue status UI, operation history, retry, and manual synchronization.
+- Keeps Supabase moderation: submitted businesses reach pending status.

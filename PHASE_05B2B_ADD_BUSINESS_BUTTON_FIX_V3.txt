@@ -1,0 +1,5 @@
+Dalil Al Hami - Phase 05B-2B Add Business Button Fix v3
+- Adds a prominent Add New Business button to the authenticated Account page.
+- Adds an explicit empty-state Add New Business button inside Manage My Business.
+- Keeps one owned business per account and routes existing owners to management.
+- Does not change SQLite schema, queue logic, Supabase RPC, or migrations.

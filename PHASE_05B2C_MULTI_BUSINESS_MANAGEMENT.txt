@@ -1,0 +1,7 @@
+Dalil Al Hami - Phase 05B-2C Multi Business Management
+- Removes the Supabase one-business-per-owner unique index.
+- Upgrades SQLite from schema 4 to 5 without deleting cached data.
+- Stores and displays multiple owned businesses per account.
+- Adds an My Businesses list with independent edit/delete management.
+- Allows manual retry of exhausted queue operations after server fixes.
+- The failed 23505 create operation can be retried after deployment.

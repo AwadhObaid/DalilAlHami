@@ -7,9 +7,13 @@ import '../../core/services/supabase_service.dart';
 import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../data/directory_data_store.dart';
+import '../../data/repositories/account_repository.dart';
 import '../auth/google_sign_in_page.dart';
 import '../shared/widgets/page_header.dart';
+import 'owned_businesses_page.dart';
 import 'profile_page.dart';
+import 'sync_queue_page.dart';
+import 'widgets/add_business_button.dart';
 
 class AccountHubPage extends StatefulWidget {
   const AccountHubPage({super.key});
@@ -22,8 +26,11 @@ class _AccountHubPageState extends State<AccountHubPage>
     with AutomaticKeepAliveClientMixin<AccountHubPage> {
   final AuthSessionStore _authStore = AuthSessionStore.instance;
   final DirectoryDataStore _directoryStore = DirectoryDataStore.instance;
+  final AccountRepository _accountRepository = AccountRepository();
 
   bool _isSigningOut = false;
+  bool _isCheckingOwnedBusiness = false;
+  int? _ownedBusinessCount;
 
   @override
   bool get wantKeepAlive => true;
@@ -33,6 +40,10 @@ class _AccountHubPageState extends State<AccountHubPage>
     super.initState();
     _authStore.addListener(_handleChanged);
     _directoryStore.addListener(_handleChanged);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshOwnedBusinessState();
+    });
   }
 
   @override
@@ -43,8 +54,60 @@ class _AccountHubPageState extends State<AccountHubPage>
   }
 
   void _handleChanged() {
+    if (!mounted) {
+      return;
+    }
+
+    if (!_authStore.isAuthenticated) {
+      setState(() {
+        _ownedBusinessCount = null;
+        _isCheckingOwnedBusiness = false;
+      });
+      return;
+    }
+
+    setState(() {});
+
+    if (_ownedBusinessCount == null && !_isCheckingOwnedBusiness) {
+      _refreshOwnedBusinessState();
+    }
+  }
+
+  Future<void> _refreshOwnedBusinessState() async {
+    if (!_authStore.isAuthenticated || _isCheckingOwnedBusiness) {
+      return;
+    }
+
     if (mounted) {
-      setState(() {});
+      setState(() {
+        _isCheckingOwnedBusiness = true;
+      });
+    }
+
+    try {
+      final snapshot = await _accountRepository.loadCurrentAccount();
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _ownedBusinessCount = snapshot.allBusinesses.length;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _ownedBusinessCount = null;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCheckingOwnedBusiness = false;
+        });
+      }
     }
   }
 
@@ -225,12 +288,38 @@ class _AccountHubPageState extends State<AccountHubPage>
           ),
         ),
         const SizedBox(height: AppSpacing.md),
+        AddBusinessButton(
+          buttonKey: const ValueKey<String>(
+            'account-add-business-button',
+          ),
+          onPressed: _isCheckingOwnedBusiness ? null : _openCreateBusiness,
+          label: _isCheckingOwnedBusiness
+              ? 'جارٍ التحقق من الأنشطة'
+              : 'إضافة نشاط جديد',
+        ),
+        const SizedBox(height: AppSpacing.sm),
         _AccountActionCard(
           icon: Icons.storefront_rounded,
-          title: 'إدارة نشاطي',
-          subtitle: 'إضافة النشاط أو تعديل بياناته ومتابعة حالة المراجعة',
+          title: 'إدارة أنشطتي',
+          subtitle: _ownedBusinessCount == null
+              ? 'عرض الأنشطة المسجلة وإدارتها'
+              : _ownedBusinessCount == 0
+                  ? 'لا توجد أنشطة مسجلة حتى الآن'
+                  : 'إدارة $_ownedBusinessCount نشاط ومتابعة حالاتها',
           color: AppColors.primaryTeal,
           onTap: _openProfile,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        _AccountActionCard(
+          icon: Icons.cloud_sync_rounded,
+          title: 'عمليات المزامنة',
+          subtitle: _directoryStore.pendingSyncOperationCount > 0
+              ? 'توجد ${_directoryStore.pendingSyncOperationCount} عملية بانتظار الإرسال'
+              : _directoryStore.failedSyncOperationCount > 0
+                  ? 'توجد عمليات تحتاج إعادة المحاولة'
+                  : 'عرض العمليات المحلية وحالة إرسالها',
+          color: AppColors.warning,
+          onTap: _openSyncQueue,
         ),
         const SizedBox(height: AppSpacing.sm),
         _AccountActionCard(
@@ -274,7 +363,7 @@ class _AccountHubPageState extends State<AccountHubPage>
         children: [
           _BenefitRow(
             icon: Icons.person_outline_rounded,
-            text: 'كل مستخدم يدير نشاطه فقط',
+            text: 'كل مستخدم يدير أنشطته فقط',
           ),
           Divider(),
           _BenefitRow(
@@ -360,14 +449,17 @@ class _AccountHubPageState extends State<AccountHubPage>
 
     if (mounted) {
       setState(() {});
+      await _refreshOwnedBusinessState();
     }
   }
 
-  Future<void> _openProfile() async {
+  Future<void> _openCreateBusiness() async {
     await Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
-        builder: (context) => const ProfilePage(),
+        builder: (context) => const ProfilePage(
+          startInCreateMode: true,
+        ),
       ),
     );
 
@@ -375,7 +467,35 @@ class _AccountHubPageState extends State<AccountHubPage>
       return;
     }
 
+    await _refreshOwnedBusinessState();
     await _directoryStore.refresh();
+  }
+
+  Future<void> _openProfile() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => const OwnedBusinessesPage(),
+      ),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    await _refreshOwnedBusinessState();
+    await _directoryStore.refresh();
+  }
+
+  Future<void> _openSyncQueue() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => const SyncQueuePage(),
+      ),
+    );
+
+    await _directoryStore.refreshSyncQueueState();
   }
 
   Future<void> _confirmSignOut() async {

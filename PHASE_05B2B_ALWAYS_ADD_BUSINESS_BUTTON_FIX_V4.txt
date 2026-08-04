@@ -1,0 +1,7 @@
+Dalil Al Hami - Phase 05B-2B Always Add Business Button Fix v4
+- The Account page always shows Add New Business for signed-in users.
+- Manage My Business shows Add New Business even when a business exists.
+- startInCreateMode opens a clean create form instead of editing the current business.
+- Canceling creation restores the previously displayed business.
+- Creating another business uses a new UUID and the existing offline sync queue.
+- No SQLite schema or Supabase migration change is required.
