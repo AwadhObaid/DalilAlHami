@@ -1,0 +1,9 @@
+Dalil Al Hami - Phase 07A admin dashboard test visibility fix v2
+
+- Keeps the Phase 07A administrator dashboard implementation unchanged.
+- Corrects the widget regression test to scroll the lazy ListView until the
+  review module is built before checking its pending-business badge.
+- Verifies the badge inside the keyed review module instead of searching an
+  off-screen child that Flutter has not built yet.
+- No runtime logic, Supabase migration, RLS policy, SQLite schema, or package
+  dependency is changed.

@@ -17,7 +17,7 @@ class AccountProfile {
   final String? email;
   final String? avatarUrl;
 
-  bool get isAdmin => role == 'admin';
+  bool get isAdmin => role.trim().toLowerCase() == 'admin';
 
   factory AccountProfile.fromMap(Map<String, dynamic> data) {
     return AccountProfile(

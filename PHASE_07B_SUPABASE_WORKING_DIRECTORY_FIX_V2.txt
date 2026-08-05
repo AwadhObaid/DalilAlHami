@@ -1,0 +1,14 @@
+Dalil Al Hami - Phase 07B Supabase working-directory fix v2
+
+Root cause fixed:
+- The linked project reference already existed under supabase/.temp/project-ref.
+- The deployment command was previously launched from the extracted package folder.
+- Supabase CLI therefore could not discover the linked project.
+
+Correction:
+- Validate that project-ref exists and is not empty.
+- Change the PowerShell working location to ProjectRoot before db push --linked.
+- Restore the previous working location in a finally block.
+- Add a source-contract regression test for the deployment working directory.
+
+No Flutter runtime logic, Supabase migration SQL, SQLite schema, or RLS policy was changed.

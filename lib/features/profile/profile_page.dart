@@ -636,6 +636,9 @@ class _ProfilePageState extends State<ProfilePage> {
       );
     }
 
+    final moderationColor =
+        business.status == 'changes_requested' ? Colors.orange : Colors.red;
+
     return Column(
       children: [
         _buildHeaderImage(isEditable: false),
@@ -665,15 +668,19 @@ class _ProfilePageState extends State<ProfilePage> {
             margin: const EdgeInsets.symmetric(horizontal: 20),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.red.shade50,
+              color: moderationColor.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.red.shade200),
+              border: Border.all(
+                color: moderationColor.withValues(alpha: 0.35),
+              ),
             ),
             child: Text(
-              'سبب الرفض: ${business.rejectionReason}',
+              business.status == 'changes_requested'
+                  ? 'التعديلات المطلوبة: ${business.rejectionReason}'
+                  : 'سبب الرفض: ${business.rejectionReason}',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.red.shade800,
+                color: moderationColor,
               ),
             ),
           ),
@@ -825,6 +832,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final color = switch (business.status) {
       'approved' => Colors.green,
       'rejected' => Colors.red,
+      'changes_requested' => Colors.orange,
       'suspended' => Colors.deepOrange,
       'pending' => Colors.orange,
       _ => Colors.blueGrey,

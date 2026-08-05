@@ -49,6 +49,7 @@ class AccountBusiness {
       'pending' => 'قيد المراجعة',
       'approved' => 'معتمد',
       'rejected' => 'مرفوض',
+      'changes_requested' => 'يحتاج تعديل',
       'suspended' => 'موقوف',
       _ => 'غير محدد',
     };

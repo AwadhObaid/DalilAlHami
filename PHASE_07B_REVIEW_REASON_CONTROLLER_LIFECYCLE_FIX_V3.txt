@@ -1,0 +1,16 @@
+Dalil Al Hami - Phase 07B review-reason controller lifecycle fix v3
+
+Root cause fixed:
+- The review reason TextEditingController was created by the parent page.
+- showModalBottomSheet completed its Future as soon as Navigator.pop returned a result.
+- The parent disposed the controller while the bottom-sheet route was still reversing and rebuilding.
+- Flutter then tried to attach listeners to an already disposed controller.
+
+Correction:
+- Move TextEditingController and FocusNode ownership into a dedicated StatefulWidget for the bottom sheet.
+- Dispose both resources only when the bottom-sheet widget itself is disposed.
+- Unfocus the field before closing the route to prevent pending caret callbacks.
+- Prevent duplicate submissions while the sheet is closing.
+- Keep the existing request-changes regression test that asserts no framework exception occurs.
+
+No Supabase SQL, RLS policy, SQLite schema, repository contract, or business workflow was changed.

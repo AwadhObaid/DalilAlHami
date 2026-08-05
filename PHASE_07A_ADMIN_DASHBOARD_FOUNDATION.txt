@@ -1,0 +1,9 @@
+Dalil Al Hami - Phase 07A Admin Dashboard Foundation
+
+- Adds an administrator-only dashboard entry inside the account hub.
+- Re-verifies the current profile role and active state through Supabase before loading admin data.
+- Reads protected dashboard totals for users, categories, businesses and advertisements.
+- Shows business moderation status totals and the future administration modules.
+- Preserves an administrator role in the local account cache when saving a business.
+- Uses the existing public.is_admin() function and RLS policies; no Supabase migration is required.
+- Phase 07B will implement business approval, rejection and revision workflows.

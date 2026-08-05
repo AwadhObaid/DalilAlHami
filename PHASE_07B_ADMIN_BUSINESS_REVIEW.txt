@@ -1,0 +1,19 @@
+Dalil Al Hami - Phase 07B: Administrator business review workflow
+
+Implemented:
+- Protected administrator-only pending business queue.
+- Full business, owner, category, image, and previous review details.
+- Approve, reject, and request-changes decisions.
+- Mandatory reason for rejection and change requests.
+- Atomic Supabase RPC that updates the business and writes an audit record.
+- Distinct changes_requested business state visible to the owner.
+- Previous moderation reason is cleared when the owner corrects and resubmits.
+- Dashboard pending count refreshes after a review decision.
+
+Supabase migration:
+20260805234500_admin_business_review_workflow.sql
+
+Security:
+- UI access is revalidated against profiles.role = admin and is_active = true.
+- The RPC independently checks public.is_admin().
+- RLS protects the immutable business_reviews audit log.

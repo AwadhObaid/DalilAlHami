@@ -8,6 +8,9 @@ import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../data/directory_data_store.dart';
 import '../../data/repositories/account_repository.dart';
+import '../../models/account_profile.dart';
+import '../admin/admin_dashboard_page.dart';
+import '../admin/widgets/admin_dashboard_entry_card.dart';
 import '../auth/google_sign_in_page.dart';
 import '../shared/widgets/page_header.dart';
 import 'background_sync_settings_page.dart';
@@ -32,6 +35,7 @@ class _AccountHubPageState extends State<AccountHubPage>
   bool _isSigningOut = false;
   bool _isCheckingOwnedBusiness = false;
   int? _ownedBusinessCount;
+  AccountProfile? _accountProfile;
 
   @override
   bool get wantKeepAlive => true;
@@ -62,6 +66,7 @@ class _AccountHubPageState extends State<AccountHubPage>
     if (!_authStore.isAuthenticated) {
       setState(() {
         _ownedBusinessCount = null;
+        _accountProfile = null;
         _isCheckingOwnedBusiness = false;
       });
       return;
@@ -94,6 +99,7 @@ class _AccountHubPageState extends State<AccountHubPage>
 
       setState(() {
         _ownedBusinessCount = snapshot.allBusinesses.length;
+        _accountProfile = snapshot.profile;
       });
     } catch (_) {
       if (!mounted) {
@@ -102,6 +108,7 @@ class _AccountHubPageState extends State<AccountHubPage>
 
       setState(() {
         _ownedBusinessCount = null;
+        _accountProfile = null;
       });
     } finally {
       if (mounted) {
@@ -288,6 +295,14 @@ class _AccountHubPageState extends State<AccountHubPage>
             ],
           ),
         ),
+        if (_accountProfile?.isAdmin == true) ...[
+          const SizedBox(height: AppSpacing.md),
+          AdminDashboardEntryCard(
+            onTap: () {
+              _openAdminDashboard();
+            },
+          ),
+        ],
         const SizedBox(height: AppSpacing.md),
         AddBusinessButton(
           buttonKey: const ValueKey<String>(
@@ -494,6 +509,19 @@ class _AccountHubPageState extends State<AccountHubPage>
 
     await _refreshOwnedBusinessState();
     await _directoryStore.refresh();
+  }
+
+  Future<void> _openAdminDashboard() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => const AdminDashboardPage(),
+      ),
+    );
+
+    if (mounted) {
+      await _refreshOwnedBusinessState();
+    }
   }
 
   Future<void> _openSyncQueue() async {

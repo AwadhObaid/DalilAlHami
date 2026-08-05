@@ -160,12 +160,15 @@ class AccountRepository {
       );
     }
 
+    final cachedProfile = await _database.readAccountProfile(
+      userId: user.id,
+    );
     final profile = AccountProfile(
       id: user.id,
       fullName: normalizedName,
       phone: user.phone ?? '',
-      role: 'user',
-      isActive: true,
+      role: cachedProfile?.role ?? 'user',
+      isActive: cachedProfile?.isActive ?? true,
       email: user.email,
       avatarUrl: user.userMetadata?['avatar_url']?.toString() ??
           user.userMetadata?['picture']?.toString(),

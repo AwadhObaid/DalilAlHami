@@ -163,6 +163,7 @@ class OwnedBusinessCard extends StatelessWidget {
     final color = switch (business.status) {
       'approved' => AppColors.success,
       'rejected' => AppColors.danger,
+      'changes_requested' => AppColors.warning,
       'pending' => AppColors.warning,
       'local_pending' => AppColors.primaryTeal,
       'sync_failed' => AppColors.danger,
