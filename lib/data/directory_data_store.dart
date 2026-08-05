@@ -17,6 +17,30 @@ import 'sync_queue/sync_conflict.dart';
 import 'sync_queue/sync_queue_item.dart';
 import 'sync_queue/sync_queue_processor.dart';
 
+class DirectoryBackgroundSyncReport {
+  const DirectoryBackgroundSyncReport({
+    required this.beforeActionable,
+    required this.afterActionable,
+    required this.completedOperations,
+    required this.failedOperations,
+    required this.exhaustedOperations,
+    required this.pendingConflicts,
+    this.lastError,
+  });
+
+  final int beforeActionable;
+  final int afterActionable;
+  final int completedOperations;
+  final int failedOperations;
+  final int exhaustedOperations;
+  final int pendingConflicts;
+  final Object? lastError;
+
+  bool get needsAttention => exhaustedOperations > 0 || pendingConflicts > 0;
+
+  bool get hasTransientFailure => lastError != null && !needsAttention;
+}
+
 enum DirectoryDataSource {
   supabase,
   sqliteCache,
@@ -465,6 +489,44 @@ class DirectoryDataStore extends ChangeNotifier {
 
   Future<void> processSyncQueueNow() async {
     await refresh();
+  }
+
+  Future<DirectoryBackgroundSyncReport> runBackgroundSync() async {
+    if (!_hasLoaded) {
+      try {
+        await _loadLocalFirst();
+        _hasLoaded = true;
+      } catch (error, stackTrace) {
+        debugPrint(
+          'Background SQLite initialization failed: $error\n$stackTrace',
+        );
+        _loadMemoryFallback(error);
+        _hasLoaded = true;
+      }
+    }
+
+    await _refreshQueueSummary();
+    final before = _syncQueueSummary;
+    _lastQueueReport = null;
+    _lastError = null;
+
+    await _flushQueueThenSynchronize();
+    await _refreshQueueSummary();
+
+    final queueReport = _lastQueueReport;
+    final calculatedCompleted = before.actionable > _syncQueueSummary.actionable
+        ? before.actionable - _syncQueueSummary.actionable
+        : 0;
+
+    return DirectoryBackgroundSyncReport(
+      beforeActionable: before.actionable,
+      afterActionable: _syncQueueSummary.actionable,
+      completedOperations: queueReport?.completed ?? calculatedCompleted,
+      failedOperations: queueReport?.failed ?? 0,
+      exhaustedOperations: _syncQueueSummary.exhausted,
+      pendingConflicts: _pendingSyncConflictCount,
+      lastError: _lastError ?? queueReport?.lastError,
+    );
   }
 
   List<Business> search(String query) {

@@ -10,6 +10,7 @@ import '../../data/directory_data_store.dart';
 import '../../data/repositories/account_repository.dart';
 import '../auth/google_sign_in_page.dart';
 import '../shared/widgets/page_header.dart';
+import 'background_sync_settings_page.dart';
 import 'owned_businesses_page.dart';
 import 'profile_page.dart';
 import 'sync_queue_page.dart';
@@ -323,6 +324,14 @@ class _AccountHubPageState extends State<AccountHubPage>
         ),
         const SizedBox(height: AppSpacing.sm),
         _AccountActionCard(
+          icon: Icons.settings_backup_restore_rounded,
+          title: 'المزامنة في الخلفية',
+          subtitle: 'الجدولة والإشعارات وحالة آخر تشغيل',
+          color: AppColors.lightTeal,
+          onTap: _openBackgroundSyncSettings,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        _AccountActionCard(
           icon: Icons.sync_rounded,
           title: 'تحديث بيانات الدليل',
           subtitle: 'جلب أحدث الأقسام والأنشطة من Supabase',
@@ -496,6 +505,15 @@ class _AccountHubPageState extends State<AccountHubPage>
     );
 
     await _directoryStore.refreshSyncQueueState();
+  }
+
+  Future<void> _openBackgroundSyncSettings() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => const BackgroundSyncSettingsPage(),
+      ),
+    );
   }
 
   Future<void> _confirmSignOut() async {

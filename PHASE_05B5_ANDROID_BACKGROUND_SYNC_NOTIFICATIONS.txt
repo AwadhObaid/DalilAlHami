@@ -1,0 +1,12 @@
+Dalil Al Hami - Phase 05B-5 Android Background Sync and Notifications
+
+- Android WorkManager periodic background synchronization.
+- One-off background scheduling after queue changes and app pause.
+- Network, battery-not-low, and storage-not-low constraints.
+- Local success and attention notifications.
+- Android 13+ notification permission request.
+- Duplicate notification suppression through SharedPreferences.
+- Account settings page for background sync and notification controls.
+- Last background execution status persisted for the UI.
+- Existing foreground automatic synchronization remains active.
+- No Supabase migration and no SQLite schema upgrade.

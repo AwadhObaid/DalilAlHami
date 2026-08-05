@@ -5,6 +5,8 @@ import 'package:flutter/widgets.dart';
 import '../../data/directory_data_store.dart';
 import '../config/supabase_config.dart';
 import 'auth_session_store.dart';
+import 'background_sync_service.dart';
+import 'background_sync_settings.dart';
 import 'network_reachability.dart';
 import 'supabase_service.dart';
 
@@ -466,6 +468,9 @@ class AutomaticSyncCoordinator extends ChangeNotifier
         AutomaticSyncTrigger.queueChanged,
         delay: const Duration(milliseconds: 800),
       );
+      unawaited(
+        BackgroundSyncService.instance.scheduleOneOffSync(),
+      );
     }
   }
 
@@ -475,6 +480,17 @@ class AutomaticSyncCoordinator extends ChangeNotifier
       _scheduleRun(
         AutomaticSyncTrigger.appResume,
         delay: const Duration(milliseconds: 300),
+      );
+      unawaited(BackgroundSyncSettingsStore.instance.reload());
+      return;
+    }
+
+    if (state == AppLifecycleState.paused &&
+        _readMetrics().pendingOperations > 0) {
+      unawaited(
+        BackgroundSyncService.instance.scheduleOneOffSync(
+          initialDelay: const Duration(seconds: 15),
+        ),
       );
     }
   }
