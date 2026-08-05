@@ -39,6 +39,9 @@ class BusinessCard extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.sm),
               child: Column(
+                key: ValueKey<String>(
+                  'business-card-layout-${business.id}',
+                ),
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
@@ -259,8 +262,10 @@ class _ContactButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: AppSizes.minimumTouchTarget,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minHeight: AppSizes.minimumTouchTarget,
+      ),
       child: OutlinedButton.icon(
         onPressed: enabled ? onPressed : null,
         style: OutlinedButton.styleFrom(
@@ -270,13 +275,22 @@ class _ContactButton extends StatelessWidget {
           side: BorderSide(
             color: enabled ? color.withValues(alpha: 0.3) : AppColors.outline,
           ),
+          minimumSize: const Size.fromHeight(
+            AppSizes.minimumTouchTarget,
+          ),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.xs,
+            vertical: AppSpacing.xxs,
           ),
           textStyle: AppTextStyles.labelMedium,
         ),
         icon: Icon(icon, size: 19),
-        label: Text(label),
+        label: Text(
+          label,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }

@@ -8,8 +8,10 @@ import '../../core/theme/app_text_styles.dart';
 import '../../data/directory_data_store.dart';
 import '../../models/service_category.dart';
 import '../shared/widgets/directory_loading_skeleton.dart';
+import '../shared/widgets/directory_page_header.dart';
+import '../shared/widgets/directory_result_summary.dart';
+import '../shared/widgets/directory_search_field.dart';
 import '../shared/widgets/directory_status_banner.dart';
-import '../shared/widgets/page_header.dart';
 import 'category_list_page.dart';
 
 class CategoriesOverviewPage extends StatefulWidget {
@@ -27,7 +29,10 @@ class CategoriesOverviewPage extends StatefulWidget {
 class _CategoriesOverviewPageState extends State<CategoriesOverviewPage>
     with AutomaticKeepAliveClientMixin<CategoriesOverviewPage> {
   final DirectoryDataStore _store = DirectoryDataStore.instance;
+  final TextEditingController _searchController = TextEditingController();
+
   late CategoryDisplayGroup _selectedGroup;
+  String _query = '';
 
   @override
   bool get wantKeepAlive => true;
@@ -45,44 +50,107 @@ class _CategoriesOverviewPageState extends State<CategoriesOverviewPage>
   }
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     super.build(context);
 
-    return AnimatedBuilder(
-      animation: _store,
-      builder: (context, child) {
-        final categories = _categoriesForSelectedGroup();
+    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
 
-        return Column(
-          children: [
-            PageHeader(
-              title: 'الأقسام',
-              subtitle: 'تصفح خدمات مدينة الحامي حسب المجال',
-              icon: Icons.grid_view_rounded,
-              action: IconButton.filledTonal(
-                tooltip: 'تحديث الأقسام',
-                onPressed: _store.isLoading ? null : _store.refresh,
-                icon: const Icon(Icons.refresh_rounded),
+    return Scaffold(
+      key: const ValueKey<String>('categories-overview-page-shell'),
+      backgroundColor: AppColors.pageBackground,
+      resizeToAvoidBottomInset: true,
+      body: AnimatedBuilder(
+        animation: _store,
+        builder: (context, child) {
+          final categories = _filteredCategories;
+          final businessCount = _businessCountForGroup(_selectedGroup);
+
+          return Column(
+            key: const ValueKey<String>('categories-overview-layout-column'),
+            children: [
+              if (!keyboardVisible)
+                DirectoryPageHeader(
+                  headerKey: 'categories-overview-header',
+                  title: 'الأقسام',
+                  subtitle: 'تصفح خدمات مدينة الحامي حسب المجال',
+                  icon: Icons.grid_view_rounded,
+                  onBack: () => Navigator.maybePop(context),
+                  action: DirectoryHeaderRefreshButton(
+                    isLoading: _store.isLoading,
+                    onPressed: _store.refresh,
+                  ),
+                ),
+              if (_store.isRefreshing)
+                const LinearProgressIndicator(minHeight: 2),
+              _buildGroupSelector(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.xs,
+                  AppSpacing.md,
+                  AppSpacing.xs,
+                ),
+                child: DirectorySearchField(
+                  controller: _searchController,
+                  query: _query,
+                  onChanged: (value) {
+                    setState(() {
+                      _query = value;
+                    });
+                  },
+                  onClear: _clearSearch,
+                  fieldKey: 'category-search-field',
+                  hintText: 'ابحث داخل الأقسام…',
+                ),
               ),
-            ),
-            if (_store.isRefreshing)
-              const LinearProgressIndicator(minHeight: 2),
-            _buildGroupSelector(),
-            if (_store.fallbackMessage != null)
-              DirectoryStatusBanner(
-                message: _store.fallbackMessage!,
-                isRefreshing: _store.isRefreshing,
-                onRetry: _store.refresh,
+              DirectoryResultSummary(
+                count: categories.length,
+                label: _selectedGroup == CategoryDisplayGroup.services
+                    ? 'أقسام الخدمات'
+                    : 'أقسام النقل',
+                icon: _selectedGroup == CategoryDisplayGroup.services
+                    ? Icons.storefront_rounded
+                    : Icons.route_rounded,
+                summaryKey: 'categories-result-summary',
+                trailing: Text(
+                  '$businessCount نشاط',
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: AppColors.primaryTeal,
+                  ),
+                ),
               ),
-            Expanded(
-              child: _store.isInitialLoading
-                  ? const CategoryLoadingSkeleton()
-                  : _buildGrid(categories),
-            ),
-          ],
-        );
-      },
+              Expanded(
+                child: _store.isInitialLoading
+                    ? const CategoryLoadingSkeleton()
+                    : _buildScrollableBody(
+                        categories,
+                        fallbackMessage: _store.fallbackMessage,
+                      ),
+              ),
+            ],
+          );
+        },
+      ),
     );
+  }
+
+  List<ServiceCategory> get _filteredCategories {
+    final source = _categoriesForSelectedGroup();
+    final query = _normalize(_query);
+
+    if (query.isEmpty) {
+      return source;
+    }
+
+    return source
+        .where((category) => _normalize(category.name).contains(query))
+        .toList(growable: false);
   }
 
   Widget _buildGroupSelector() {
@@ -93,98 +161,147 @@ class _CategoriesOverviewPageState extends State<CategoriesOverviewPage>
         AppSpacing.md,
         AppSpacing.xs,
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _GroupButton(
-              label: 'الخدمات والأنشطة',
-              icon: Icons.storefront_rounded,
-              selected: _selectedGroup == CategoryDisplayGroup.services,
-              onPressed: () {
-                setState(() {
-                  _selectedGroup = CategoryDisplayGroup.services;
-                });
-              },
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.xxs),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceMuted,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          border: Border.all(color: AppColors.outline),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: _GroupButton(
+                keyName: 'category-group-services',
+                label: 'الخدمات والأنشطة',
+                icon: Icons.storefront_rounded,
+                selected: _selectedGroup == CategoryDisplayGroup.services,
+                onPressed: () => _selectGroup(CategoryDisplayGroup.services),
+              ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Expanded(
-            child: _GroupButton(
-              label: 'خدمات النقل',
-              icon: Icons.route_rounded,
-              selected: _selectedGroup == CategoryDisplayGroup.transport,
-              onPressed: () {
-                setState(() {
-                  _selectedGroup = CategoryDisplayGroup.transport;
-                });
-              },
+            const SizedBox(width: AppSpacing.xxs),
+            Expanded(
+              child: _GroupButton(
+                keyName: 'category-group-transport',
+                label: 'خدمات النقل',
+                icon: Icons.route_rounded,
+                selected: _selectedGroup == CategoryDisplayGroup.transport,
+                onPressed: () => _selectGroup(CategoryDisplayGroup.transport),
+              ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScrollableBody(
+    List<ServiceCategory> categories, {
+    required String? fallbackMessage,
+  }) {
+    return RefreshIndicator(
+      onRefresh: _store.refresh,
+      child: CustomScrollView(
+        key: PageStorageKey<String>(
+          'categories-scrollable-${_selectedGroup.name}',
+        ),
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          if (fallbackMessage != null)
+            SliverToBoxAdapter(
+              child: DirectoryStatusBanner(
+                key: const ValueKey<String>('categories-status-banner'),
+                message: fallbackMessage,
+                isRefreshing: _store.isRefreshing,
+                onRetry: _store.refresh,
+              ),
+            ),
+          if (categories.isEmpty)
+            SliverToBoxAdapter(
+              child: _buildEmptyCategoriesState(),
+            )
+          else
+            _buildCategoryGridSliver(categories),
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 120),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildGrid(List<ServiceCategory> categories) {
-    if (categories.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: _store.refresh,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xl,
-            72,
-            AppSpacing.xl,
-            130,
+  Widget _buildEmptyCategoriesState() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        48,
+        AppSpacing.xl,
+        AppSpacing.xl,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.category_outlined,
+            size: 62,
+            color: AppColors.primaryTeal,
           ),
-          children: [
-            const Icon(
-              Icons.category_outlined,
-              size: 70,
-              color: AppColors.textMuted,
-            ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            _query.trim().isEmpty
+                ? 'لا توجد أقسام متاحة حاليًا'
+                : 'لا يوجد قسم مطابق لبحثك',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.titleLarge,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            _query.trim().isEmpty
+                ? 'اسحب إلى الأسفل لإعادة تحميل البيانات.'
+                : 'جرّب كلمة أقصر أو امسح البحث.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodyMedium,
+          ),
+          if (_query.trim().isNotEmpty) ...[
             const SizedBox(height: AppSpacing.lg),
-            Text(
-              'لا توجد أقسام متاحة حاليًا',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.titleLarge,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'اسحب إلى الأسفل لإعادة تحميل البيانات.',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodyMedium,
+            OutlinedButton.icon(
+              onPressed: _clearSearch,
+              icon: const Icon(Icons.close_rounded),
+              label: const Text('مسح البحث'),
             ),
           ],
-        ),
-      );
-    }
+        ],
+      ),
+    );
+  }
 
-    return LayoutBuilder(
+  Widget _buildCategoryGridSliver(
+    List<ServiceCategory> categories,
+  ) {
+    return SliverLayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth < 360
+        final availableWidth = constraints.crossAxisExtent;
+        final crossAxisCount = availableWidth < 360
             ? 2
-            : constraints.maxWidth < 700
+            : availableWidth < 700
                 ? 3
                 : 4;
         final requestedTextScale = MediaQuery.textScalerOf(context).scale(1);
         final textScale = requestedTextScale.clamp(1.0, 1.4);
-        final baseCardExtent = crossAxisCount == 2 ? 144.0 : 142.0;
-        final cardExtent = (baseCardExtent + ((textScale - 1) * 72))
-            .clamp(baseCardExtent, 172.0);
+        final baseCardExtent = crossAxisCount == 2 ? 164.0 : 158.0;
+        final cardExtent = (baseCardExtent + ((textScale - 1) * 120))
+            .clamp(baseCardExtent, 220.0);
 
-        return RefreshIndicator(
-          onRefresh: _store.refresh,
-          child: GridView.builder(
-            key: PageStorageKey<String>(
-              'categories-${_selectedGroup.name}',
-            ),
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.sm,
-              AppSpacing.md,
-              130,
+        return SliverPadding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.xs,
+            AppSpacing.md,
+            0,
+          ),
+          sliver: SliverGrid(
+            key: ValueKey<String>(
+              'categories-grid-${_selectedGroup.name}',
             ),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
@@ -192,17 +309,21 @@ class _CategoriesOverviewPageState extends State<CategoriesOverviewPage>
               crossAxisSpacing: AppSpacing.sm,
               mainAxisExtent: cardExtent,
             ),
-            itemCount: categories.length,
-            itemBuilder: (context, index) {
-              final category = categories[index];
-              final count = _store.byCategory(category).length;
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final category = categories[index];
+                final count = _store.byCategory(category).length;
 
-              return CategoryOverviewCard(
-                category: category,
-                businessCount: count,
-                onTap: () => _openCategory(category),
-              );
-            },
+                return CategoryOverviewCard(
+                  key: ValueKey<String>('category-card-${category.id}'),
+                  category: category,
+                  businessCount: count,
+                  accentIndex: index,
+                  onTap: () => _openCategory(category),
+                );
+              },
+              childCount: categories.length,
+            ),
           ),
         );
       },
@@ -223,6 +344,44 @@ class _CategoriesOverviewPageState extends State<CategoriesOverviewPage>
         : AppCatalog.transport;
   }
 
+  int _businessCountForGroup(CategoryDisplayGroup group) {
+    final categories = group == CategoryDisplayGroup.services
+        ? _store.serviceCategories
+        : _store.transportCategories;
+
+    return _store.businesses.where((business) {
+      if (business.isDeleted) {
+        return false;
+      }
+
+      return categories.any(
+        (category) => business.belongsToCategory(
+          id: category.id,
+          name: category.name,
+        ),
+      );
+    }).length;
+  }
+
+  void _selectGroup(CategoryDisplayGroup group) {
+    FocusManager.instance.primaryFocus?.unfocus();
+    _searchController.clear();
+
+    setState(() {
+      _selectedGroup = group;
+      _query = '';
+    });
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    setState(() {
+      _query = '';
+    });
+  }
+
   void _openCategory(ServiceCategory category) {
     Navigator.push<void>(
       context,
@@ -230,20 +389,33 @@ class _CategoriesOverviewPageState extends State<CategoriesOverviewPage>
         builder: (context) => CategoryListPage(
           categoryName: category.name,
           categoryId: category.id,
+          categoryIcon: category.icon,
         ),
       ),
     );
+  }
+
+  static String _normalize(String value) {
+    return value
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[\u064B-\u065F\u0670]'), '')
+        .replaceAll(RegExp('[أإآٱ]'), 'ا')
+        .replaceAll('ى', 'ي')
+        .replaceAll('ة', 'ه');
   }
 }
 
 class _GroupButton extends StatelessWidget {
   const _GroupButton({
+    required this.keyName,
     required this.label,
     required this.icon,
     required this.selected,
     required this.onPressed,
   });
 
+  final String keyName;
   final String label;
   final IconData icon;
   final bool selected;
@@ -251,28 +423,45 @@ class _GroupButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textScale = MediaQuery.textScalerOf(context).scale(1);
-    final buttonHeight = (52 + ((textScale - 1) * 24)).clamp(52.0, 64.0);
-
-    return SizedBox(
-      height: buttonHeight,
-      child: OutlinedButton.icon(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: selected ? AppColors.white : AppColors.primaryTeal,
-          backgroundColor: selected ? AppColors.primaryTeal : AppColors.surface,
-          side: BorderSide(
-            color: selected ? AppColors.primaryTeal : AppColors.outlineStrong,
+    return Material(
+      key: ValueKey<String>(keyName),
+      color: selected ? AppColors.primaryTeal : Colors.transparent,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: AppSizes.minimumTouchTarget,
           ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xs,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xs,
+              vertical: AppSpacing.xxs,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 19,
+                  color: selected ? AppColors.white : AppColors.primaryTeal,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.labelMedium.copyWith(
+                      color: selected ? AppColors.white : AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        icon: Icon(icon, size: 20),
-        label: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
       ),
     );
@@ -284,59 +473,87 @@ class CategoryOverviewCard extends StatelessWidget {
     required this.category,
     required this.businessCount,
     required this.onTap,
+    this.accentIndex = 0,
     super.key,
   });
 
   final ServiceCategory category;
   final int businessCount;
   final VoidCallback onTap;
+  final int accentIndex;
+
+  static const List<Color> _accentBackgrounds = [
+    AppColors.primarySoft,
+    AppColors.categoryBlueSoft,
+    AppColors.categoryRoseSoft,
+    AppColors.categoryLavenderSoft,
+    AppColors.categoryPeachSoft,
+    AppColors.categoryLimeSoft,
+  ];
 
   @override
   Widget build(BuildContext context) {
+    final accent =
+        _accentBackgrounds[accentIndex.abs() % _accentBackgrounds.length];
+
     return Semantics(
       button: true,
       label: 'فتح قسم ${category.name}',
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(color: AppColors.outline),
           boxShadow: AppShadows.subtle,
         ),
         child: Material(
           color: Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadius.md),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: onTap,
             child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.xs),
+              padding: const EdgeInsets.all(AppSpacing.sm),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                key: ValueKey<String>(
+                  'category-card-layout-${category.id}',
+                ),
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: AppColors.primarySoft,
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                    ),
-                    child: Icon(
-                      category.icon,
-                      color: AppColors.primaryTeal,
-                      size: 28,
-                    ),
+                  Row(
+                    children: [
+                      Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          color: accent,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                        child: Icon(
+                          category.icon,
+                          color: AppColors.primaryTeal,
+                          size: 27,
+                        ),
+                      ),
+                      const Spacer(),
+                      const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 16,
+                        color: AppColors.textMuted,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Flexible(
-                    child: Text(
-                      category.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.labelMedium.copyWith(
-                        color: AppColors.textPrimary,
-                        height: 1.15,
+                  const SizedBox(height: AppSpacing.sm),
+                  Expanded(
+                    child: Align(
+                      alignment: AlignmentDirectional.topStart,
+                      child: Text(
+                        category.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.titleSmall.copyWith(
+                          height: 1.25,
+                        ),
                       ),
                     ),
                   ),
@@ -351,6 +568,7 @@ class CategoryOverviewCard extends StatelessWidget {
                       color: businessCount == 0
                           ? AppColors.textMuted
                           : AppColors.primaryTeal,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],

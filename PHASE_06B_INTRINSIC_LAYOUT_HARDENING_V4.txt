@@ -1,0 +1,12 @@
+Dalil Al Hami - Phase 06B Intrinsic Layout Hardening v4
+
+Root cause correction:
+- Enlarged-text controls no longer rely on estimated fixed heights.
+- Directory filter bars use their intrinsic chip height with vertical padding.
+- Category group buttons use a minimum touch target and may grow naturally.
+- Category cards receive a larger responsive main-axis extent for two-line Arabic labels.
+- Business contact buttons use a minimum height instead of an exact height and may grow with text.
+- Responsive test failures now include diagnostics for the actual overflowing RenderFlex.
+
+The package is cumulative over Phase 06B v3 and retains the complete v2 baseline.
+No SQLite or Supabase migration is required.

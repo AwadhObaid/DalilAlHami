@@ -6,83 +6,178 @@ import '../../core/theme/app_text_styles.dart';
 import '../../data/directory_data_store.dart';
 import '../../models/business.dart';
 import '../../models/service_category.dart';
+import '../shared/widgets/directory_loading_skeleton.dart';
+import '../shared/widgets/directory_page_header.dart';
+import '../shared/widgets/directory_result_summary.dart';
+import '../shared/widgets/directory_search_field.dart';
+import '../shared/widgets/directory_status_banner.dart';
 import 'member_details_page.dart';
 import 'widgets/business_card.dart';
 
-class CategoryListPage extends StatelessWidget {
+class CategoryListPage extends StatefulWidget {
   const CategoryListPage({
     required this.categoryName,
     this.categoryId = '',
+    this.categoryIcon = Icons.category_rounded,
     super.key,
   });
 
   final String categoryName;
   final String categoryId;
+  final IconData categoryIcon;
+
+  @override
+  State<CategoryListPage> createState() => _CategoryListPageState();
+}
+
+class _CategoryListPageState extends State<CategoryListPage> {
+  final DirectoryDataStore _store = DirectoryDataStore.instance;
+  final TextEditingController _searchController = TextEditingController();
+
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (!_store.hasLoaded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _store.load();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final store = DirectoryDataStore.instance;
+    final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
 
     return Scaffold(
+      key: const ValueKey<String>('category-list-page-shell'),
       backgroundColor: AppColors.pageBackground,
-      appBar: AppBar(title: Text(categoryName)),
+      resizeToAvoidBottomInset: true,
       body: AnimatedBuilder(
-        animation: store,
+        animation: _store,
         builder: (context, child) {
-          final category = _resolveCategory(store);
-          final businesses = category == null
-              ? store.businesses
-                  .where((business) => business.category == categoryName)
-                  .toList(growable: false)
-              : store.byCategory(category);
+          final businesses = _filteredBusinesses;
 
-          if (store.isLoading && businesses.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (businesses.isEmpty) {
-            return RefreshIndicator(
-              onRefresh: store.refresh,
-              child: _EmptyCategoryState(
-                categoryName: categoryName,
-                fallbackMessage: store.fallbackMessage,
+          return Column(
+            children: [
+              if (!keyboardVisible)
+                DirectoryPageHeader(
+                  headerKey: 'category-list-header',
+                  title: widget.categoryName,
+                  subtitle: 'الأنشطة المسجلة ضمن هذا القسم',
+                  icon: widget.categoryIcon,
+                  onBack: () => Navigator.maybePop(context),
+                  action: DirectoryHeaderRefreshButton(
+                    isLoading: _store.isLoading,
+                    onPressed: _store.refresh,
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                  AppSpacing.md,
+                  AppSpacing.xs,
+                ),
+                child: DirectorySearchField(
+                  controller: _searchController,
+                  query: _query,
+                  onChanged: (value) {
+                    setState(() {
+                      _query = value;
+                    });
+                  },
+                  onClear: _clearSearch,
+                  fieldKey: 'category-list-search-field',
+                  hintText: 'ابحث داخل قسم ${widget.categoryName}…',
+                ),
               ),
-            );
-          }
-
-          return RefreshIndicator(
-            onRefresh: store.refresh,
-            child: ListView.separated(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.md,
-                AppSpacing.md,
-                AppSpacing.xxl,
+              DirectoryResultSummary(
+                count: businesses.length,
+                label: 'أنشطة القسم',
+                icon: widget.categoryIcon,
+                summaryKey: 'category-list-result-count',
               ),
-              itemCount:
-                  businesses.length + (store.fallbackMessage != null ? 1 : 0),
-              separatorBuilder: (context, index) => const SizedBox(
-                height: AppSpacing.sm,
+              if (_store.isRefreshing)
+                const LinearProgressIndicator(minHeight: 2),
+              if (_store.fallbackMessage != null)
+                DirectoryStatusBanner(
+                  message: _store.fallbackMessage!,
+                  isRefreshing: _store.isRefreshing,
+                  onRetry: _store.refresh,
+                ),
+              Expanded(
+                child: _buildBody(businesses),
               ),
-              itemBuilder: (context, index) {
-                if (store.fallbackMessage != null && index == 0) {
-                  return _DataSourceNotice(
-                    message: store.fallbackMessage!,
-                    onRefresh: store.refresh,
-                  );
-                }
+            ],
+          );
+        },
+      ),
+    );
+  }
 
-                final businessIndex =
-                    index - (store.fallbackMessage != null ? 1 : 0);
-                final business = businesses[businessIndex];
+  List<Business> get _filteredBusinesses {
+    final category = _resolveCategory(_store);
+    final source = category == null
+        ? _store.businesses.where(
+            (business) => business.category == widget.categoryName,
+          )
+        : _store.byCategory(category);
+    final query = _query.trim();
+    final values =
+        source.where((business) => !business.isDeleted).where((business) {
+      return query.isEmpty || business.matchesSearch(query);
+    }).toList(growable: true);
 
-                return BusinessCard(
-                  business: business,
-                  onOpen: () => _openBusiness(context, business),
-                );
-              },
-            ),
+    values.sort(_compareBusinesses);
+    return values;
+  }
+
+  Widget _buildBody(List<Business> businesses) {
+    if (_store.isInitialLoading) {
+      return const DirectoryLoadingSkeleton();
+    }
+
+    if (businesses.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: _store.refresh,
+        child: _EmptyCategoryState(
+          categoryName: widget.categoryName,
+          hasSearch: _query.trim().isNotEmpty,
+          onClearSearch: _clearSearch,
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _store.refresh,
+      child: ListView.separated(
+        key: const PageStorageKey<String>('category-business-list'),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.xs,
+          AppSpacing.md,
+          AppSpacing.xxl,
+        ),
+        itemCount: businesses.length,
+        separatorBuilder: (context, index) =>
+            const SizedBox(height: AppSpacing.sm),
+        itemBuilder: (context, index) {
+          final business = businesses[index];
+
+          return BusinessCard(
+            key: ValueKey<String>('category-business-${business.id}'),
+            business: business,
+            onOpen: () => _openBusiness(business),
           );
         },
       ),
@@ -91,11 +186,11 @@ class CategoryListPage extends StatelessWidget {
 
   ServiceCategory? _resolveCategory(DirectoryDataStore store) {
     for (final category in store.categories) {
-      if (categoryId.isNotEmpty && category.id == categoryId) {
+      if (widget.categoryId.isNotEmpty && category.id == widget.categoryId) {
         return category;
       }
 
-      if (category.name == categoryName) {
+      if (category.name == widget.categoryName) {
         return category;
       }
     }
@@ -103,123 +198,90 @@ class CategoryListPage extends StatelessWidget {
     return null;
   }
 
-  void _openBusiness(
-    BuildContext context,
-    Business business,
-  ) {
+  void _clearSearch() {
+    _searchController.clear();
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    setState(() {
+      _query = '';
+    });
+  }
+
+  void _openBusiness(Business business) {
     Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
-        builder: (context) => MemberDetailsPage(
-          business: business,
-        ),
+        builder: (context) => MemberDetailsPage(business: business),
       ),
     );
   }
-}
 
-class _DataSourceNotice extends StatelessWidget {
-  const _DataSourceNotice({
-    required this.message,
-    required this.onRefresh,
-  });
+  static int _compareBusinesses(Business first, Business second) {
+    if (first.isFeatured != second.isFeatured) {
+      return first.isFeatured ? -1 : 1;
+    }
 
-  final String message;
-  final Future<void> Function() onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: AppColors.mintSoft,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.cloud_off_outlined,
-            color: AppColors.primaryTeal,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              message,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.primaryDark,
-              ),
-            ),
-          ),
-          IconButton(
-            tooltip: 'إعادة المحاولة',
-            onPressed: onRefresh,
-            icon: const Icon(Icons.refresh_rounded),
-          ),
-        ],
-      ),
-    );
+    return first.displayName.compareTo(second.displayName);
   }
 }
 
 class _EmptyCategoryState extends StatelessWidget {
   const _EmptyCategoryState({
     required this.categoryName,
-    this.fallbackMessage,
+    required this.hasSearch,
+    required this.onClearSearch,
   });
 
   final String categoryName;
-  final String? fallbackMessage;
+  final bool hasSearch;
+  final VoidCallback onClearSearch;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
+      key: const ValueKey<String>('empty-category-state'),
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(AppSpacing.xl),
       children: [
-        const SizedBox(height: 70),
-        Container(
-          width: 86,
-          height: 86,
-          decoration: const BoxDecoration(
-            color: AppColors.primarySoft,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.storefront_outlined,
-            color: AppColors.primaryTeal,
-            size: 42,
-          ),
+        const SizedBox(height: 40),
+        const Icon(
+          Icons.storefront_outlined,
+          color: AppColors.primaryTeal,
+          size: 58,
         ),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.md),
         Text(
-          'لا توجد أنشطة حاليًا',
+          hasSearch ? 'لا توجد نتائج مطابقة' : 'لا توجد أنشطة حاليًا',
           style: AppTextStyles.titleLarge,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          'لم تُضف بيانات معتمدة إلى قسم $categoryName بعد.',
+          hasSearch
+              ? 'لا يوجد نشاط مطابق لبحثك داخل قسم $categoryName.'
+              : 'لم تُضف بيانات معتمدة إلى قسم $categoryName بعد.',
           style: AppTextStyles.bodyMedium.copyWith(
             color: AppColors.textSecondary,
           ),
           textAlign: TextAlign.center,
         ),
-        if (fallbackMessage != null) ...[
+        if (hasSearch) ...[
+          const SizedBox(height: AppSpacing.lg),
+          Center(
+            child: OutlinedButton.icon(
+              onPressed: onClearSearch,
+              icon: const Icon(Icons.close_rounded),
+              label: const Text('مسح البحث'),
+            ),
+          ),
+        ] else ...[
           const SizedBox(height: AppSpacing.md),
           Text(
-            fallbackMessage!,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.warning,
-            ),
+            'اسحب إلى الأسفل لمحاولة تحديث البيانات.',
+            style: AppTextStyles.bodySmall,
             textAlign: TextAlign.center,
           ),
         ],
-        const SizedBox(height: AppSpacing.md),
-        Text(
-          'اسحب إلى الأسفل لمحاولة تحديث البيانات.',
-          style: AppTextStyles.bodySmall,
-          textAlign: TextAlign.center,
-        ),
       ],
     );
   }

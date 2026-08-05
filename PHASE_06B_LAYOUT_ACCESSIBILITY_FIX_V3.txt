@@ -1,0 +1,10 @@
+Dalil Al Hami - Phase 06B Layout Accessibility Fix v3
+
+Fixes included:
+- Directory filter bars now derive their height from the scaled minimum touch target.
+- Filter chips remain vertically centered and no longer overflow at 135% text scale.
+- Material/layout regression tests now verify the four directory pages independently.
+- The standalone search/filter regression now runs with enlarged text.
+
+This package is cumulative over Phase 06A root stabilization v9 and includes the complete Phase 06B v2 baseline.
+No SQLite or Supabase migration is required.

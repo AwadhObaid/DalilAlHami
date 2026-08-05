@@ -5,7 +5,7 @@ import 'package:hami_guide/features/directory/widgets/business_card.dart';
 import 'package:hami_guide/models/business.dart';
 
 void main() {
-  testWidgets('بطاقة النشاط لا تتجاوز الشاشة الضيقة', (
+  testWidgets('بطاقة النشاط تتحمل الشاشة الضيقة والخط المكبر ولوحة المفاتيح', (
     WidgetTester tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(320, 720));
@@ -25,6 +25,17 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light,
+        builder: (context, child) {
+          final mediaQuery = MediaQuery.of(context);
+
+          return MediaQuery(
+            data: mediaQuery.copyWith(
+              textScaler: const TextScaler.linear(1.35),
+              viewInsets: const EdgeInsets.only(bottom: 300),
+            ),
+            child: child!,
+          );
+        },
         home: Scaffold(
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(8),

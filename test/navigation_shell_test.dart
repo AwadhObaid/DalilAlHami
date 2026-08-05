@@ -8,7 +8,7 @@ import 'package:hami_guide/features/directory/categories_overview_page.dart';
 import 'package:hami_guide/features/home/home_screen.dart';
 
 void main() {
-  setUpAll(() {
+  setUp(() {
     DirectoryDataStore.instance.prepareBundledDataForTesting();
   });
 

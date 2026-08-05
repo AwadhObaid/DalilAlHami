@@ -1,0 +1,16 @@
+Dalil Al Hami - Phase 06B Root Hardening v2
+
+Root causes fixed:
+- Shared TextField and FilterChip components now provide their own Material.
+- Search page has a Material root while remaining suitable for HomeScreen tabs.
+- Categories page is a self-contained routed Scaffold with a back action.
+- Filter chips use SingleChildScrollView + Row, so every option is built before tests or accessibility tools query it.
+- Directory headers collapse while the software keyboard is visible, preserving usable result space.
+- Search, categories, all-businesses, and category-list pages support narrow screens and enlarged text.
+- Phase 06B tests use guarded controls, assert element existence before interaction, and include dedicated Material/layout regressions.
+- Installation runs tests in stages before the full project suite and ARM64 APK build.
+
+No SQLite upgrade or Supabase migration is required.
+
+
+Retained as the cumulative baseline inside Layout Accessibility Fix v3.

@@ -1,0 +1,13 @@
+Dalil Al Hami - Phase 06B Directory Experience
+
+Implemented:
+- Unified teal directory headers for search, categories, all businesses, and category lists.
+- Real-time search with service, transport, featured, and all filters.
+- Search result counts and practical discovery prompt.
+- Category group selector, category search, group statistics, and refined cards.
+- Dedicated all-businesses search and filters.
+- Search inside each category list.
+- Shared reusable widgets for headers, search fields, filter bars, and summaries.
+- Behavior-based Phase 06B widget tests; no Dart source-text assertions.
+
+No Supabase migration or SQLite upgrade is required.
