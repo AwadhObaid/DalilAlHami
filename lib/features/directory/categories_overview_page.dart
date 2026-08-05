@@ -13,7 +13,12 @@ import '../shared/widgets/page_header.dart';
 import 'category_list_page.dart';
 
 class CategoriesOverviewPage extends StatefulWidget {
-  const CategoriesOverviewPage({super.key});
+  const CategoriesOverviewPage({
+    this.initialGroup = CategoryDisplayGroup.services,
+    super.key,
+  });
+
+  final CategoryDisplayGroup initialGroup;
 
   @override
   State<CategoriesOverviewPage> createState() => _CategoriesOverviewPageState();
@@ -22,7 +27,7 @@ class CategoriesOverviewPage extends StatefulWidget {
 class _CategoriesOverviewPageState extends State<CategoriesOverviewPage>
     with AutomaticKeepAliveClientMixin<CategoriesOverviewPage> {
   final DirectoryDataStore _store = DirectoryDataStore.instance;
-  CategoryDisplayGroup _selectedGroup = CategoryDisplayGroup.services;
+  late CategoryDisplayGroup _selectedGroup;
 
   @override
   bool get wantKeepAlive => true;
@@ -30,6 +35,7 @@ class _CategoriesOverviewPageState extends State<CategoriesOverviewPage>
   @override
   void initState() {
     super.initState();
+    _selectedGroup = widget.initialGroup;
 
     if (!_store.hasLoaded) {
       WidgetsBinding.instance.addPostFrameCallback((_) {

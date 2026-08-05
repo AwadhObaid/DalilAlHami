@@ -1,0 +1,16 @@
+Dalil Al Hami - Phase 06A Sticky Advertisement Contract Test Fix v8
+
+Cause:
+The old Phase 06A source-contract test expected HomeDashboardPage to invoke
+AdSlider directly and expected StickyAdvertisementHeader to be absent.
+
+The approved v5 design intentionally changed the structure to:
+HomeDashboardPage -> StickyAdvertisementHeader -> AdSlider
+
+Fix:
+- The contract test now expects StickyAdvertisementHeader in the dashboard.
+- It verifies that StickyAdvertisementHeader still embeds AdSlider.
+- It verifies the compact pinned advertisement key.
+- It verifies the all-businesses route and exploration footer contracts.
+- No application source or behavior was modified.
+- No SQLite or Supabase migration is required.

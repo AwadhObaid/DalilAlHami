@@ -1,0 +1,14 @@
+Dalil Al Hami - Phase 06A Manual Sliver Scroll Test Fix v7
+
+Cause:
+WidgetTester.scrollUntilVisible expects its scrollable finder to resolve to a
+Scrollable widget. The previous test passed a CustomScrollView finder, which
+caused a runtime type cast error.
+
+Fix:
+- Replaced scrollUntilVisible with a controlled drag loop on CustomScrollView.
+- The loop pumps after every drag and stops as soon as the lazily built target
+  enters the widget tree.
+- ensureVisible is used only after the target has been built.
+- No application source, UI, advertisement, routing, synchronization, SQLite,
+  Supabase, WorkManager, or notification behavior was changed.

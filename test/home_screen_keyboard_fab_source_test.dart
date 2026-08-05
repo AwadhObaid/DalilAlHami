@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test(
-    'HomeScreen keeps the keyboard visibility guard for the business FAB',
+    'HomeScreen keeps the keyboard visibility guard for the business action button',
     () {
       final source = File(
         'lib/features/home/home_screen.dart',
@@ -19,7 +19,7 @@ void main() {
       expect(
         source,
         contains(
-          'floatingActionButton: isKeyboardVisible',
+          'showBusinessAction: !isKeyboardVisible',
         ),
       );
     },

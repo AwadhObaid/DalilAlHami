@@ -3,17 +3,20 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_catalog.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
-import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_text_styles.dart';
-import '../../core/utils/launch_actions.dart';
 import '../../data/directory_data_store.dart';
+import '../../models/business.dart';
 import '../../models/service_category.dart';
+import '../directory/all_businesses_page.dart';
+import '../directory/categories_overview_page.dart';
 import '../directory/category_list_page.dart';
+import '../directory/member_details_page.dart';
 import '../shared/widgets/directory_loading_skeleton.dart';
 import '../shared/widgets/directory_status_banner.dart';
-import 'widgets/sticky_advertisement_header.dart';
 import 'widgets/category_circle_item.dart';
+import 'widgets/home_business_card.dart';
 import 'widgets/home_header.dart';
+import 'widgets/sticky_advertisement_header.dart';
 
 class HomeDashboardPage extends StatefulWidget {
   const HomeDashboardPage({
@@ -31,6 +34,15 @@ class HomeDashboardPage extends StatefulWidget {
 
 class _HomeDashboardPageState extends State<HomeDashboardPage>
     with AutomaticKeepAliveClientMixin<HomeDashboardPage> {
+  static const ServiceCategory _transportHub = ServiceCategory(
+    id: 'featured-transport-hub',
+    name: 'خدمات النقل',
+    slug: 'transport-hub',
+    iconName: 'local_taxi',
+    sortOrder: -1,
+    displayGroup: CategoryDisplayGroup.transport,
+  );
+
   final DirectoryDataStore _directoryStore = DirectoryDataStore.instance;
   final PageController _adPageController = PageController();
 
@@ -59,9 +71,61 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
     return values.isNotEmpty ? values : AppCatalog.services;
   }
 
-  List<ServiceCategory> get _transportCategories {
-    final values = _directoryStore.transportCategories;
-    return values.isNotEmpty ? values : AppCatalog.transport;
+  List<ServiceCategory> get _featuredCategories {
+    const preferredSlugs = [
+      'salons',
+      'restaurants',
+      'pharmacies',
+      'groceries',
+      'workshops',
+      'fuel-stations',
+    ];
+
+    final services = _serviceCategories;
+    final result = <ServiceCategory>[_transportHub];
+
+    for (final slug in preferredSlugs) {
+      for (final category in services) {
+        if (category.slug == slug &&
+            !result.any((value) => value.id == category.id)) {
+          result.add(category);
+          break;
+        }
+      }
+    }
+
+    for (final category in services) {
+      if (result.length >= 8) {
+        break;
+      }
+      if (!result.any((value) => value.id == category.id)) {
+        result.add(category);
+      }
+    }
+
+    return result;
+  }
+
+  List<Business> get _nearbyBusinesses {
+    final values = _directoryStore.businesses
+        .where((business) => !business.isDeleted)
+        .toList(growable: true);
+
+    values.sort((first, second) {
+      if (first.isFeatured != second.isFeatured) {
+        return first.isFeatured ? -1 : 1;
+      }
+
+      final firstUpdated = first.updatedAt ?? first.createdAt;
+      final secondUpdated = second.updatedAt ?? second.createdAt;
+      if (firstUpdated != null && secondUpdated != null) {
+        return secondUpdated.compareTo(firstUpdated);
+      }
+
+      return first.displayName.compareTo(second.displayName);
+    });
+
+    return values.take(5).toList(growable: false);
   }
 
   @override
@@ -71,30 +135,44 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
     return AnimatedBuilder(
       animation: _directoryStore,
       builder: (context, child) {
-        return Column(
-          children: [
-            const HomeHeader(),
-            if (_directoryStore.isRefreshing)
-              const LinearProgressIndicator(minHeight: 2),
-            Expanded(
-              child: _directoryStore.isInitialLoading
-                  ? const DirectoryLoadingSkeleton(itemCount: 3)
-                  : _buildContent(),
-            ),
-          ],
-        );
+        if (_directoryStore.isInitialLoading) {
+          return Column(
+            children: [
+              HomeHeader(
+                onOpenSearch: widget.onOpenSearch,
+                onOpenFilters: () => _openCategoriesOverview(),
+              ),
+              const Expanded(
+                child: DirectoryLoadingSkeleton(itemCount: 3),
+              ),
+            ],
+          );
+        }
+
+        return _buildContent();
       },
     );
   }
 
   Widget _buildContent() {
+    final businesses = _nearbyBusinesses;
+
     return RefreshIndicator(
       onRefresh: _directoryStore.refresh,
       child: CustomScrollView(
         key: const PageStorageKey<String>('home-dashboard-scroll'),
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          SliverToBoxAdapter(child: _buildSearchLauncher()),
+          SliverToBoxAdapter(
+            child: HomeHeader(
+              onOpenSearch: widget.onOpenSearch,
+              onOpenFilters: () => _openCategoriesOverview(),
+            ),
+          ),
+          if (_directoryStore.isRefreshing)
+            const SliverToBoxAdapter(
+              child: LinearProgressIndicator(minHeight: 2),
+            ),
           if (_directoryStore.fallbackMessage != null)
             SliverToBoxAdapter(
               child: DirectoryStatusBanner(
@@ -114,230 +192,123 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
             child: SizedBox(height: AppSpacing.lg),
           ),
           SliverToBoxAdapter(
-            child: _buildSectionHeader(
-              title: 'خدمات النقل',
-              subtitle: 'وصول أسرع للخدمات اليومية',
-              icon: Icons.route_rounded,
-              onViewAll: widget.onOpenCategories,
+            child: _SectionHeader(
+              title: 'الفئات المميزة',
+              icon: Icons.workspace_premium_outlined,
+              viewAllKey: 'featured-categories-view-all',
+              onViewAll: () => _openCategoriesOverview(),
             ),
           ),
-          SliverToBoxAdapter(child: _buildHorizontalCategories()),
-          SliverToBoxAdapter(child: _buildSuggestionBox()),
+          SliverToBoxAdapter(child: _buildFeaturedCategories()),
           const SliverToBoxAdapter(
-            child: SizedBox(height: AppSpacing.xs),
+            child: SizedBox(height: AppSpacing.lg),
           ),
           SliverToBoxAdapter(
-            child: _buildSectionHeader(
-              title: 'الخدمات والأنشطة',
-              subtitle: 'اختر القسم الذي تبحث عنه',
-              icon: Icons.grid_view_rounded,
-              onViewAll: widget.onOpenCategories,
+            child: _SectionHeader(
+              title: 'أنشطة قريبة منك',
+              icon: Icons.location_on_outlined,
+              viewAllKey: 'nearby-businesses-view-all',
+              onViewAll: _openAllBusinesses,
             ),
           ),
-          SliverToBoxAdapter(child: _buildServiceGrid()),
-          const SliverToBoxAdapter(child: SizedBox(height: 132)),
-        ],
-      ),
-    );
-  }
+          if (businesses.isEmpty)
+            SliverToBoxAdapter(child: _buildEmptyBusinesses())
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  if (index.isOdd) {
+                    return const SizedBox(height: AppSpacing.sm);
+                  }
 
-  Widget _buildSearchLauncher() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        0,
-      ),
-      child: Material(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        elevation: 0,
-        child: InkWell(
-          key: const ValueKey<String>('home-search-launcher'),
-          onTap: widget.onOpenSearch,
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 56),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
-            ),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              border: Border.all(color: AppColors.outline),
-              boxShadow: AppShadows.card,
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.search_rounded,
-                  color: AppColors.primaryTeal,
-                  size: 27,
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    'ابحث عن مطعم، صيدلية، ورشة أو اسم نشاط…',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textMuted,
+                  final business = businesses[index ~/ 2];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
                     ),
-                  ),
-                ),
-                const Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  size: 16,
-                  color: AppColors.textMuted,
-                ),
-              ],
+                    child: HomeBusinessCard(
+                      business: business,
+                      onOpen: () => _openBusiness(business),
+                    ),
+                  );
+                },
+                childCount: (businesses.length * 2) - 1,
+              ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required VoidCallback onViewAll,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: AppColors.primarySoft,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: _ExploreDirectoryFooter(
+              onOpenAllBusinesses: _openAllBusinesses,
+              onOpenCategories: () => _openCategoriesOverview(),
             ),
-            child: Icon(
-              icon,
-              color: AppColors.primaryTeal,
-              size: 21,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: AppTextStyles.titleMedium),
-                Text(subtitle, style: AppTextStyles.bodySmall),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: onViewAll,
-            child: const Text('عرض الكل'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHorizontalCategories() {
-    final categories = _transportCategories;
+  Widget _buildFeaturedCategories() {
+    final categories = _featuredCategories;
     final textScale = MediaQuery.textScalerOf(context).scale(1);
-    final listHeight = (106 + ((textScale - 1) * 90)).clamp(
-      106.0,
-      142.0,
-    );
+    final listHeight = (116 + ((textScale - 1) * 84)).clamp(116.0, 152.0);
 
     return SizedBox(
-      key: const ValueKey<String>('transport-category-list'),
+      key: const ValueKey<String>('featured-category-list'),
       height: listHeight,
       child: ListView.separated(
-        key: const PageStorageKey<String>('transport-categories'),
+        key: const PageStorageKey<String>('featured-categories'),
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
         scrollDirection: Axis.horizontal,
         reverse: true,
         itemCount: categories.length,
-        separatorBuilder: (context, index) => const SizedBox(
-          width: AppSpacing.xxs,
-        ),
+        separatorBuilder: (context, index) => const SizedBox(width: 2),
         itemBuilder: (context, index) {
           final category = categories[index];
 
           return CategoryCircleItem(
             category: category,
-            onTap: () => _openCategory(category),
+            accentIndex: index,
+            emphasized: index == 0,
+            onTap: category.id == _transportHub.id
+                ? () => _openCategoriesOverview(
+                      initialGroup: CategoryDisplayGroup.transport,
+                    )
+                : () => _openCategory(category),
           );
         },
       ),
     );
   }
 
-  Widget _buildSuggestionBox() {
+  Widget _buildEmptyBusinesses() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.xs,
-        AppSpacing.md,
-        AppSpacing.md,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
       ),
       child: Container(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(color: AppColors.outline),
-          boxShadow: AppShadows.subtle,
         ),
-        child: Row(
+        child: Column(
           children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: const BoxDecoration(
-                color: AppColors.mintSoft,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.lightbulb_outline_rounded,
-                color: AppColors.primaryTeal,
-              ),
+            const Icon(
+              Icons.storefront_outlined,
+              size: 42,
+              color: AppColors.primaryTeal,
             ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'شكرًا لاختيارك دليل الحامي',
-                    style: AppTextStyles.titleSmall,
-                  ),
-                  const SizedBox(height: AppSpacing.xxs),
-                  Text(
-                    'اقتراحك يساعدنا على تطوير الدليل وتحسين خدماته.',
-                    style: AppTextStyles.bodySmall,
-                  ),
-                ],
-              ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'ستظهر الأنشطة المسجلة هنا',
+              style: AppTextStyles.titleSmall,
             ),
-            const SizedBox(width: AppSpacing.xs),
-            IconButton.filled(
-              tooltip: 'إرسال اقتراح عبر واتساب',
-              style: IconButton.styleFrom(
-                backgroundColor: AppColors.primaryTeal,
-                foregroundColor: AppColors.white,
-              ),
-              onPressed: () {
-                LaunchActions.openWhatsApp(
-                  context,
-                  '772551846',
-                  message: 'لدي اقتراح لتطوير تطبيق دليل الحامي.',
-                );
-              },
-              icon: const Icon(Icons.chat_bubble_outline_rounded),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'حدّث بيانات الدليل أو استخدم البحث للوصول إلى نشاط محدد.',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodySmall,
             ),
           ],
         ),
@@ -345,93 +316,25 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
     );
   }
 
-  Widget _buildServiceGrid() {
-    final categories = _serviceCategories;
+  Future<void> _openAllBusinesses() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => const AllBusinessesPage(),
+      ),
+    );
+  }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final crossAxisCount = constraints.maxWidth < 360 ? 2 : 3;
-        final textScale = MediaQuery.textScalerOf(context).scale(1);
-        final baseAspectRatio = crossAxisCount == 2 ? 1.12 : 0.96;
-        final adaptiveAspectRatio =
-            (baseAspectRatio / (1 + ((textScale - 1) * 0.75)))
-                .clamp(0.72, baseAspectRatio);
-
-        return GridView.builder(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.xs,
-            AppSpacing.md,
-            AppSpacing.md,
-          ),
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            mainAxisSpacing: AppSpacing.sm,
-            crossAxisSpacing: AppSpacing.sm,
-            childAspectRatio: adaptiveAspectRatio,
-          ),
-          itemCount: categories.length,
-          itemBuilder: (context, index) {
-            final category = categories[index];
-
-            return Semantics(
-              button: true,
-              label: 'فتح قسم ${category.name}',
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  border: Border.all(color: AppColors.outline),
-                  boxShadow: AppShadows.subtle,
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  child: InkWell(
-                    onTap: () => _openCategory(category),
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.xs),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 46,
-                            height: 46,
-                            decoration: BoxDecoration(
-                              color: index.isEven
-                                  ? AppColors.primarySoft
-                                  : AppColors.mintSoft,
-                              borderRadius: BorderRadius.circular(AppRadius.sm),
-                            ),
-                            child: Icon(
-                              category.icon,
-                              color: AppColors.primaryTeal,
-                              size: 25,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            category.name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: AppTextStyles.labelMedium.copyWith(
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
+  Future<void> _openCategoriesOverview({
+    CategoryDisplayGroup initialGroup = CategoryDisplayGroup.services,
+  }) async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => CategoriesOverviewPage(
+          initialGroup: initialGroup,
+        ),
+      ),
     );
   }
 
@@ -443,6 +346,157 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
           categoryName: category.name,
           categoryId: category.id,
         ),
+      ),
+    );
+  }
+
+  void _openBusiness(Business business) {
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => MemberDetailsPage(business: business),
+      ),
+    );
+  }
+}
+
+class _ExploreDirectoryFooter extends StatelessWidget {
+  const _ExploreDirectoryFooter({
+    required this.onOpenAllBusinesses,
+    required this.onOpenCategories,
+  });
+
+  final VoidCallback onOpenAllBusinesses;
+  final VoidCallback onOpenCategories;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSizes.bottomBarHeight + AppSpacing.md,
+        ),
+        child: Container(
+          key: const ValueKey<String>('home-explore-directory-footer'),
+          width: double.infinity,
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: AppColors.primarySoft,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: AppColors.outline),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: const BoxDecoration(
+                  color: AppColors.surface,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.explore_outlined,
+                  color: AppColors.primaryTeal,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'استكشف دليل الحامي',
+                      style: AppTextStyles.titleSmall,
+                    ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      'تصفح جميع الأنشطة أو انتقل إلى الأقسام.',
+                      style: AppTextStyles.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                tooltip: 'خيارات الاستكشاف',
+                onSelected: (value) {
+                  if (value == 'all') {
+                    onOpenAllBusinesses();
+                  } else {
+                    onOpenCategories();
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: 'all',
+                    child: Text('جميع الأنشطة'),
+                  ),
+                  PopupMenuItem(
+                    value: 'categories',
+                    child: Text('الأقسام'),
+                  ),
+                ],
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: AppColors.primaryTeal,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.title,
+    required this.icon,
+    required this.viewAllKey,
+    required this.onViewAll,
+  });
+
+  final String title;
+  final IconData icon;
+  final String viewAllKey;
+  final VoidCallback onViewAll;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: const BoxDecoration(
+              color: AppColors.primarySoft,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: AppColors.primaryTeal,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Text(title, style: AppTextStyles.titleLarge),
+          ),
+          TextButton(
+            key: ValueKey<String>(viewAllKey),
+            onPressed: onViewAll,
+            child: const Text('عرض الكل'),
+          ),
+        ],
       ),
     );
   }

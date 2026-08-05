@@ -1,0 +1,10 @@
+Dalil Al Hami - Phase 06A Search Placeholder Fix v4
+
+Restored the official home search placeholder expected by the application
+startup regression test:
+
+ابحث عن مطعم، صيدلية، ورشة أو اسم نشاط…
+
+The compact Phase 06A v3 header, advertisement behavior, categories routing,
+and removed home synchronization card remain unchanged.
+No SQLite or Supabase change is required.

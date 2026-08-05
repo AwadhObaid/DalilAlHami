@@ -1,0 +1,17 @@
+Dalil Al Hami - Phase 06A Root Stabilization v9
+
+Root cause addressed:
+Phase 06A accumulated source-text contract tests that searched Dart files for
+implementation strings. Valid UI refactors then failed because a widget moved
+behind a wrapper or a key lived in a child component.
+
+Permanent test policy:
+- Phase 06A tests do not read Dart source files.
+- They render real widgets and verify visible behavior.
+- Navigation is tested by tapping actual buttons.
+- Lazy slivers are tested through one shared controlled-scroll helper.
+- Sticky advertisement behavior is tested after real scrolling.
+- The complete approved Phase 06A application baseline is reinstalled in one
+  cumulative package to eliminate patch drift.
+
+No SQLite or Supabase migration is required.

@@ -35,26 +35,17 @@ class _AdSliderState extends State<AdSlider> {
     final progress = widget.collapseProgress.clamp(0.0, 1.0).toDouble();
     final compact = progress >= 0.55;
     final textScale = MediaQuery.textScalerOf(context).scale(1);
-    final sliderHeight = (116 + ((textScale - 1) * 90)).clamp(
-      116.0,
-      152.0,
-    );
+    final sliderHeight =
+        (AppSizes.homeAdExpandedHeight + ((textScale - 1) * 104))
+            .clamp(AppSizes.homeAdExpandedHeight, 252.0);
 
     final adContent = Semantics(
-      label: 'الإعلانات',
+      label: 'الإعلانات المحلية',
       child: Container(
         key: const ValueKey<String>('home-ad-slider'),
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [
-              AppColors.lightTeal,
-              AppColors.primaryTeal,
-              AppColors.primaryDark,
-            ],
-          ),
+          color: AppColors.advertisementInk,
           borderRadius: BorderRadius.circular(
             compact ? AppRadius.md : AppRadius.lg,
           ),
@@ -62,30 +53,6 @@ class _AdSliderState extends State<AdSlider> {
         ),
         child: Stack(
           children: [
-            Positioned(
-              top: -30,
-              left: -20,
-              child: Container(
-                width: 105,
-                height: 105,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.white.withValues(alpha: 0.09),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: -45,
-              right: -10,
-              child: Container(
-                width: 130,
-                height: 130,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.white.withValues(alpha: 0.07),
-                ),
-              ),
-            ),
             PageView.builder(
               controller: widget.controller,
               itemCount: widget.advertisements.length,
@@ -103,12 +70,13 @@ class _AdSliderState extends State<AdSlider> {
                   ),
                   message: widget.advertisements[index],
                   collapseProgress: progress,
+                  variantIndex: index,
                 );
               },
             ),
-            Positioned(
-              right: 0,
-              left: 0,
+            PositionedDirectional(
+              start: 0,
+              end: 0,
               bottom: compact ? AppSpacing.xxs : AppSpacing.xs,
               child: IgnorePointer(
                 child: Row(
@@ -117,13 +85,13 @@ class _AdSliderState extends State<AdSlider> {
                     widget.advertisements.length,
                     (index) => AnimatedContainer(
                       duration: const Duration(milliseconds: 220),
-                      width: index == _currentPage ? (compact ? 14 : 18) : 6,
-                      height: compact ? 5 : 6,
+                      width: index == _currentPage ? (compact ? 14 : 22) : 7,
+                      height: compact ? 5 : 7,
                       margin: const EdgeInsets.symmetric(horizontal: 3),
                       decoration: BoxDecoration(
                         color: index == _currentPage
-                            ? AppColors.white
-                            : AppColors.white.withValues(alpha: 0.45),
+                            ? AppColors.lightTeal
+                            : AppColors.white.withValues(alpha: 0.52),
                         borderRadius: BorderRadius.circular(AppRadius.pill),
                       ),
                     ),
@@ -151,103 +119,251 @@ class _AdvertisementPage extends StatelessWidget {
   const _AdvertisementPage({
     required this.message,
     required this.collapseProgress,
+    required this.variantIndex,
     super.key,
   });
 
   final String message;
   final double collapseProgress;
+  final int variantIndex;
 
   @override
   Widget build(BuildContext context) {
     final progress = collapseProgress.clamp(0.0, 1.0).toDouble();
     final compact = progress >= 0.55;
-    final iconSize = 44 - (10 * progress);
-    final horizontalPadding = 20 - (8 * progress);
-    final verticalPadding = 14 - (6 * progress);
-    final titleFontSize = 16 - (2 * progress);
+    final visual = _AdvertisementVisual.forIndex(variantIndex);
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        horizontalPadding,
-        verticalPadding,
-        horizontalPadding,
-        compact ? 13 : 24,
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: iconSize,
-            height: iconSize,
-            decoration: BoxDecoration(
-              color: AppColors.white.withValues(alpha: 0.16),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.campaign_rounded,
-              size: compact ? 21 : 24,
-              color: AppColors.white,
-            ),
+    if (compact) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: AlignmentDirectional.topStart,
+            end: AlignmentDirectional.bottomEnd,
+            colors: visual.gradient,
           ),
-          SizedBox(width: compact ? AppSpacing.xs : AppSpacing.sm),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (!compact) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xs,
-                      vertical: AppSpacing.xxs,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.white.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                    ),
-                    child: Text(
-                      'إعلان',
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: AppColors.white,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                ],
-                Flexible(
-                  child: Text(
-                    message,
-                    maxLines: compact ? 1 : 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.titleMedium.copyWith(
-                      color: AppColors.white,
-                      fontSize: titleFontSize,
-                    ),
-                  ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.xs,
+            AppSpacing.md,
+            AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppColors.white.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
                 ),
-              ],
-            ),
-          ),
-          if (compact) ...[
-            const SizedBox(width: AppSpacing.xs),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xs,
-                vertical: AppSpacing.xxs,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(AppRadius.pill),
-              ),
-              child: Text(
-                'إعلان',
-                style: AppTextStyles.labelSmall.copyWith(
+                child: Icon(
+                  visual.icon,
                   color: AppColors.white,
+                  size: 23,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  message,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.titleSmall.copyWith(
+                    color: AppColors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              _AdvertisementBadge(compact: true),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
+          colors: visual.gradient,
+        ),
+      ),
+      child: Stack(
+        children: [
+          PositionedDirectional(
+            end: -24,
+            top: -34,
+            child: Container(
+              width: 176,
+              height: 176,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.white.withValues(alpha: 0.08),
+              ),
+            ),
+          ),
+          PositionedDirectional(
+            end: AppSpacing.xl,
+            bottom: AppSpacing.lg,
+            child: Transform.rotate(
+              angle: -0.08,
+              child: Container(
+                width: 112,
+                height: 112,
+                decoration: BoxDecoration(
+                  color: AppColors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppRadius.xl),
+                  border: Border.all(
+                    color: AppColors.white.withValues(alpha: 0.18),
+                  ),
+                ),
+                child: Icon(
+                  visual.icon,
+                  color: AppColors.white,
+                  size: 64,
                 ),
               ),
             ),
-          ],
+          ),
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                154,
+                AppSpacing.xl,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const _AdvertisementBadge(compact: false),
+                  const SizedBox(height: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Flexible(
+                          child: Align(
+                            alignment: AlignmentDirectional.bottomStart,
+                            child: Text(
+                              message,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.headlineMedium.copyWith(
+                                color: AppColors.white,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xxs),
+                        Text(
+                          'إعلان محلي تديره إدارة دليل الحامي',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.white.withValues(alpha: 0.82),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.xs,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.advertisementGold,
+                            borderRadius: BorderRadius.circular(
+                              AppRadius.pill,
+                            ),
+                          ),
+                          child: Text(
+                            'اكتشف الآن',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.labelMedium.copyWith(
+                              color: AppColors.advertisementInk,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+}
+
+class _AdvertisementBadge extends StatelessWidget {
+  const _AdvertisementBadge({required this.compact});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? AppSpacing.xs : AppSpacing.sm,
+        vertical: AppSpacing.xxs,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.advertisementGold,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Text(
+        'إعلان',
+        style: AppTextStyles.labelSmall.copyWith(
+          color: AppColors.advertisementInk,
+        ),
+      ),
+    );
+  }
+}
+
+class _AdvertisementVisual {
+  const _AdvertisementVisual({
+    required this.gradient,
+    required this.icon,
+  });
+
+  final List<Color> gradient;
+  final IconData icon;
+
+  static _AdvertisementVisual forIndex(int index) {
+    return switch (index % 3) {
+      1 => const _AdvertisementVisual(
+          gradient: [
+            Color(0xFF0B5960),
+            Color(0xFF008F84),
+            Color(0xFF2AB99E),
+          ],
+          icon: Icons.construction_rounded,
+        ),
+      2 => const _AdvertisementVisual(
+          gradient: [
+            Color(0xFF173F4A),
+            Color(0xFF00646D),
+            Color(0xFF009A8B),
+          ],
+          icon: Icons.storefront_rounded,
+        ),
+      _ => const _AdvertisementVisual(
+          gradient: [
+            Color(0xFF073C43),
+            Color(0xFF006B70),
+            Color(0xFF008F84),
+          ],
+          icon: Icons.restaurant_rounded,
+        ),
+    };
   }
 }

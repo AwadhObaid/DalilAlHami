@@ -22,8 +22,11 @@ class StickyAdvertisementHeader extends StatelessWidget {
 
     final textScale =
         MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.4).toDouble();
-    final compactExtent = 82 + ((textScale - 1) * 34);
-    final expandedExtent = 136 + ((textScale - 1) * 70);
+    final safeTop = MediaQuery.paddingOf(context).top;
+    final compactExtent =
+        AppSizes.homeAdCompactHeight + safeTop + ((textScale - 1) * 34);
+    final expandedExtent =
+        AppSizes.homeAdExpandedHeight + ((textScale - 1) * 104);
 
     return SliverPersistentHeader(
       pinned: true,
@@ -32,6 +35,7 @@ class StickyAdvertisementHeader extends StatelessWidget {
         advertisements: advertisements,
         compactExtent: compactExtent,
         expandedExtent: expandedExtent,
+        safeTop: safeTop,
       ),
     );
   }
@@ -43,12 +47,14 @@ class _StickyAdvertisementDelegate extends SliverPersistentHeaderDelegate {
     required this.advertisements,
     required this.compactExtent,
     required this.expandedExtent,
+    required this.safeTop,
   });
 
   final PageController controller;
   final List<String> advertisements;
   final double compactExtent;
   final double expandedExtent;
+  final double safeTop;
 
   @override
   double get minExtent => compactExtent;
@@ -67,13 +73,15 @@ class _StickyAdvertisementDelegate extends SliverPersistentHeaderDelegate {
         ? 1.0
         : (shrinkOffset / collapseRange).clamp(0.0, 1.0).toDouble();
 
+    final topInset = safeTop * collapseProgress;
+
     return ColoredBox(
       key: const ValueKey<String>('sticky-advertisement-header'),
       color: AppColors.pageBackground,
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           AppSpacing.md,
-          AppSpacing.xxs,
+          AppSpacing.xxs + topInset,
           AppSpacing.md,
           overlapsContent ? AppSpacing.xs : AppSpacing.xxs,
         ),
@@ -92,6 +100,7 @@ class _StickyAdvertisementDelegate extends SliverPersistentHeaderDelegate {
     return oldDelegate.controller != controller ||
         oldDelegate.advertisements != advertisements ||
         oldDelegate.compactExtent != compactExtent ||
-        oldDelegate.expandedExtent != expandedExtent;
+        oldDelegate.expandedExtent != expandedExtent ||
+        oldDelegate.safeTop != safeTop;
   }
 }

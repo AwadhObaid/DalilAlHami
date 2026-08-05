@@ -1,0 +1,11 @@
+Dalil Al Hami - Phase 06A Responsive Advertisement Fix v2
+
+Fixed RenderFlex bottom overflows in the approved home advertisement:
+- Expanded advertisement content now uses a flexible vertical area.
+- Long titles and enlarged text are constrained with ellipsis.
+- The expanded advertisement height is 208 at normal scale and grows
+  proportionally for accessibility text scaling.
+- The compact pinned advertisement height remains unchanged and stays
+  below 110 logical pixels in the existing regression tests.
+- Navigation, local advertising data, synchronization, WorkManager,
+  notifications, SQLite, and Supabase behavior are unchanged.

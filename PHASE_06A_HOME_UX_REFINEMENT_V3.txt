@@ -1,0 +1,13 @@
+Dalil Al Hami - Phase 06A Home UX Refinement v3
+
+Changes:
+- Reduced the home header from 292 to 218 logical pixels.
+- Reduced the search launcher height from 68 to 60 logical pixels.
+- Featured categories "View all" opens CategoriesOverviewPage directly.
+- Transport opens CategoriesOverviewPage with the transport group selected.
+- The advertisement is a full normal-flow card and is no longer pinned or
+  collapsed under the system status bar.
+- Removed the large HomeSyncStrip card from the home page.
+- Automatic synchronization, notifications, background work, and snack-bar
+  feedback remain active.
+- No Supabase migration or SQLite upgrade is required.

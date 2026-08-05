@@ -1,0 +1,12 @@
+Dalil Al Hami - Phase 06A New Design System and Home UI
+
+- Approved teal coastal visual identity implemented with Flutter widgets.
+- Scenic Hami header is rendered with a CustomPainter and contains no static UI screenshot.
+- Search and filter controls are real interactive Flutter controls.
+- Local administration advertisement slider remains connected to directory data.
+- Featured circular categories include a clear transport services shortcut.
+- Nearby business cards use real business data without fabricated ratings or distances.
+- Automatic synchronization status is presented in a compact home strip.
+- Bottom navigation now follows the approved five-part layout with a central Add Business action.
+- All Phase 05B-5 background sync and notification features remain unchanged.
+- No Supabase migration or SQLite schema upgrade is required.

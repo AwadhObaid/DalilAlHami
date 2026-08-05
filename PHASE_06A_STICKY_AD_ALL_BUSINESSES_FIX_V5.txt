@@ -1,0 +1,8 @@
+Dalil Al Hami - Phase 06A Sticky Advertisement and Home Space Fix v5
+
+- Restored the local advertisement as a pinned SliverPersistentHeader.
+- The advertisement shrinks to compact mode while scrolling and stays visible.
+- Added safe status-bar spacing only during compact pinned mode.
+- Nearby activities View all opens a dedicated All Businesses page.
+- Added an Explore Directory footer that fills remaining home space.
+- Background sync, notifications, SQLite, and Supabase are unchanged.

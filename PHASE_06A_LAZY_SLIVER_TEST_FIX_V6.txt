@@ -1,0 +1,12 @@
+Dalil Al Hami - Phase 06A Lazy Sliver Test Fix v6
+
+The Phase 06A v5 UI keys were already present in the application source.
+The widget tests failed because the target widgets are inside lazily built
+slivers and were below the visible viewport.
+
+This correction:
+- scrolls the home CustomScrollView until nearby-businesses-view-all exists;
+- scrolls until home-explore-directory-footer is built and visible;
+- then performs the route and visibility assertions;
+- does not modify any application UI, routing, synchronization, SQLite,
+  Supabase, WorkManager, or notification behavior.

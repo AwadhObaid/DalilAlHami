@@ -39,9 +39,12 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(
-        find.text('تصفح خدمات مدينة الحامي حسب المجال'),
+        find.byKey(
+          const ValueKey<String>('my-activities-sign-in-prompt'),
+        ),
         findsOneWidget,
       );
+      expect(find.text('سجّل الدخول لإدارة أنشطتك'), findsOneWidget);
 
       await tester.tap(
         find.byKey(const ValueKey<String>('nav-search')),
