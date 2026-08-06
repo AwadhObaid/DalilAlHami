@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/services/media_upload_service.dart';
 import 'sync_queue_item.dart';
 import 'sync_queue_remote_gateway.dart';
 
@@ -9,6 +10,7 @@ class SupabaseSyncQueueGateway implements SyncQueueRemoteGateway {
   const SupabaseSyncQueueGateway(this._client);
 
   static const String localLogoPathKey = '_local_logo_path';
+  static const String localGalleryPathsKey = '_local_gallery_paths';
 
   final SupabaseClient _client;
 
@@ -28,18 +30,87 @@ class SupabaseSyncQueueGateway implements SyncQueueRemoteGateway {
 
     final payload = Map<String, dynamic>.from(item.payload);
     final localLogoPath = payload.remove(localLogoPathKey)?.toString().trim();
-    if (localLogoPath != null && localLogoPath.isNotEmpty) {
-      payload['logo_url'] = await _uploadQueuedLogo(
-        item: item,
-        localPath: localLogoPath,
+    final localGalleryPaths = _readPathList(
+      payload.remove(localGalleryPathsKey),
+    );
+
+    final result = await _executeDirectoryOperation(item, payload);
+    if (result.isConflict ||
+        item.operationType == SyncQueueOperationType.deleteEntity ||
+        ((localLogoPath == null || localLogoPath.isEmpty) &&
+            localGalleryPaths.isEmpty)) {
+      return result;
+    }
+
+    final remoteEntityId = result.entityId?.trim() ?? '';
+    final businessId = remoteEntityId.isNotEmpty
+        ? remoteEntityId
+        : item.entityId?.trim() ?? '';
+    if (businessId.isEmpty) {
+      throw const SyncQueueExecutionException(
+        message: 'A business ID is required to finalize queued media.',
+        code: '22023',
+        isRetryable: false,
       );
     }
 
+    String? logoUrl;
+    if (localLogoPath != null && localLogoPath.isNotEmpty) {
+      final upload = await _uploadQueuedImage(
+        item: item,
+        businessId: businessId,
+        localPath: localLogoPath,
+        kind: MediaAssetKind.businessLogo,
+        suffix: 'logo',
+      );
+      logoUrl = upload.publicUrl;
+    }
+
+    final gallery = <Map<String, dynamic>>[];
+    for (var index = 0;
+        index < localGalleryPaths.length && index < 5;
+        index++) {
+      final upload = await _uploadQueuedImage(
+        item: item,
+        businessId: businessId,
+        localPath: localGalleryPaths[index],
+        kind: MediaAssetKind.businessGallery,
+        suffix: 'gallery_$index',
+      );
+      gallery.add(<String, dynamic>{
+        'storage_path': upload.storagePath,
+        'public_url': upload.publicUrl,
+        'alt_text': '',
+        'sort_order': index,
+        'is_primary': index == 0,
+      });
+    }
+
+    try {
+      await _client.rpc(
+        'finalize_owner_business_media',
+        params: <String, dynamic>{
+          'p_business_id': businessId,
+          'p_logo_url': logoUrl,
+          'p_gallery': gallery,
+        },
+      );
+    } on PostgrestException catch (error) {
+      throw _postgrestFailure(error);
+    }
+
+    return result;
+  }
+
+  Future<SyncQueueRemoteResult> _executeDirectoryOperation(
+    SyncQueueItem item,
+    Map<String, dynamic> payload,
+  ) async {
     Object? response;
     try {
       response = await _client.rpc(
         'process_directory_sync_operation',
-        params: {
+        params: <String, dynamic>{
           'p_operation_id': item.id,
           'p_entity_type': item.entityType.databaseValue,
           'p_operation_type': item.operationType.databaseValue,
@@ -48,19 +119,7 @@ class SupabaseSyncQueueGateway implements SyncQueueRemoteGateway {
         },
       );
     } on PostgrestException catch (error) {
-      const permanentCodes = <String>{
-        '22023',
-        '22P02',
-        '23503',
-        '23505',
-        '42501',
-      };
-      throw SyncQueueExecutionException(
-        message: error.message,
-        code: error.code,
-        isRetryable: !permanentCodes.contains(error.code),
-        cause: error,
-      );
+      throw _postgrestFailure(error);
     }
 
     final result = SyncQueueRemoteResult.fromRpc(response);
@@ -74,47 +133,54 @@ class SupabaseSyncQueueGateway implements SyncQueueRemoteGateway {
         'Supabase returned a different sync operation type.',
       );
     }
-
     return result;
   }
 
-  Future<String> _uploadQueuedLogo({
+  Future<MediaUploadResult> _uploadQueuedImage({
     required SyncQueueItem item,
+    required String businessId,
     required String localPath,
+    required MediaAssetKind kind,
+    required String suffix,
   }) async {
-    final entityId = item.entityId;
-    if (entityId == null || entityId.trim().isEmpty) {
-      throw const SyncQueueExecutionException(
-        message: 'A business ID is required to upload the queued logo.',
-        code: '22023',
-        isRetryable: false,
-      );
-    }
-
     final file = File(localPath);
     if (!await file.exists()) {
       throw const SyncQueueExecutionException(
-        message: 'The locally selected business image no longer exists.',
+        message: 'A locally selected business image no longer exists.',
         code: 'LOCAL_FILE_MISSING',
         isRetryable: false,
       );
     }
 
-    final extension = _safeImageExtension(localPath);
+    PreparedMediaImage prepared;
+    try {
+      prepared = MediaImageProcessor.prepare(
+        await file.readAsBytes(),
+        kind,
+      );
+    } on MediaUploadException catch (error) {
+      throw SyncQueueExecutionException(
+        message: error.message,
+        code: 'LOCAL_IMAGE_INVALID',
+        isRetryable: false,
+        cause: error,
+      );
+    }
+
     final safeOperationId = item.id.replaceAll(
       RegExp('[^a-zA-Z0-9_-]'),
       '_',
     );
-    final storagePath = '$entityId/queued_$safeOperationId.$extension';
+    final storagePath = '$businessId/queued_${safeOperationId}_$suffix.jpg';
 
     try {
-      await _client.storage.from('business-media').upload(
+      await _client.storage.from('business-media').uploadBinary(
             storagePath,
-            file,
-            fileOptions: FileOptions(
-              cacheControl: '3600',
+            prepared.bytes,
+            fileOptions: const FileOptions(
+              cacheControl: '31536000',
               upsert: false,
-              contentType: _contentTypeFor(extension),
+              contentType: 'image/jpeg',
             ),
           );
     } on StorageException catch (error) {
@@ -127,24 +193,44 @@ class SupabaseSyncQueueGateway implements SyncQueueRemoteGateway {
       }
     }
 
-    return _client.storage.from('business-media').getPublicUrl(storagePath);
+    return MediaUploadResult(
+      publicUrl:
+          _client.storage.from('business-media').getPublicUrl(storagePath),
+      storagePath: storagePath,
+      width: prepared.width,
+      height: prepared.height,
+      originalBytes: prepared.originalBytes,
+      uploadedBytes: prepared.bytes.lengthInBytes,
+    );
   }
 
-  String _safeImageExtension(String path) {
-    final match = RegExp(r'\.([a-zA-Z0-9]+)$').firstMatch(path);
-    final extension = match?.group(1)?.toLowerCase();
-    return switch (extension) {
-      'png' => 'png',
-      'webp' => 'webp',
-      _ => 'jpg',
-    };
+  static List<String> _readPathList(Object? value) {
+    if (value is! List) {
+      return const <String>[];
+    }
+    return List<String>.unmodifiable(
+      value
+          .map((item) => item?.toString().trim() ?? '')
+          .where((item) => item.isNotEmpty)
+          .take(5),
+    );
   }
 
-  String _contentTypeFor(String extension) {
-    return switch (extension) {
-      'png' => 'image/png',
-      'webp' => 'image/webp',
-      _ => 'image/jpeg',
+  static SyncQueueExecutionException _postgrestFailure(
+    PostgrestException error,
+  ) {
+    const permanentCodes = <String>{
+      '22023',
+      '22P02',
+      '23503',
+      '23505',
+      '42501',
     };
+    return SyncQueueExecutionException(
+      message: error.message,
+      code: error.code,
+      isRetryable: !permanentCodes.contains(error.code),
+      cause: error,
+    );
   }
 }

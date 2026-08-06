@@ -5,13 +5,17 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/services/auth_session_store.dart';
+import '../../core/services/media_upload_service.dart';
 import '../../data/directory_data_store.dart';
 import '../../data/repositories/account_repository.dart';
 import '../../models/account_business.dart';
 import '../../models/account_profile.dart';
+import '../shared/widgets/business_gallery_manager.dart';
+import '../shared/widgets/cached_directory_image.dart';
 import 'widgets/add_business_button.dart';
 import 'widgets/business_category_dropdown.dart';
 import 'widgets/empty_owned_business_state.dart';
+import 'widgets/local_business_gallery_picker.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({
@@ -31,6 +35,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final AccountRepository _repository = AccountRepository();
   final DirectoryDataStore _directoryStore = DirectoryDataStore.instance;
   final ImagePicker _picker = ImagePicker();
+  final MediaUploadService _mediaUploadService = MediaUploadService();
 
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _businessNameController = TextEditingController();
@@ -45,9 +50,11 @@ class _ProfilePageState extends State<ProfilePage> {
   AccountBusiness? _businessBeforeCreate;
   String? _selectedCategoryId;
   String? _selectedImagePath;
+  List<String> _selectedGalleryPaths = const <String>[];
 
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isUploadingAvatar = false;
   bool _isEditing = false;
   String? _loadError;
 
@@ -138,8 +145,72 @@ class _ProfilePageState extends State<ProfilePage> {
     _addressController.text = snapshot.business?.address ?? 'الحامي';
     _descriptionController.text = snapshot.business?.description ?? '';
     _selectedImagePath = null;
+    _selectedGalleryPaths =
+        snapshot.business?.localGalleryPaths ?? const <String>[];
 
     _selectedCategoryId = snapshot.business?.categoryId;
+  }
+
+  Future<void> _uploadProfileAvatar() async {
+    final profile = _profile;
+    if (profile == null || _isUploadingAvatar || _isSaving) {
+      return;
+    }
+
+    setState(() => _isUploadingAvatar = true);
+    MediaUploadResult? upload;
+    try {
+      upload = await _mediaUploadService.pickAndUpload(
+        kind: MediaAssetKind.profileAvatar,
+        entityId: profile.id,
+      );
+      if (upload == null || !mounted) {
+        return;
+      }
+
+      final updated = await _repository.updateProfileAvatar(upload.publicUrl);
+      if (!mounted) {
+        return;
+      }
+
+      setState(() => _profile = updated);
+      await _deleteAvatarBestEffort(
+        profile.avatarUrl,
+        exceptValue: upload.publicUrl,
+      );
+      _showMessage('تم تحديث الصورة الشخصية.');
+    } catch (error) {
+      final uploadedValue = upload?.publicUrl;
+      if (uploadedValue != null) {
+        await _deleteAvatarBestEffort(uploadedValue);
+      }
+      if (mounted) {
+        _showMessage(_messageForError(error), isError: true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingAvatar = false);
+      }
+    }
+  }
+
+  Future<void> _deleteAvatarBestEffort(
+    String? value, {
+    String? exceptValue,
+  }) async {
+    final normalized = value?.trim() ?? '';
+    if (normalized.isEmpty || normalized == exceptValue?.trim()) {
+      return;
+    }
+    try {
+      await _mediaUploadService.deleteAsset(
+        kind: MediaAssetKind.profileAvatar,
+        value: normalized,
+      );
+    } catch (_) {
+      // Cleanup is intentionally best effort. The admin media cleanup tool can
+      // remove any unreferenced object later without blocking profile updates.
+    }
   }
 
   Future<void> _pickImage() async {
@@ -196,6 +267,7 @@ class _ProfilePageState extends State<ProfilePage> {
         businessId: _business?.id,
         baseSyncVersion: _business?.syncVersion,
         selectedImagePath: _selectedImagePath,
+        selectedGalleryPaths: _selectedGalleryPaths,
       );
 
       if (!mounted) {
@@ -402,6 +474,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _descriptionController.clear();
     _selectedCategoryId = null;
     _selectedImagePath = null;
+    _selectedGalleryPaths = const <String>[];
   }
 
   void _startCreatingBusiness() {
@@ -523,6 +596,8 @@ class _ProfilePageState extends State<ProfilePage> {
           child: Column(
             children: [
               _buildSectionTitle('بيانات الحساب'),
+              _buildProfileAvatarEditor(),
+              const SizedBox(height: 12),
               _buildInputCard([
                 _buildCustomField(
                   'الاسم الشخصي',
@@ -563,6 +638,23 @@ class _ProfilePageState extends State<ProfilePage> {
                   lines: 3,
                 ),
               ]),
+              const SizedBox(height: 20),
+              if (_business != null &&
+                  !_business!.isWaitingForSync &&
+                  !_business!.hasSyncFailure)
+                BusinessGalleryManager(
+                  businessId: _business!.id,
+                  initialImages: _business!.galleryImages,
+                  enabled: !_isSaving,
+                )
+              else
+                LocalBusinessGalleryPicker(
+                  paths: _selectedGalleryPaths,
+                  enabled: !_isSaving,
+                  onChanged: (paths) {
+                    setState(() => _selectedGalleryPaths = paths);
+                  },
+                ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -619,8 +711,18 @@ class _ProfilePageState extends State<ProfilePage> {
     final business = _business;
 
     if (business == null) {
-      return EmptyOwnedBusinessState(
-        onAddPressed: _startCreatingBusiness,
+      return Column(
+        children: [
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _buildProfileAvatarEditor(),
+          ),
+          const SizedBox(height: 12),
+          EmptyOwnedBusinessState(
+            onAddPressed: _startCreatingBusiness,
+          ),
+        ],
       );
     }
 
@@ -844,6 +946,70 @@ class _ProfilePageState extends State<ProfilePage> {
           color: color,
           fontWeight: FontWeight.bold,
         ),
+      ),
+    );
+  }
+
+  Widget _buildProfileAvatarEditor() {
+    final profile = _profile;
+    return Container(
+      key: const ValueKey<String>('profile-avatar-editor'),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.outline),
+      ),
+      child: Row(
+        children: [
+          ClipOval(
+            child: CachedDirectoryImage(
+              source: profile?.avatarUrl,
+              bucket: 'avatars',
+              width: 72,
+              height: 72,
+              placeholder: const ColoredBox(
+                color: AppColors.primarySoft,
+                child: Center(
+                  child: Icon(
+                    Icons.person_rounded,
+                    color: AppColors.primaryTeal,
+                    size: 38,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'الصورة الشخصية',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'تظهر داخل حسابك، وهي مستقلة عن شعار النشاط.',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          IconButton.filledTonal(
+            key: const ValueKey<String>('profile-avatar-upload-action'),
+            tooltip: 'اختيار صورة شخصية',
+            onPressed:
+                _isUploadingAvatar || _isSaving ? null : _uploadProfileAvatar,
+            icon: _isUploadingAvatar
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.add_a_photo_rounded),
+          ),
+        ],
       ),
     );
   }

@@ -1,0 +1,13 @@
+Dalil Al Hami - Phase 08A-2
+Business Gallery and Advanced Media Management
+
+- Up to five ordered gallery images for each business.
+- Primary gallery image and alternative text.
+- Add, replace, delete, and reorder media.
+- Draft/local gallery uploads finalized after business sync.
+- Public gallery in business details.
+- SQLite schema version 9 with gallery caching.
+- Administrator media overview and guarded orphan cleanup.
+- Supabase Storage and RLS protections for business galleries.
+- Personal profile avatar upload with transactional replacement cleanup.
+- Admin media overview and orphan cleanup include profile avatars.

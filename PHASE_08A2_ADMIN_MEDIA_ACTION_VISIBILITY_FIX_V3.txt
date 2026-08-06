@@ -1,0 +1,7 @@
+Phase 08A-2 v3 - Admin Media Action Visibility Fix
+
+- Makes the administration media test scroll the management ListView itself.
+- Requires the scan and cleanup actions to be hit-testable before tapping.
+- Verifies that the cleanup scan callback actually runs before checking results.
+- Keeps the production media management layout unchanged.
+- No new Supabase migration, SQLite change, or media behavior change.

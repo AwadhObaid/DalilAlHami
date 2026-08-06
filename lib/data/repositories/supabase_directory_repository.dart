@@ -39,6 +39,9 @@ class SupabaseDirectoryRepository
           'id, category_id, name, description, phone, whatsapp, '
           'address, logo_url, cover_url, is_featured, created_at, '
           'updated_at, deleted_at, sync_version, '
+          'business_images(id, business_id, storage_path, public_url, '
+          'alt_text, sort_order, is_primary, created_at, updated_at, '
+          'deleted_at, sync_version), '
           'categories!businesses_category_id_fkey('
           'id, name_ar, slug, icon_name'
           ')',

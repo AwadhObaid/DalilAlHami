@@ -6,6 +6,7 @@ import '../../../core/constants/app_catalog.dart';
 import '../../../models/account_business.dart';
 import '../../../models/account_profile.dart';
 import '../../../models/business.dart';
+import '../../../models/business_gallery_image.dart';
 import '../../../models/directory_advertisement.dart';
 import '../../../models/service_category.dart';
 import '../../local_directory_store.dart';
@@ -47,7 +48,7 @@ class LocalDirectoryDatabase {
 
   static final LocalDirectoryDatabase instance = LocalDirectoryDatabase();
 
-  static const int schemaVersion = 8;
+  static const int schemaVersion = 9;
 
   static const String _categoriesTable = 'directory_categories';
   static const String _businessesTable = 'directory_businesses';
@@ -129,6 +130,7 @@ class LocalDirectoryDatabase {
         category_slug TEXT NOT NULL DEFAULT '',
         logo_url TEXT,
         cover_url TEXT,
+        gallery_json TEXT NOT NULL DEFAULT '[]',
         is_featured INTEGER NOT NULL DEFAULT 0,
         is_remote INTEGER NOT NULL DEFAULT 0,
         created_at TEXT,
@@ -325,6 +327,27 @@ class LocalDirectoryDatabase {
       );
     }
 
+    if (oldVersion < 9) {
+      await _addColumnIfMissing(
+        database,
+        tableName: _businessesTable,
+        columnName: 'gallery_json',
+        definition: "TEXT NOT NULL DEFAULT '[]'",
+      );
+      await _addColumnIfMissing(
+        database,
+        tableName: _accountBusinessesTable,
+        columnName: 'gallery_json',
+        definition: "TEXT NOT NULL DEFAULT '[]'",
+      );
+      await _addColumnIfMissing(
+        database,
+        tableName: _accountBusinessesTable,
+        columnName: 'local_gallery_json',
+        definition: "TEXT NOT NULL DEFAULT '[]'",
+      );
+    }
+
     await database.execute(
       '''
       CREATE INDEX IF NOT EXISTS directory_businesses_category_id_idx
@@ -374,6 +397,7 @@ class LocalDirectoryDatabase {
         category_slug TEXT NOT NULL DEFAULT '',
         logo_url TEXT,
         cover_url TEXT,
+        gallery_json TEXT NOT NULL DEFAULT '[]',
         is_featured INTEGER NOT NULL DEFAULT 0,
         is_remote INTEGER NOT NULL DEFAULT 0,
         created_at TEXT,
@@ -642,6 +666,8 @@ class LocalDirectoryDatabase {
         address TEXT NOT NULL DEFAULT 'الحامي',
         logo_url TEXT,
         local_logo_path TEXT,
+        gallery_json TEXT NOT NULL DEFAULT '[]',
+        local_gallery_json TEXT NOT NULL DEFAULT '[]',
         status TEXT NOT NULL DEFAULT 'draft',
         rejection_reason TEXT,
         is_active INTEGER NOT NULL DEFAULT 1,
@@ -705,6 +731,8 @@ class LocalDirectoryDatabase {
         address TEXT NOT NULL DEFAULT 'الحامي',
         logo_url TEXT,
         local_logo_path TEXT,
+        gallery_json TEXT NOT NULL DEFAULT '[]',
+        local_gallery_json TEXT NOT NULL DEFAULT '[]',
         status TEXT NOT NULL DEFAULT 'draft',
         rejection_reason TEXT,
         is_active INTEGER NOT NULL DEFAULT 1,
@@ -1086,6 +1114,10 @@ class LocalDirectoryDatabase {
         'address': business.address,
         'logo_url': business.logoUrl,
         'local_logo_path': business.localLogoPath,
+        'gallery_json': jsonEncode(
+          business.galleryImages.map((image) => image.toMap()).toList(),
+        ),
+        'local_gallery_json': jsonEncode(business.localGalleryPaths),
         'status': business.status,
         'rejection_reason': business.rejectionReason,
         'is_active': business.isActive ? 1 : 0,
@@ -1150,6 +1182,8 @@ class LocalDirectoryDatabase {
       isActive: _readBoolean(row['is_active']),
       logoUrl: _nullableString(row['logo_url']),
       localLogoPath: _nullableString(row['local_logo_path']),
+      galleryImages: _galleryImagesFromJson(row['gallery_json']),
+      localGalleryPaths: _stringListFromJson(row['local_gallery_json']),
       rejectionReason: _nullableString(row['rejection_reason']),
       syncVersion: _readInteger(row['sync_version']),
       updatedAt: DateTime.tryParse(
@@ -1782,6 +1816,9 @@ class LocalDirectoryDatabase {
       'category_slug': business.categorySlug,
       'logo_url': business.logoUrl,
       'cover_url': business.coverUrl,
+      'gallery_json': jsonEncode(
+        business.galleryImages.map((image) => image.toMap()).toList(),
+      ),
       'is_featured': business.isFeatured ? 1 : 0,
       'is_remote': business.isRemote ? 1 : 0,
       'created_at': business.createdAt?.toIso8601String(),
@@ -1807,6 +1844,7 @@ class LocalDirectoryDatabase {
       categorySlug: row['category_slug']?.toString() ?? '',
       logoUrl: _nullableString(row['logo_url']),
       coverUrl: _nullableString(row['cover_url']),
+      galleryImages: _galleryImagesFromJson(row['gallery_json']),
       isFeatured: _readBoolean(row['is_featured']),
       isRemote: _readBoolean(row['is_remote']),
       createdAt: DateTime.tryParse(
@@ -1882,6 +1920,38 @@ class LocalDirectoryDatabase {
     }
 
     return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static List<BusinessGalleryImage> _galleryImagesFromJson(Object? value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) {
+      return const <BusinessGalleryImage>[];
+    }
+    try {
+      return BusinessGalleryImage.readList(jsonDecode(text));
+    } catch (_) {
+      return const <BusinessGalleryImage>[];
+    }
+  }
+
+  static List<String> _stringListFromJson(Object? value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) {
+      return const <String>[];
+    }
+    try {
+      final decoded = jsonDecode(text);
+      if (decoded is! List) {
+        return const <String>[];
+      }
+      return List<String>.unmodifiable(
+        decoded
+            .map((item) => item?.toString().trim() ?? '')
+            .where((item) => item.isNotEmpty),
+      );
+    } catch (_) {
+      return const <String>[];
+    }
   }
 
   static String? _nullableString(Object? value) {

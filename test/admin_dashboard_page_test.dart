@@ -103,6 +103,17 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(advertisementModule, findsOneWidget);
+
+    final mediaModule = find.byKey(
+      const ValueKey<String>('admin-manage-media-action'),
+    );
+    await tester.scrollUntilVisible(
+      mediaModule,
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(mediaModule, findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

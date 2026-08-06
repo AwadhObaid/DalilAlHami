@@ -1,3 +1,5 @@
+import 'business_gallery_image.dart';
+
 class AccountBusiness {
   const AccountBusiness({
     required this.id,
@@ -13,6 +15,8 @@ class AccountBusiness {
     required this.isActive,
     this.logoUrl,
     this.localLogoPath,
+    this.galleryImages = const <BusinessGalleryImage>[],
+    this.localGalleryPaths = const <String>[],
     this.rejectionReason,
     this.syncVersion = 0,
     this.updatedAt,
@@ -31,6 +35,8 @@ class AccountBusiness {
   final bool isActive;
   final String? logoUrl;
   final String? localLogoPath;
+  final List<BusinessGalleryImage> galleryImages;
+  final List<String> localGalleryPaths;
   final String? rejectionReason;
   final int syncVersion;
   final DateTime? updatedAt;
@@ -69,6 +75,8 @@ class AccountBusiness {
     bool? isActive,
     String? logoUrl,
     String? localLogoPath,
+    List<BusinessGalleryImage>? galleryImages,
+    List<String>? localGalleryPaths,
     String? rejectionReason,
     int? syncVersion,
     DateTime? updatedAt,
@@ -87,6 +95,8 @@ class AccountBusiness {
       isActive: isActive ?? this.isActive,
       logoUrl: logoUrl ?? this.logoUrl,
       localLogoPath: localLogoPath ?? this.localLogoPath,
+      galleryImages: galleryImages ?? this.galleryImages,
+      localGalleryPaths: localGalleryPaths ?? this.localGalleryPaths,
       rejectionReason: rejectionReason ?? this.rejectionReason,
       syncVersion: syncVersion ?? this.syncVersion,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -117,12 +127,25 @@ class AccountBusiness {
       isActive: data['is_active'] != false,
       logoUrl: _nullableText(data['logo_url']),
       localLogoPath: _nullableText(data['local_logo_path']),
+      galleryImages: BusinessGalleryImage.readList(data['business_images']),
+      localGalleryPaths: _readStringList(data['local_gallery_paths']),
       rejectionReason: _nullableText(data['rejection_reason']),
       syncVersion: _readInteger(data['sync_version']),
       updatedAt: DateTime.tryParse(
         data['updated_at']?.toString() ?? '',
       )?.toUtc(),
     );
+  }
+
+  static List<String> _readStringList(Object? value) {
+    if (value is List) {
+      return List<String>.unmodifiable(
+        value
+            .map((item) => item?.toString().trim() ?? '')
+            .where((item) => item.isNotEmpty),
+      );
+    }
+    return const <String>[];
   }
 
   static int _readInteger(Object? value) {

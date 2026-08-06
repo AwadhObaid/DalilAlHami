@@ -6,6 +6,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'supabase_service.dart';
 
 enum MediaAssetKind {
+  profileAvatar(
+    bucket: 'avatars',
+    fileStem: 'avatar',
+    maxWidth: 1024,
+    maxHeight: 1024,
+    quality: 86,
+  ),
   category(
     bucket: 'category-media',
     fileStem: 'category',
@@ -25,6 +32,13 @@ enum MediaAssetKind {
     fileStem: 'cover',
     maxWidth: 1600,
     maxHeight: 900,
+    quality: 84,
+  ),
+  businessGallery(
+    bucket: 'business-media',
+    fileStem: 'gallery',
+    maxWidth: 1600,
+    maxHeight: 1200,
     quality: 84,
   ),
   advertisementExpanded(
@@ -256,6 +270,79 @@ class MediaUploadService {
     }
   }
 
+  Future<MediaUploadResult> moveDraftAssetToBusiness({
+    required MediaAssetKind kind,
+    required String value,
+    required String businessId,
+    ValueChanged<double>? onProgress,
+  }) async {
+    if (kind.bucket != 'business-media') {
+      throw const MediaUploadException(
+        'نقل ملفات المسودة متاح لصور الأنشطة فقط.',
+      );
+    }
+
+    final sourcePath = storagePathFromValue(value, bucket: kind.bucket);
+    if (sourcePath == null) {
+      throw const MediaUploadException('مسار صورة المسودة غير صالح.');
+    }
+    if (!sourcePath.startsWith('drafts/')) {
+      final publicUrl = resolvePublicValue(
+        value: value,
+        bucket: kind.bucket,
+        client: _supabase,
+      );
+      return MediaUploadResult(
+        publicUrl: publicUrl,
+        storagePath: sourcePath,
+        width: 0,
+        height: 0,
+        originalBytes: 0,
+        uploadedBytes: 0,
+      );
+    }
+
+    final safeBusinessId = sanitizePathSegment(businessId);
+    if (safeBusinessId.isEmpty || safeBusinessId == 'new') {
+      throw const MediaUploadException('معرف النشاط غير صالح لنقل الصورة.');
+    }
+
+    final extension = sourcePath.toLowerCase().endsWith('.png')
+        ? 'png'
+        : sourcePath.toLowerCase().endsWith('.webp')
+            ? 'webp'
+            : 'jpg';
+    final destination = '$safeBusinessId/${kind.fileStem}-'
+        '${DateTime.now().toUtc().microsecondsSinceEpoch}.$extension';
+
+    try {
+      onProgress?.call(0.2);
+      await _supabase.storage.from(kind.bucket).move(
+            sourcePath,
+            destination,
+          );
+      onProgress?.call(0.9);
+      final publicUrl =
+          _supabase.storage.from(kind.bucket).getPublicUrl(destination);
+      onProgress?.call(1);
+      return MediaUploadResult(
+        publicUrl: publicUrl,
+        storagePath: destination,
+        width: 0,
+        height: 0,
+        originalBytes: 0,
+        uploadedBytes: 0,
+      );
+    } on StorageException catch (error) {
+      throw MediaUploadException(_friendlyStorageMessage(error));
+    }
+  }
+
+  static bool isDraftBusinessMedia(String? value) {
+    final path = storagePathFromValue(value, bucket: 'business-media');
+    return path != null && path.startsWith('drafts/');
+  }
+
   Future<void> deleteAsset({
     required MediaAssetKind kind,
     required String value,
@@ -303,8 +390,13 @@ class MediaUploadService {
     final safeUser = sanitizePathSegment(userId);
     final stamp = timestamp.microsecondsSinceEpoch;
 
+    if (kind == MediaAssetKind.profileAvatar) {
+      return '$safeUser/${kind.fileStem}-$stamp.jpg';
+    }
+
     if (kind == MediaAssetKind.businessLogo ||
-        kind == MediaAssetKind.businessCover) {
+        kind == MediaAssetKind.businessCover ||
+        kind == MediaAssetKind.businessGallery) {
       if (safeEntity.isNotEmpty && safeEntity != 'new') {
         return '$safeEntity/${kind.fileStem}-$stamp.jpg';
       }

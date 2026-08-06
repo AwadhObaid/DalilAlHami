@@ -129,6 +129,38 @@ class AccountRepository {
     }
   }
 
+  Future<AccountProfile> updateProfileAvatar(String avatarUrl) async {
+    final user = _user;
+    final normalizedUrl = avatarUrl.trim();
+    if (normalizedUrl.isEmpty) {
+      throw const AccountFailure('رابط الصورة الشخصية غير صالح.');
+    }
+
+    try {
+      final rows = await _client
+          .from('profiles')
+          .update(<String, dynamic>{'avatar_url': normalizedUrl})
+          .eq('id', user.id)
+          .select('id, full_name, email, phone, avatar_url, role, is_active')
+          .limit(1);
+      if (rows.isEmpty) {
+        throw const AccountFailure('تعذر تحديث الصورة الشخصية.');
+      }
+      final profile = AccountProfile.fromMap(rows.first);
+      await _database.upsertAccountProfile(profile);
+      return profile;
+    } on AccountFailure {
+      rethrow;
+    } on PostgrestException catch (error) {
+      if (error.code == '42501') {
+        throw const AccountFailure('لا تملك صلاحية تحديث الصورة الشخصية.');
+      }
+      throw const AccountFailure(
+        'تعذر تحديث الصورة الشخصية. تحقق من الاتصال ثم أعد المحاولة.',
+      );
+    }
+  }
+
   Future<AccountSaveResult> saveAccount({
     required String fullName,
     required String categoryId,
@@ -141,6 +173,7 @@ class AccountRepository {
     String? businessId,
     int? baseSyncVersion,
     String? selectedImagePath,
+    List<String> selectedGalleryPaths = const <String>[],
   }) async {
     final user = _user;
     final normalizedName = fullName.trim();
@@ -170,7 +203,8 @@ class AccountRepository {
       role: cachedProfile?.role ?? 'user',
       isActive: cachedProfile?.isActive ?? true,
       email: user.email,
-      avatarUrl: user.userMetadata?['avatar_url']?.toString() ??
+      avatarUrl: cachedProfile?.avatarUrl ??
+          user.userMetadata?['avatar_url']?.toString() ??
           user.userMetadata?['picture']?.toString(),
     );
     await _database.upsertAccountProfile(profile);
@@ -180,9 +214,21 @@ class AccountRepository {
         ? businessId!.trim()
         : _createUuidV4();
     final isCreate = businessId == null || businessId.trim().isEmpty;
+    final cachedBusiness = isCreate
+        ? null
+        : await _database.readOwnedBusinessCacheById(
+            userId: user.id,
+            businessId: savedBusinessId,
+          );
     final localLogoPath = selectedImagePath?.trim().isNotEmpty == true
         ? selectedImagePath!.trim()
         : null;
+    final localGalleryPaths = List<String>.unmodifiable(
+      selectedGalleryPaths
+          .map((path) => path.trim())
+          .where((path) => path.isNotEmpty)
+          .take(5),
+    );
 
     final localBusiness = AccountBusiness(
       id: savedBusinessId,
@@ -197,6 +243,8 @@ class AccountRepository {
       status: 'local_pending',
       isActive: true,
       localLogoPath: localLogoPath,
+      galleryImages: cachedBusiness?.galleryImages ?? const [],
+      localGalleryPaths: localGalleryPaths,
       syncVersion: baseSyncVersion ?? 0,
     );
     await _database.upsertOwnedBusinessCache(localBusiness);
@@ -210,6 +258,8 @@ class AccountRepository {
       'address': normalizedAddress,
       if (localLogoPath != null)
         SupabaseSyncQueueGateway.localLogoPathKey: localLogoPath,
+      if (localGalleryPaths.isNotEmpty)
+        SupabaseSyncQueueGateway.localGalleryPathsKey: localGalleryPaths,
       if (!isCreate) '_base_sync_version': baseSyncVersion ?? 0,
       'submit_for_review': true,
     };
@@ -246,9 +296,9 @@ class AccountRepository {
       message: _directoryStore.usesSupabase
           ? 'تم حفظ النشاط وسيُرسل للمراجعة تلقائيًا.'
           : 'تم حفظ النشاط في الجهاز وسيُرسل عند عودة الإنترنت.',
-      imageWarning: localLogoPath == null
+      imageWarning: localLogoPath == null && localGalleryPaths.isEmpty
           ? null
-          : 'ستُرفع الصورة تلقائيًا مع عملية المزامنة.',
+          : 'ستُرفع صور النشاط تلقائيًا مع عملية المزامنة.',
     );
   }
 
@@ -347,7 +397,10 @@ class AccountRepository {
           'id, owner_id, category_id, name, description, phone, '
           'whatsapp, address, logo_url, status, rejection_reason, '
           'is_active, sync_version, created_at, updated_at, '
-          'categories!businesses_category_id_fkey(id, name_ar, slug)',
+          'categories!businesses_category_id_fkey(id, name_ar, slug), '
+          'business_images(id, business_id, storage_path, public_url, '
+          'alt_text, sort_order, is_primary, created_at, updated_at, '
+          'deleted_at, sync_version)',
         )
         .eq('owner_id', userId)
         .order('created_at', ascending: false);

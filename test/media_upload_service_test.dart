@@ -42,6 +42,19 @@ void main() {
     expect(draft, endsWith('.jpg'));
   });
 
+  test('مسار الصورة الشخصية يبقى داخل مجلد المستخدم', () {
+    final path = MediaUploadService.buildStoragePath(
+      kind: MediaAssetKind.profileAvatar,
+      entityId: 'ignored-profile-id',
+      userId: 'user-123',
+      timestamp: DateTime.utc(2026, 8, 6, 21),
+    );
+
+    expect(path, startsWith('user-123/avatar-'));
+    expect(path, endsWith('.jpg'));
+    expect(path, isNot(contains('drafts/')));
+  });
+
   test('استخراج مسار التخزين لا يحذف رابطًا خارجيًا', () {
     const publicUrl = 'https://project.supabase.co/storage/v1/object/public/'
         'advertisements/admin/ad/expanded.jpg';

@@ -1,0 +1,6 @@
+Phase 08A-2 v4 - Schema contract forward compatibility fix
+
+- Updates the legacy Phase 07D source-contract test to accept SQLite schema version 8 or newer.
+- Keeps Phase 08A-2 responsible for asserting schema version 9 exactly.
+- Prevents older phase contracts from failing when later phases legitimately advance the schema.
+- No production code, Supabase, SQLite migration, or UI behavior changes.

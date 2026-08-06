@@ -7,6 +7,7 @@ import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/launch_actions.dart';
 import '../../models/business.dart';
+import 'widgets/business_gallery_section.dart';
 import 'widgets/business_image.dart';
 
 class MemberDetailsPage extends StatelessWidget {
@@ -42,6 +43,10 @@ class MemberDetailsPage extends StatelessWidget {
                   _buildInformationCard(context),
                   const SizedBox(height: AppSpacing.md),
                   _buildDescriptionCard(),
+                  if (business.activeGalleryImages.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    _buildGalleryCard(),
+                  ],
                   const SizedBox(height: AppSpacing.md),
                   _buildTrustNote(),
                 ],
@@ -319,6 +324,14 @@ class MemberDetailsPage extends StatelessWidget {
               : AppColors.textPrimary,
         ),
       ),
+    );
+  }
+
+  Widget _buildGalleryCard() {
+    return _SectionCard(
+      title: 'صور النشاط',
+      icon: Icons.photo_library_outlined,
+      child: BusinessGallerySection(images: business.activeGalleryImages),
     );
   }
 

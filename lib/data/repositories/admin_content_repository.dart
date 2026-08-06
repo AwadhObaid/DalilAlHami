@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/services/media_upload_service.dart';
 import '../../core/services/supabase_service.dart';
 import '../../models/admin_advertisement_management.dart';
 import '../../models/admin_content_management.dart';
@@ -7,6 +8,9 @@ import 'admin_repository.dart';
 
 class AdminContentRepository {
   final AdminRepository _adminRepository = AdminRepository();
+  late final MediaUploadService _mediaService = MediaUploadService(
+    client: _client,
+  );
 
   SupabaseClient get _client => SupabaseService.client;
 
@@ -64,7 +68,10 @@ class AdminContentRepository {
             'address, latitude, longitude, logo_url, cover_url, status, '
             'rejection_reason, is_featured, is_active, deleted_at, '
             'created_at, updated_at, '
-            'categories!businesses_category_id_fkey(id, name_ar, slug)',
+            'categories!businesses_category_id_fkey(id, name_ar, slug), '
+            'business_images(id, business_id, storage_path, public_url, '
+            'alt_text, sort_order, is_primary, created_at, updated_at, '
+            'deleted_at, sync_version)',
           )
           .order('updated_at', ascending: false),
     );
@@ -163,9 +170,60 @@ class AdminContentRepository {
           'p_cover_url': _nullable(draft.coverUrl),
         },
       );
-      return AdminContentMutationResult.fromRpc(response);
+      final result = AdminContentMutationResult.fromRpc(response);
+      await _finalizeDraftBusinessPrimaryMedia(
+        businessId: result.entityId,
+        logoUrl: draft.logoUrl,
+        coverUrl: draft.coverUrl,
+      );
+      return result;
+    } on MediaUploadException catch (error) {
+      throw AdminContentRepositoryFailure(
+        'تم حفظ النشاط، لكن تعذر نقل صور المسودة: ${error.message}',
+      );
     } on PostgrestException catch (error) {
       throw AdminContentRepositoryFailure(_friendlyMessage(error));
+    }
+  }
+
+  Future<void> _finalizeDraftBusinessPrimaryMedia({
+    required String businessId,
+    required String? logoUrl,
+    required String? coverUrl,
+  }) async {
+    final normalizedLogo = _nullable(logoUrl);
+    final normalizedCover = _nullable(coverUrl);
+
+    if (MediaUploadService.isDraftBusinessMedia(normalizedLogo)) {
+      final moved = await _mediaService.moveDraftAssetToBusiness(
+        kind: MediaAssetKind.businessLogo,
+        value: normalizedLogo!,
+        businessId: businessId,
+      );
+      await _client.rpc(
+        'finalize_owner_business_media',
+        params: <String, dynamic>{
+          'p_business_id': businessId,
+          'p_logo_url': moved.publicUrl,
+          'p_gallery': const <Map<String, dynamic>>[],
+        },
+      );
+    }
+
+    if (MediaUploadService.isDraftBusinessMedia(normalizedCover)) {
+      final moved = await _mediaService.moveDraftAssetToBusiness(
+        kind: MediaAssetKind.businessCover,
+        value: normalizedCover!,
+        businessId: businessId,
+      );
+      await _client.rpc(
+        'finalize_owner_business_media',
+        params: <String, dynamic>{
+          'p_business_id': businessId,
+          'p_cover_url': moved.publicUrl,
+          'p_gallery': const <Map<String, dynamic>>[],
+        },
+      );
     }
   }
 

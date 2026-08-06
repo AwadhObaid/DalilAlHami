@@ -11,6 +11,7 @@ import 'admin_advertisement_management_page.dart';
 import 'admin_business_management_page.dart';
 import 'admin_business_review_page.dart';
 import 'admin_category_management_page.dart';
+import 'admin_media_management_page.dart';
 
 typedef AdminProfileLoader = Future<AccountProfile> Function();
 typedef AdminDashboardLoader = Future<AdminDashboardSnapshot> Function();
@@ -255,6 +256,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           ),
           const SizedBox(height: AppSpacing.sm),
           _AdminModuleCard(
+            key: const ValueKey<String>('admin-manage-media-action'),
+            icon: Icons.photo_library_rounded,
+            title: 'إدارة الصور والوسائط',
+            subtitle: 'مراجعة صور الأنشطة وتنظيف الملفات غير المستخدمة',
+            badge: 'معرض وتنظيف',
+            color: AppColors.primaryDark,
+            onTap: _openMediaManagement,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _AdminModuleCard(
             icon: Icons.manage_accounts_rounded,
             title: 'إدارة المستخدمين',
             subtitle: 'متابعة الحسابات وحالتها وصلاحيات الإدارة',
@@ -312,6 +323,18 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => const AdminAdvertisementManagementPage(),
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    await _loadDashboard();
+  }
+
+  Future<void> _openMediaManagement() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const AdminMediaManagementPage(),
       ),
     );
     if (!mounted) {

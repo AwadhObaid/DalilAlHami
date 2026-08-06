@@ -1,0 +1,7 @@
+Dalil Al Hami - Phase 08A-2 v2
+Reorder callback compatibility fix
+
+- Replaced deprecated ReorderableListView.onReorder with onReorderItem.
+- Removed the legacy manual newIndex decrement because Flutter now adjusts it.
+- Added a regression test for moving an item downward without an off-by-one error.
+- No database, Supabase, storage, or media workflow changes.

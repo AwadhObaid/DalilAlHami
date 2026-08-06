@@ -19,6 +19,27 @@ class AccountProfile {
 
   bool get isAdmin => role.trim().toLowerCase() == 'admin';
 
+  AccountProfile copyWith({
+    String? id,
+    String? fullName,
+    String? phone,
+    String? role,
+    bool? isActive,
+    String? email,
+    String? avatarUrl,
+    bool clearAvatarUrl = false,
+  }) {
+    return AccountProfile(
+      id: id ?? this.id,
+      fullName: fullName ?? this.fullName,
+      phone: phone ?? this.phone,
+      role: role ?? this.role,
+      isActive: isActive ?? this.isActive,
+      email: email ?? this.email,
+      avatarUrl: clearAvatarUrl ? null : avatarUrl ?? this.avatarUrl,
+    );
+  }
+
   factory AccountProfile.fromMap(Map<String, dynamic> data) {
     return AccountProfile(
       id: data['id']?.toString() ?? '',

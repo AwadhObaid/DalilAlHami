@@ -1,3 +1,5 @@
+import 'business_gallery_image.dart';
+
 class AdminCategoryItem {
   const AdminCategoryItem({
     required this.id,
@@ -99,6 +101,7 @@ class AdminBusinessItem {
     this.longitude,
     this.logoUrl,
     this.coverUrl,
+    this.galleryImages = const <BusinessGalleryImage>[],
     this.rejectionReason,
     this.deletedAt,
   });
@@ -123,6 +126,7 @@ class AdminBusinessItem {
   final double? longitude;
   final String? logoUrl;
   final String? coverUrl;
+  final List<BusinessGalleryImage> galleryImages;
   final String? rejectionReason;
   final DateTime? deletedAt;
 
@@ -176,6 +180,7 @@ class AdminBusinessItem {
       longitude: _readDouble(data['longitude']),
       logoUrl: _nullableText(data['logo_url']),
       coverUrl: _nullableText(data['cover_url']),
+      galleryImages: BusinessGalleryImage.readList(data['business_images']),
       status: data['status']?.toString() ?? 'draft',
       rejectionReason: _nullableText(data['rejection_reason']),
       isFeatured: _readBoolean(data['is_featured']),

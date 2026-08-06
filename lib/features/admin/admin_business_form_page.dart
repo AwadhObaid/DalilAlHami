@@ -6,6 +6,7 @@ import '../../core/services/media_upload_service.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../models/admin_content_management.dart';
 import '../shared/widgets/admin_media_field.dart';
+import '../shared/widgets/business_gallery_manager.dart';
 
 typedef AdminBusinessSaveAction = Future<AdminContentMutationResult> Function(
   AdminBusinessDraft draft,
@@ -312,6 +313,12 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
               kind: MediaAssetKind.businessCover,
               entityId: widget.initialBusiness?.id ?? 'new',
               aspectRatio: 16 / 9,
+              enabled: !_saving,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            BusinessGalleryManager(
+              businessId: widget.initialBusiness?.id ?? '',
+              initialImages: widget.initialBusiness?.galleryImages ?? const [],
               enabled: !_saving,
             ),
             const SizedBox(height: AppSpacing.md),

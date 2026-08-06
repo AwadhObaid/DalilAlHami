@@ -1,7 +1,11 @@
-﻿Dalil Al Hami - Phase 08A-1 media foundation
-Migration: 20260806170000
-Verified at: 2026-08-06T20:39:37.4643473+03:00
-Log: F:\FlutterProjects\DalilAlHami_Clean\build_logs\phase08a_media_verify_20260806_203927\migration_list.combined.log
-Storage: category-media, business-media, advertisements
-Images: category, logo, cover, expanded ad, compact ad
-Local cache schema: 8
+Dalil Al Hami - Phase 08A-1
+Media foundation and primary images
+
+- Supabase Storage RLS for category, business and advertisement media.
+- Client-side resize and JPEG compression before upload.
+- Visual upload, progress, replacement and removal controls.
+- Cached display for categories and businesses.
+- Expanded and compact advertisement images.
+- SQLite schema version 8 with compact_image_path.
+
+Business gallery ordering and automated orphan cleanup continue in Phase 08A-2.

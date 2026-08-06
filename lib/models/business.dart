@@ -1,3 +1,5 @@
+import 'business_gallery_image.dart';
+
 class Business {
   const Business({
     required this.id,
@@ -18,6 +20,7 @@ class Business {
     this.updatedAt,
     this.deletedAt,
     this.syncVersion = 0,
+    this.galleryImages = const <BusinessGalleryImage>[],
   });
 
   final String id;
@@ -38,11 +41,32 @@ class Business {
   final DateTime? updatedAt;
   final DateTime? deletedAt;
   final int syncVersion;
+  final List<BusinessGalleryImage> galleryImages;
+
+  List<BusinessGalleryImage> get activeGalleryImages =>
+      BusinessGalleryImage.readList(
+        galleryImages.map((image) => image.toMap()).toList(growable: false),
+      );
+
+  BusinessGalleryImage? get primaryGalleryImage {
+    final images = activeGalleryImages;
+    for (final image in images) {
+      if (image.isPrimary) {
+        return image;
+      }
+    }
+    return images.isEmpty ? null : images.first;
+  }
 
   String get preferredImageUrl {
     final cover = coverUrl?.trim() ?? '';
     if (cover.isNotEmpty) {
       return cover;
+    }
+
+    final gallery = primaryGalleryImage?.displayUrl.trim() ?? '';
+    if (gallery.isNotEmpty) {
+      return gallery;
     }
 
     return logoUrl?.trim() ?? '';
@@ -122,6 +146,7 @@ class Business {
     DateTime? deletedAt,
     bool clearDeletedAt = false,
     int? syncVersion,
+    List<BusinessGalleryImage>? galleryImages,
   }) {
     return Business(
       id: id ?? this.id,
@@ -142,6 +167,7 @@ class Business {
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: clearDeletedAt ? null : deletedAt ?? this.deletedAt,
       syncVersion: syncVersion ?? this.syncVersion,
+      galleryImages: galleryImages ?? this.galleryImages,
     );
   }
 
@@ -165,6 +191,8 @@ class Business {
       'updated_at': updatedAt?.toIso8601String(),
       'deleted_at': deletedAt?.toIso8601String(),
       'sync_version': syncVersion,
+      'business_images':
+          galleryImages.map((image) => image.toMap()).toList(growable: false),
     };
   }
 
@@ -194,6 +222,7 @@ class Business {
         map['deleted_at']?.toString() ?? '',
       ),
       syncVersion: _readInteger(map['sync_version']),
+      galleryImages: BusinessGalleryImage.readList(map['business_images']),
     );
   }
 
@@ -229,6 +258,7 @@ class Business {
         data['deleted_at']?.toString() ?? '',
       ),
       syncVersion: _readInteger(data['sync_version']),
+      galleryImages: BusinessGalleryImage.readList(data['business_images']),
     );
   }
 
