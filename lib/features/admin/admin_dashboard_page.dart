@@ -7,7 +7,9 @@ import '../../core/theme/app_text_styles.dart';
 import '../../data/repositories/admin_repository.dart';
 import '../../models/account_profile.dart';
 import '../../models/admin_dashboard_snapshot.dart';
+import 'admin_business_management_page.dart';
 import 'admin_business_review_page.dart';
+import 'admin_category_management_page.dart';
 
 typedef AdminProfileLoader = Future<AccountProfile> Function();
 typedef AdminDashboardLoader = Future<AdminDashboardSnapshot> Function();
@@ -208,7 +210,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           const SizedBox(height: AppSpacing.lg),
           const _SectionTitle(
             title: 'إدارة النظام',
-            subtitle: 'بوابات الوحدات الإدارية القادمة',
+            subtitle: 'إدارة محتوى الدليل ومتابعة دورة الاعتماد',
           ),
           const SizedBox(height: AppSpacing.sm),
           _AdminModuleCard(
@@ -222,15 +224,23 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           ),
           const SizedBox(height: AppSpacing.sm),
           _AdminModuleCard(
+            key: const ValueKey<String>('admin-manage-businesses-action'),
+            icon: Icons.store_mall_directory_rounded,
+            title: 'إدارة الأنشطة',
+            subtitle: 'إضافة الأنشطة وتعديلها وتمييزها وإيقافها أو حذفها',
+            badge: '${snapshot.totalBusinesses} نشاط',
+            color: AppColors.primaryTeal,
+            onTap: _openBusinessManagement,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _AdminModuleCard(
+            key: const ValueKey<String>('admin-manage-categories-action'),
             icon: Icons.account_tree_rounded,
             title: 'إدارة الأقسام',
-            subtitle: 'إضافة الأقسام وترتيبها وتفعيلها أو إيقافها',
+            subtitle: 'إضافة الأقسام وترتيبها وتفعيلها أو أرشفتها',
             badge: '${snapshot.activeCategories} نشط',
             color: AppColors.lightTeal,
-            onTap: () => _showComingModule(
-              'إدارة الأقسام',
-              'ستُفعّل ضمن مرحلة إدارة محتوى الدليل.',
-            ),
+            onTap: _openCategoryManagement,
           ),
           const SizedBox(height: AppSpacing.sm),
           _AdminModuleCard(
@@ -267,6 +277,30 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => const AdminBusinessReviewPage(),
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    await _loadDashboard();
+  }
+
+  Future<void> _openBusinessManagement() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const AdminBusinessManagementPage(),
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    await _loadDashboard();
+  }
+
+  Future<void> _openCategoryManagement() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const AdminCategoryManagementPage(),
       ),
     );
     if (!mounted) {

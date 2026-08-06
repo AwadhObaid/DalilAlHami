@@ -1,0 +1,22 @@
+Dalil Al Hami - Phase 07C Business Action Visibility Fix v3
+============================================================
+
+This cumulative package fixes two business-management interaction failures.
+
+Root causes
+-----------
+1. The save button lived at the end of a lazy ListView, so it was not built
+   until the form was scrolled near the bottom.
+2. The trailing business action menu could overlap the floating add button,
+   making pointer events hit the floating button instead of the menu.
+
+Fixes
+-----
+- The business save action is now persistent in Scaffold.bottomNavigationBar.
+- The add-business FAB uses FloatingActionButtonLocation.startFloat, opposite
+  the trailing action menu in both LTR and RTL layouts.
+- Every business action menu has a stable business-specific ValueKey.
+- Widget tests target the explicit menu key and ensure it is visible first.
+- Source contract tests protect the persistent save action and FAB placement.
+
+No database or Supabase migration changes are introduced by v3.

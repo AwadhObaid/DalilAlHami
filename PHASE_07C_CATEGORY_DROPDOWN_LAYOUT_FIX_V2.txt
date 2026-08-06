@@ -1,0 +1,20 @@
+Dalil Al Hami - Phase 07C Category Dropdown Layout Fix v2
+================================================================
+
+This cumulative package fixes the category icon dropdown layout failure.
+
+Root cause
+----------
+A flex child was placed inside a DropdownMenuItem Row while Flutter supplied
+unbounded horizontal constraints. The Row could not both shrink-wrap and
+expand a Flexible child, causing RenderFlex and cascading RenderBox failures.
+
+Fix
+---
+- The dropdown isExpanded flag is enabled.
+- The item Row shrink-wraps with MainAxisSize.min.
+- The flex child was removed and replaced with an ellipsized Text widget.
+- The category widget test now asserts that the icon field opens without any
+  framework exception before entering form data.
+
+No database or Supabase migration changes are introduced by v2.

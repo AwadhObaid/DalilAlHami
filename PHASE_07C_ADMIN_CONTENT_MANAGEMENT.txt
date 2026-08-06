@@ -1,0 +1,6 @@
+﻿Dalil Al Hami - Phase 07C admin content management
+Migration: 20260806003000
+Verified at: 2026-08-06T15:48:45.0288637+03:00
+Log: F:\FlutterProjects\DalilAlHami_Clean\build_logs\phase07c_verify_20260806_154831\migration_list.combined.log
+Features: categories CRUD, businesses CRUD, feature, suspend, restore
+Audit: public.admin_content_actions

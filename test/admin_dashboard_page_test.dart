@@ -70,6 +70,28 @@ void main() {
       ),
       findsOneWidget,
     );
+
+    final businessModule = find.byKey(
+      const ValueKey<String>('admin-manage-businesses-action'),
+    );
+    await tester.scrollUntilVisible(
+      businessModule,
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(businessModule, findsOneWidget);
+
+    final categoryModule = find.byKey(
+      const ValueKey<String>('admin-manage-categories-action'),
+    );
+    await tester.scrollUntilVisible(
+      categoryModule,
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(categoryModule, findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
