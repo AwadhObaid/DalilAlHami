@@ -3,14 +3,17 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/utils/launch_actions.dart';
 import '../../data/directory_data_store.dart';
 import '../../models/business.dart';
+import '../../models/directory_advertisement.dart';
 import '../../models/service_category.dart';
 import '../shared/widgets/directory_loading_skeleton.dart';
 import '../shared/widgets/directory_page_header.dart';
 import '../shared/widgets/directory_result_summary.dart';
 import '../shared/widgets/directory_search_field.dart';
 import '../shared/widgets/directory_status_banner.dart';
+import '../shared/widgets/inline_advertisement_banner.dart';
 import 'member_details_page.dart';
 import 'widgets/business_card.dart';
 
@@ -115,7 +118,10 @@ class _CategoryListPageState extends State<CategoryListPage> {
                   onRetry: _store.refresh,
                 ),
               Expanded(
-                child: _buildBody(businesses),
+                child: _buildBody(
+                  businesses,
+                  _store.advertisementsForPlacement('business_list'),
+                ),
               ),
             ],
           );
@@ -141,7 +147,10 @@ class _CategoryListPageState extends State<CategoryListPage> {
     return values;
   }
 
-  Widget _buildBody(List<Business> businesses) {
+  Widget _buildBody(
+    List<Business> businesses,
+    List<DirectoryAdvertisement> advertisements,
+  ) {
     if (_store.isInitialLoading) {
       return const DirectoryLoadingSkeleton();
     }
@@ -168,11 +177,19 @@ class _CategoryListPageState extends State<CategoryListPage> {
           AppSpacing.md,
           AppSpacing.xxl,
         ),
-        itemCount: businesses.length,
+        itemCount: businesses.length + (advertisements.isNotEmpty ? 1 : 0),
         separatorBuilder: (context, index) =>
             const SizedBox(height: AppSpacing.sm),
         itemBuilder: (context, index) {
-          final business = businesses[index];
+          if (advertisements.isNotEmpty && index == 0) {
+            return InlineAdvertisementBanner(
+              advertisements: advertisements,
+              onOpen: _openAdvertisement,
+            );
+          }
+
+          final businessIndex = index - (advertisements.isNotEmpty ? 1 : 0);
+          final business = businesses[businessIndex];
 
           return BusinessCard(
             key: ValueKey<String>('category-business-${business.id}'),
@@ -205,6 +222,26 @@ class _CategoryListPageState extends State<CategoryListPage> {
     setState(() {
       _query = '';
     });
+  }
+
+  void _openAdvertisement(DirectoryAdvertisement advertisement) {
+    final businessId = advertisement.businessId?.trim();
+    if (businessId != null && businessId.isNotEmpty) {
+      for (final business in _store.businesses) {
+        if (business.id == businessId && !business.isDeleted) {
+          _openBusiness(business);
+          return;
+        }
+      }
+
+      LaunchActions.showMessage(context, 'لم يعد النشاط المرتبط متاحًا.');
+      return;
+    }
+
+    final targetUrl = advertisement.targetUrl?.trim();
+    if (targetUrl != null && targetUrl.isNotEmpty) {
+      LaunchActions.openExternalUrl(context, targetUrl);
+    }
   }
 
   void _openBusiness(Business business) {

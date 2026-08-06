@@ -7,6 +7,7 @@ import '../../core/theme/app_text_styles.dart';
 import '../../data/repositories/admin_repository.dart';
 import '../../models/account_profile.dart';
 import '../../models/admin_dashboard_snapshot.dart';
+import 'admin_advertisement_management_page.dart';
 import 'admin_business_management_page.dart';
 import 'admin_business_review_page.dart';
 import 'admin_category_management_page.dart';
@@ -244,15 +245,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           ),
           const SizedBox(height: AppSpacing.sm),
           _AdminModuleCard(
+            key: const ValueKey<String>('admin-manage-advertisements-action'),
             icon: Icons.campaign_rounded,
             title: 'إدارة الإعلانات',
-            subtitle: 'الصور والروابط وفترات العرض وترتيب الظهور',
+            subtitle: 'المحتوى والروابط وفترات العرض وترتيب الظهور',
             badge: '${snapshot.activeAdvertisements} ظاهر',
             color: AppColors.advertisementGold,
-            onTap: () => _showComingModule(
-              'إدارة الإعلانات',
-              'ستُفعّل في Phase 07D مع مزامنة التطبيق.',
-            ),
+            onTap: _openAdvertisementManagement,
           ),
           const SizedBox(height: AppSpacing.sm),
           _AdminModuleCard(
@@ -301,6 +300,18 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => const AdminCategoryManagementPage(),
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    await _loadDashboard();
+  }
+
+  Future<void> _openAdvertisementManagement() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const AdminAdvertisementManagementPage(),
       ),
     );
     if (!mounted) {
@@ -737,8 +748,8 @@ class _FoundationNotice extends StatelessWidget {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
-              'تم تفعيل مراجعة الأنشطة مع سجل قرارات محمي. '
-              'إدارة الأقسام والإعلانات والمستخدمين ستُضاف تدريجيًا. '
+              'تم تفعيل مراجعة الأنشطة وإدارة الأقسام والأنشطة والإعلانات '
+              'مع سجل تدقيق محمي. إدارة المستخدمين هي الوحدة الإدارية التالية. '
               'آخر تحديث: $time.',
               style: AppTextStyles.bodySmall,
             ),

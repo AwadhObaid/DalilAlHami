@@ -27,6 +27,22 @@ abstract final class LaunchActions {
     );
   }
 
+  static Future<void> openExternalUrl(
+    BuildContext context,
+    String value,
+  ) async {
+    final opened = await ExternalLauncherService.openExternalUrl(value);
+
+    if (!context.mounted || opened) {
+      return;
+    }
+
+    _showFailure(
+      context,
+      'تعذر فتح رابط الإعلان.',
+    );
+  }
+
   static Future<void> openWhatsApp(
     BuildContext context,
     String phoneNumber, {

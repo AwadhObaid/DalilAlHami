@@ -4,8 +4,10 @@ import '../../core/constants/app_catalog.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/utils/launch_actions.dart';
 import '../../data/directory_data_store.dart';
 import '../../models/business.dart';
+import '../../models/directory_advertisement.dart';
 import '../../models/service_category.dart';
 import '../directory/all_businesses_page.dart';
 import '../directory/categories_overview_page.dart';
@@ -13,10 +15,11 @@ import '../directory/category_list_page.dart';
 import '../directory/member_details_page.dart';
 import '../shared/widgets/directory_loading_skeleton.dart';
 import '../shared/widgets/directory_status_banner.dart';
+import '../shared/widgets/inline_advertisement_banner.dart';
+import 'widgets/sticky_advertisement_header.dart';
 import 'widgets/category_circle_item.dart';
 import 'widgets/home_business_card.dart';
 import 'widgets/home_header.dart';
-import 'widgets/sticky_advertisement_header.dart';
 
 class HomeDashboardPage extends StatefulWidget {
   const HomeDashboardPage({
@@ -156,6 +159,10 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
 
   Widget _buildContent() {
     final businesses = _nearbyBusinesses;
+    final homeTopAdvertisements =
+        _directoryStore.advertisementsForPlacement('home_top');
+    final homeMiddleAdvertisements =
+        _directoryStore.advertisementsForPlacement('home_middle');
 
     return RefreshIndicator(
       onRefresh: _directoryStore.refresh,
@@ -186,7 +193,15 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
           ),
           StickyAdvertisementHeader(
             controller: _adPageController,
-            advertisements: _directoryStore.advertisements,
+            advertisements: homeTopAdvertisements
+                .map((advertisement) => advertisement.title)
+                .toList(growable: false),
+            onAdvertisementTap: (index) {
+              if (index < 0 || index >= homeTopAdvertisements.length) {
+                return;
+              }
+              _openAdvertisement(homeTopAdvertisements[index]);
+            },
           ),
           const SliverToBoxAdapter(
             child: SizedBox(height: AppSpacing.lg),
@@ -200,6 +215,13 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
             ),
           ),
           SliverToBoxAdapter(child: _buildFeaturedCategories()),
+          if (homeMiddleAdvertisements.isNotEmpty)
+            SliverToBoxAdapter(
+              child: InlineAdvertisementBanner(
+                advertisements: homeMiddleAdvertisements,
+                onOpen: _openAdvertisement,
+              ),
+            ),
           const SliverToBoxAdapter(
             child: SizedBox(height: AppSpacing.lg),
           ),
@@ -345,9 +367,30 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
         builder: (context) => CategoryListPage(
           categoryName: category.name,
           categoryId: category.id,
+          categoryIcon: category.icon,
         ),
       ),
     );
+  }
+
+  void _openAdvertisement(DirectoryAdvertisement advertisement) {
+    final businessId = advertisement.businessId?.trim();
+    if (businessId != null && businessId.isNotEmpty) {
+      for (final business in _directoryStore.businesses) {
+        if (business.id == businessId && !business.isDeleted) {
+          _openBusiness(business);
+          return;
+        }
+      }
+
+      LaunchActions.showMessage(context, 'لم يعد النشاط المرتبط متاحًا.');
+      return;
+    }
+
+    final targetUrl = advertisement.targetUrl?.trim();
+    if (targetUrl != null && targetUrl.isNotEmpty) {
+      LaunchActions.openExternalUrl(context, targetUrl);
+    }
   }
 
   void _openBusiness(Business business) {

@@ -22,6 +22,24 @@ abstract final class ExternalLauncherService {
     }
   }
 
+  static Future<bool> openExternalUrl(String value) async {
+    final uri = Uri.tryParse(value.trim());
+    if (uri == null ||
+        !uri.hasAuthority ||
+        (uri.scheme != 'http' && uri.scheme != 'https')) {
+      return false;
+    }
+
+    try {
+      return launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+    } on Exception {
+      return false;
+    }
+  }
+
   static Future<bool> openWhatsApp(
     String phoneNumber, {
     String? message,

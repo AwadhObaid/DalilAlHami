@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/services/supabase_service.dart';
+import '../../models/admin_advertisement_management.dart';
 import '../../models/admin_content_management.dart';
 import 'admin_repository.dart';
 
@@ -195,6 +196,112 @@ class AdminContentRepository {
       final response = await _client.rpc(
         'admin_delete_business',
         params: <String, dynamic>{'p_business_id': businessId},
+      );
+      return AdminContentMutationResult.fromRpc(response);
+    } on PostgrestException catch (error) {
+      throw AdminContentRepositoryFailure(_friendlyMessage(error));
+    }
+  }
+
+  Future<List<AdminAdvertisementItem>> loadAdvertisements() async {
+    await _adminRepository.loadCurrentAdminProfile();
+
+    final rows = _asRows(
+      await _client
+          .from('advertisements')
+          .select(
+            'id, business_id, title, image_path, target_url, placement, '
+            'starts_at, ends_at, sort_order, is_active, created_at, '
+            'updated_at, deleted_at, '
+            'businesses!advertisements_business_id_fkey(id, name)',
+          )
+          .order('sort_order')
+          .order('updated_at', ascending: false),
+    );
+
+    return rows.map(AdminAdvertisementItem.fromMap).toList(growable: false);
+  }
+
+  Future<List<AdminAdvertisementBusinessOption>>
+      loadAdvertisementBusinesses() async {
+    await _adminRepository.loadCurrentAdminProfile();
+
+    final rows = _asRows(
+      await _client
+          .from('businesses')
+          .select('id, name, deleted_at')
+          .eq('status', 'approved')
+          .eq('is_active', true)
+          .order('name'),
+    );
+
+    return rows
+        .where((row) => row['deleted_at'] == null)
+        .map(AdminAdvertisementBusinessOption.fromMap)
+        .where((business) => business.id.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  Future<AdminContentMutationResult> saveAdvertisement(
+    AdminAdvertisementDraft draft,
+  ) async {
+    await _adminRepository.loadCurrentAdminProfile();
+    try {
+      final response = await _client.rpc(
+        'admin_upsert_advertisement',
+        params: <String, dynamic>{
+          'p_advertisement_id': draft.id,
+          'p_business_id':
+              draft.targetType == AdminAdvertisementTargetType.business
+                  ? draft.businessId
+                  : null,
+          'p_title': draft.title.trim(),
+          'p_image_path': draft.imagePath.trim(),
+          'p_target_url':
+              draft.targetType == AdminAdvertisementTargetType.external
+                  ? _nullable(draft.targetUrl)
+                  : null,
+          'p_placement': draft.placement.rpcValue,
+          'p_starts_at': draft.startsAt?.toUtc().toIso8601String(),
+          'p_ends_at': draft.endsAt?.toUtc().toIso8601String(),
+          'p_sort_order': draft.sortOrder,
+        },
+      );
+      return AdminContentMutationResult.fromRpc(response);
+    } on PostgrestException catch (error) {
+      throw AdminContentRepositoryFailure(_friendlyMessage(error));
+    }
+  }
+
+  Future<AdminContentMutationResult> setAdvertisementActive({
+    required String advertisementId,
+    required bool isActive,
+  }) async {
+    await _adminRepository.loadCurrentAdminProfile();
+    try {
+      final response = await _client.rpc(
+        'admin_set_advertisement_active',
+        params: <String, dynamic>{
+          'p_advertisement_id': advertisementId,
+          'p_is_active': isActive,
+        },
+      );
+      return AdminContentMutationResult.fromRpc(response);
+    } on PostgrestException catch (error) {
+      throw AdminContentRepositoryFailure(_friendlyMessage(error));
+    }
+  }
+
+  Future<AdminContentMutationResult> deleteAdvertisement(
+    String advertisementId,
+  ) async {
+    await _adminRepository.loadCurrentAdminProfile();
+    try {
+      final response = await _client.rpc(
+        'admin_delete_advertisement',
+        params: <String, dynamic>{
+          'p_advertisement_id': advertisementId,
+        },
       );
       return AdminContentMutationResult.fromRpc(response);
     } on PostgrestException catch (error) {

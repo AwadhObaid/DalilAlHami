@@ -1,0 +1,10 @@
+Phase 07D Advertisement Layout Hardening v3
+============================================
+
+- Aligns StickyAdvertisementHeader extents with the real AdSlider expanded and compact heights.
+- Reserves the maximum outer vertical padding while the pinned header overlaps content.
+- Calculates inline advertisement height from measured text, available width, and accessibility text scaling.
+- Uses responsive advertisement image widths on narrow layouts.
+- Keeps the advertisement action reachable and preserves destination callbacks.
+- Strengthens presentation and source-contract regression tests.
+- Introduces no new Supabase migration or SQLite schema change.

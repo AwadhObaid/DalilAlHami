@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../core/constants/app_catalog.dart';
 import '../core/services/supabase_service.dart';
 import '../models/business.dart';
+import '../models/directory_advertisement.dart';
 import '../models/service_category.dart';
 import 'local/database/local_directory_database.dart';
 import 'local_directory_store.dart';
@@ -59,6 +60,7 @@ class DirectoryDataStore extends ChangeNotifier {
   List<ServiceCategory> _categories = const [];
   List<Business> _businesses = const [];
   List<String> _advertisements = const [];
+  List<DirectoryAdvertisement> _advertisementItems = const [];
 
   DirectoryDataSource? _source;
   Object? _lastError;
@@ -215,6 +217,15 @@ class DirectoryDataStore extends ChangeNotifier {
   UnmodifiableListView<String> get advertisements =>
       UnmodifiableListView(_advertisements);
 
+  UnmodifiableListView<DirectoryAdvertisement> get advertisementItems =>
+      UnmodifiableListView(_advertisementItems);
+
+  List<DirectoryAdvertisement> advertisementsForPlacement(String placement) {
+    return _advertisementItems
+        .where((advertisement) => advertisement.placement == placement)
+        .toList(growable: false);
+  }
+
   @visibleForTesting
   void prepareBundledDataForTesting() {
     _categories = List<ServiceCategory>.unmodifiable(
@@ -225,6 +236,16 @@ class DirectoryDataStore extends ChangeNotifier {
     );
     _advertisements = List<String>.unmodifiable(
       AppCatalog.advertisements,
+    );
+    _advertisementItems = List<DirectoryAdvertisement>.unmodifiable(
+      List<DirectoryAdvertisement>.generate(
+        AppCatalog.advertisements.length,
+        (index) => DirectoryAdvertisement(
+          id: 'bundled-ad-$index',
+          title: AppCatalog.advertisements[index],
+          sortOrder: index,
+        ),
+      ),
     );
     _source = DirectoryDataSource.bundledSeed;
     _lastError = null;
@@ -732,10 +753,24 @@ class DirectoryDataStore extends ChangeNotifier {
     _businesses = List<Business>.unmodifiable(
       snapshot.businesses,
     );
+    final useBundledAdvertisements =
+        snapshot.isSeedData && snapshot.advertisementItems.isEmpty;
     _advertisements = List<String>.unmodifiable(
-      snapshot.advertisements.isEmpty
+      useBundledAdvertisements
           ? AppCatalog.advertisements
           : snapshot.advertisements,
+    );
+    _advertisementItems = List<DirectoryAdvertisement>.unmodifiable(
+      useBundledAdvertisements
+          ? List<DirectoryAdvertisement>.generate(
+              AppCatalog.advertisements.length,
+              (index) => DirectoryAdvertisement(
+                id: 'bundled-ad-$index',
+                title: AppCatalog.advertisements[index],
+                sortOrder: index,
+              ),
+            )
+          : snapshot.advertisementItems,
     );
     _lastSyncedAt = snapshot.lastSyncedAt;
     _lastSyncVersion = snapshot.lastSyncVersion;
@@ -751,6 +786,16 @@ class DirectoryDataStore extends ChangeNotifier {
     );
     _advertisements = List<String>.unmodifiable(
       AppCatalog.advertisements,
+    );
+    _advertisementItems = List<DirectoryAdvertisement>.unmodifiable(
+      List<DirectoryAdvertisement>.generate(
+        AppCatalog.advertisements.length,
+        (index) => DirectoryAdvertisement(
+          id: 'bundled-ad-$index',
+          title: AppCatalog.advertisements[index],
+          sortOrder: index,
+        ),
+      ),
     );
     _source = DirectoryDataSource.memoryFallback;
     _lastError = error;

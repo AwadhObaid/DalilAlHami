@@ -50,6 +50,16 @@ void main() {
         find.byKey(const ValueKey<String>('sticky-ad-expanded-content')),
         findsOneWidget,
       );
+      expect(
+        tester
+            .getSize(
+              find.byKey(
+                const ValueKey<String>('sticky-advertisement-header'),
+              ),
+            )
+            .height,
+        greaterThanOrEqualTo(208),
+      );
       expect(tester.takeException(), isNull);
 
       await tester.drag(

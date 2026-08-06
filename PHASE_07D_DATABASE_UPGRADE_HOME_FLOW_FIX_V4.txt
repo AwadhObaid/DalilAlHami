@@ -1,0 +1,19 @@
+Phase 07D database upgrade and home flow fix v4
+================================================
+
+This cumulative hardening release fixes two regressions discovered only by the
+full sequential test suite:
+
+1. SQLite schema v7 upgrades no longer assume that directory_advertisements or
+   the other core directory tables already exist in every legacy/partial cache.
+   Core tables are ensured with CREATE TABLE IF NOT EXISTS, and columns are
+   added only when PRAGMA table_info confirms that they are missing.
+
+2. The approved Phase 06A home flow is restored while preserving Phase 07D
+   advertisement placements and destinations:
+   - Nearby "View all" opens AllBusinessesPage.
+   - The home exploration footer is restored.
+   - home_top remains a sticky advertisement header.
+   - home_middle remains an inline advertisement placement.
+
+No new Supabase migration is introduced by v4.

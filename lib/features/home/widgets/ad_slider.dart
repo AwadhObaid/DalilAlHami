@@ -9,6 +9,7 @@ class AdSlider extends StatefulWidget {
   const AdSlider({
     required this.controller,
     required this.advertisements,
+    this.onAdvertisementTap,
     this.collapseProgress = 0,
     this.expandToFill = false,
     super.key,
@@ -16,6 +17,7 @@ class AdSlider extends StatefulWidget {
 
   final PageController controller;
   final List<String> advertisements;
+  final ValueChanged<int>? onAdvertisementTap;
   final double collapseProgress;
   final bool expandToFill;
 
@@ -69,6 +71,9 @@ class _AdSliderState extends State<AdSlider> {
                         : 'sticky-ad-expanded-content',
                   ),
                   message: widget.advertisements[index],
+                  onTap: widget.onAdvertisementTap == null
+                      ? null
+                      : () => widget.onAdvertisementTap!(index),
                   collapseProgress: progress,
                   variantIndex: index,
                 );
@@ -120,10 +125,12 @@ class _AdvertisementPage extends StatelessWidget {
     required this.message,
     required this.collapseProgress,
     required this.variantIndex,
+    this.onTap,
     super.key,
   });
 
   final String message;
+  final VoidCallback? onTap;
   final double collapseProgress;
   final int variantIndex;
 
@@ -133,8 +140,10 @@ class _AdvertisementPage extends StatelessWidget {
     final compact = progress >= 0.55;
     final visual = _AdvertisementVisual.forIndex(variantIndex);
 
+    final Widget content;
+
     if (compact) {
-      return DecoratedBox(
+      content = DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: AlignmentDirectional.topStart,
@@ -181,123 +190,136 @@ class _AdvertisementPage extends StatelessWidget {
           ),
         ),
       );
-    }
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: AlignmentDirectional.topStart,
-          end: AlignmentDirectional.bottomEnd,
-          colors: visual.gradient,
+    } else {
+      content = DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: AlignmentDirectional.topStart,
+            end: AlignmentDirectional.bottomEnd,
+            colors: visual.gradient,
+          ),
         ),
-      ),
-      child: Stack(
-        children: [
-          PositionedDirectional(
-            end: -24,
-            top: -34,
-            child: Container(
-              width: 176,
-              height: 176,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.white.withValues(alpha: 0.08),
+        child: Stack(
+          children: [
+            PositionedDirectional(
+              end: -24,
+              top: -34,
+              child: Container(
+                width: 176,
+                height: 176,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.white.withValues(alpha: 0.08),
+                ),
               ),
             ),
-          ),
-          PositionedDirectional(
-            end: AppSpacing.xl,
-            bottom: AppSpacing.lg,
-            child: Transform.rotate(
-              angle: -0.08,
-              child: Container(
-                width: 112,
-                height: 112,
-                decoration: BoxDecoration(
-                  color: AppColors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(AppRadius.xl),
-                  border: Border.all(
-                    color: AppColors.white.withValues(alpha: 0.18),
+            PositionedDirectional(
+              end: AppSpacing.xl,
+              bottom: AppSpacing.lg,
+              child: Transform.rotate(
+                angle: -0.08,
+                child: Container(
+                  width: 112,
+                  height: 112,
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppRadius.xl),
+                    border: Border.all(
+                      color: AppColors.white.withValues(alpha: 0.18),
+                    ),
+                  ),
+                  child: Icon(
+                    visual.icon,
+                    color: AppColors.white,
+                    size: 64,
                   ),
                 ),
-                child: Icon(
-                  visual.icon,
-                  color: AppColors.white,
-                  size: 64,
-                ),
               ),
             ),
-          ),
-          Positioned.fill(
-            child: Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                154,
-                AppSpacing.xl,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _AdvertisementBadge(compact: false),
-                  const SizedBox(height: AppSpacing.sm),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Flexible(
-                          child: Align(
-                            alignment: AlignmentDirectional.bottomStart,
-                            child: Text(
-                              message,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTextStyles.headlineMedium.copyWith(
-                                color: AppColors.white,
-                                height: 1.2,
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                  154,
+                  AppSpacing.xl,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _AdvertisementBadge(compact: false),
+                    const SizedBox(height: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Flexible(
+                            child: Align(
+                              alignment: AlignmentDirectional.bottomStart,
+                              child: Text(
+                                message,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.headlineMedium.copyWith(
+                                  color: AppColors.white,
+                                  height: 1.2,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: AppSpacing.xxs),
-                        Text(
-                          'إعلان محلي تديره إدارة دليل الحامي',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.white.withValues(alpha: 0.82),
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.md,
-                            vertical: AppSpacing.xs,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.advertisementGold,
-                            borderRadius: BorderRadius.circular(
-                              AppRadius.pill,
-                            ),
-                          ),
-                          child: Text(
-                            'اكتشف الآن',
+                          const SizedBox(height: AppSpacing.xxs),
+                          Text(
+                            'إعلان محلي تديره إدارة دليل الحامي',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.labelMedium.copyWith(
-                              color: AppColors.advertisementInk,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.white.withValues(alpha: 0.82),
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: AppSpacing.xs),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.xs,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.advertisementGold,
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.pill,
+                              ),
+                            ),
+                            child: Text(
+                              'اكتشف الآن',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.labelMedium.copyWith(
+                                color: AppColors.advertisementInk,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
+      );
+    }
+
+    if (onTap == null) {
+      return content;
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        key: ValueKey<String>('home-advertisement-action-$variantIndex'),
+        onTap: onTap,
+        child: content,
       ),
     );
   }

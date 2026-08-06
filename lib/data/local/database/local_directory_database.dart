@@ -19,6 +19,7 @@ class DirectoryCacheSnapshot {
     required this.categories,
     required this.businesses,
     required this.advertisements,
+    this.advertisementItems = const <DirectoryAdvertisement>[],
     required this.isInitialized,
     required this.isSeedData,
     required this.lastSyncVersion,
@@ -28,6 +29,7 @@ class DirectoryCacheSnapshot {
   final List<ServiceCategory> categories;
   final List<Business> businesses;
   final List<String> advertisements;
+  final List<DirectoryAdvertisement> advertisementItems;
   final bool isInitialized;
   final bool isSeedData;
   final int lastSyncVersion;
@@ -45,7 +47,7 @@ class LocalDirectoryDatabase {
 
   static final LocalDirectoryDatabase instance = LocalDirectoryDatabase();
 
-  static const int schemaVersion = 6;
+  static const int schemaVersion = 7;
 
   static const String _categoriesTable = 'directory_categories';
   static const String _businessesTable = 'directory_businesses';
@@ -156,6 +158,8 @@ class LocalDirectoryDatabase {
       CREATE TABLE $_advertisementsTable (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
+        business_id TEXT,
+        placement TEXT NOT NULL DEFAULT 'home_top',
         image_path TEXT,
         target_url TEXT,
         sort_order INTEGER NOT NULL DEFAULT 0,
@@ -188,54 +192,95 @@ class LocalDirectoryDatabase {
     int oldVersion,
     int newVersion,
   ) async {
+    await _ensureCoreDirectoryTables(database);
+    await _createAccountCacheSchema(database);
+
     if (oldVersion < 2) {
-      await database.execute(
-        'ALTER TABLE $_categoriesTable ADD COLUMN updated_at TEXT',
+      await _addColumnIfMissing(
+        database,
+        tableName: _categoriesTable,
+        columnName: 'updated_at',
+        definition: 'TEXT',
       );
-      await database.execute(
-        'ALTER TABLE $_categoriesTable ADD COLUMN deleted_at TEXT',
+      await _addColumnIfMissing(
+        database,
+        tableName: _categoriesTable,
+        columnName: 'deleted_at',
+        definition: 'TEXT',
       );
-      await database.execute(
-        'ALTER TABLE $_categoriesTable '
-        'ADD COLUMN sync_version INTEGER NOT NULL DEFAULT 0',
-      );
-
-      await database.execute(
-        'ALTER TABLE $_businessesTable ADD COLUMN updated_at TEXT',
-      );
-      await database.execute(
-        'ALTER TABLE $_businessesTable ADD COLUMN deleted_at TEXT',
-      );
-      await database.execute(
-        'ALTER TABLE $_businessesTable '
-        'ADD COLUMN sync_version INTEGER NOT NULL DEFAULT 0',
+      await _addColumnIfMissing(
+        database,
+        tableName: _categoriesTable,
+        columnName: 'sync_version',
+        definition: 'INTEGER NOT NULL DEFAULT 0',
       );
 
-      await database.execute(
-        'ALTER TABLE $_advertisementsTable ADD COLUMN image_path TEXT',
+      await _addColumnIfMissing(
+        database,
+        tableName: _businessesTable,
+        columnName: 'updated_at',
+        definition: 'TEXT',
       );
-      await database.execute(
-        'ALTER TABLE $_advertisementsTable ADD COLUMN target_url TEXT',
+      await _addColumnIfMissing(
+        database,
+        tableName: _businessesTable,
+        columnName: 'deleted_at',
+        definition: 'TEXT',
       );
-      await database.execute(
-        'ALTER TABLE $_advertisementsTable '
-        'ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1',
+      await _addColumnIfMissing(
+        database,
+        tableName: _businessesTable,
+        columnName: 'sync_version',
+        definition: 'INTEGER NOT NULL DEFAULT 0',
       );
-      await database.execute(
-        'ALTER TABLE $_advertisementsTable ADD COLUMN starts_at TEXT',
+
+      await _addColumnIfMissing(
+        database,
+        tableName: _advertisementsTable,
+        columnName: 'image_path',
+        definition: 'TEXT',
       );
-      await database.execute(
-        'ALTER TABLE $_advertisementsTable ADD COLUMN ends_at TEXT',
+      await _addColumnIfMissing(
+        database,
+        tableName: _advertisementsTable,
+        columnName: 'target_url',
+        definition: 'TEXT',
       );
-      await database.execute(
-        'ALTER TABLE $_advertisementsTable ADD COLUMN updated_at TEXT',
+      await _addColumnIfMissing(
+        database,
+        tableName: _advertisementsTable,
+        columnName: 'is_active',
+        definition: 'INTEGER NOT NULL DEFAULT 1',
       );
-      await database.execute(
-        'ALTER TABLE $_advertisementsTable ADD COLUMN deleted_at TEXT',
+      await _addColumnIfMissing(
+        database,
+        tableName: _advertisementsTable,
+        columnName: 'starts_at',
+        definition: 'TEXT',
       );
-      await database.execute(
-        'ALTER TABLE $_advertisementsTable '
-        'ADD COLUMN sync_version INTEGER NOT NULL DEFAULT 0',
+      await _addColumnIfMissing(
+        database,
+        tableName: _advertisementsTable,
+        columnName: 'ends_at',
+        definition: 'TEXT',
+      );
+      await _addColumnIfMissing(
+        database,
+        tableName: _advertisementsTable,
+        columnName: 'updated_at',
+        definition: 'TEXT',
+      );
+      await _addColumnIfMissing(
+        database,
+        tableName: _advertisementsTable,
+        columnName: 'deleted_at',
+        definition: 'TEXT',
+      );
+      await _addColumnIfMissing(
+        database,
+        tableName: _advertisementsTable,
+        columnName: 'sync_version',
+        definition: 'INTEGER NOT NULL DEFAULT 0',
       );
 
       await _writeMetadata(
@@ -249,24 +294,207 @@ class LocalDirectoryDatabase {
       await _createSyncQueueSchema(database);
     }
 
-    if (oldVersion < 4) {
-      await _createAccountCacheSchema(database);
-    }
-
     if (oldVersion < 5) {
       await _migrateAccountBusinessesToMultiple(database);
     }
 
     if (oldVersion >= 5 && oldVersion < 6) {
-      await database.execute(
-        'ALTER TABLE $_accountBusinessesTable '
-        'ADD COLUMN sync_version INTEGER NOT NULL DEFAULT 0',
+      await _addColumnIfMissing(
+        database,
+        tableName: _accountBusinessesTable,
+        columnName: 'sync_version',
+        definition: 'INTEGER NOT NULL DEFAULT 0',
       );
     }
 
     if (oldVersion < 6) {
       await _createSyncConflictSchema(database);
     }
+
+    if (oldVersion < 7) {
+      await _ensureAdvertisementSchemaV7(database);
+    }
+
+    await database.execute(
+      '''
+      CREATE INDEX IF NOT EXISTS directory_businesses_category_id_idx
+      ON $_businessesTable(category_id)
+      ''',
+    );
+    await database.execute(
+      '''
+      CREATE INDEX IF NOT EXISTS directory_businesses_category_name_idx
+      ON $_businessesTable(category_name)
+      ''',
+    );
+  }
+
+  static Future<void> _ensureCoreDirectoryTables(
+    DatabaseExecutor database,
+  ) async {
+    await database.execute(
+      '''
+      CREATE TABLE IF NOT EXISTS $_categoriesTable (
+        id TEXT PRIMARY KEY,
+        name_ar TEXT NOT NULL,
+        slug TEXT NOT NULL,
+        icon_name TEXT NOT NULL,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        display_group TEXT NOT NULL,
+        image_url TEXT,
+        updated_at TEXT,
+        deleted_at TEXT,
+        sync_version INTEGER NOT NULL DEFAULT 0
+      )
+      ''',
+    );
+
+    await database.execute(
+      '''
+      CREATE TABLE IF NOT EXISTS $_businessesTable (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        phone TEXT NOT NULL DEFAULT '',
+        whatsapp TEXT NOT NULL DEFAULT '',
+        category_name TEXT NOT NULL DEFAULT '',
+        place TEXT NOT NULL DEFAULT '',
+        details TEXT NOT NULL DEFAULT '',
+        image_path TEXT,
+        category_id TEXT NOT NULL DEFAULT '',
+        category_slug TEXT NOT NULL DEFAULT '',
+        logo_url TEXT,
+        cover_url TEXT,
+        is_featured INTEGER NOT NULL DEFAULT 0,
+        is_remote INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT,
+        updated_at TEXT,
+        deleted_at TEXT,
+        sync_version INTEGER NOT NULL DEFAULT 0
+      )
+      ''',
+    );
+
+    await database.execute(
+      '''
+      CREATE TABLE IF NOT EXISTS $_advertisementsTable (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        business_id TEXT,
+        placement TEXT NOT NULL DEFAULT 'home_top',
+        image_path TEXT,
+        target_url TEXT,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        starts_at TEXT,
+        ends_at TEXT,
+        updated_at TEXT,
+        deleted_at TEXT,
+        sync_version INTEGER NOT NULL DEFAULT 0
+      )
+      ''',
+    );
+
+    await database.execute(
+      '''
+      CREATE TABLE IF NOT EXISTS $_metadataTable (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+      ''',
+    );
+  }
+
+  static Future<void> _ensureAdvertisementSchemaV7(
+    DatabaseExecutor database,
+  ) async {
+    final tableExists = await _tableExists(
+      database,
+      _advertisementsTable,
+    );
+
+    if (!tableExists) {
+      await database.execute(
+        '''
+        CREATE TABLE $_advertisementsTable (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          business_id TEXT,
+          placement TEXT NOT NULL DEFAULT 'home_top',
+          image_path TEXT,
+          target_url TEXT,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          is_active INTEGER NOT NULL DEFAULT 1,
+          starts_at TEXT,
+          ends_at TEXT,
+          updated_at TEXT,
+          deleted_at TEXT,
+          sync_version INTEGER NOT NULL DEFAULT 0
+        )
+        ''',
+      );
+      return;
+    }
+
+    await _addColumnIfMissing(
+      database,
+      tableName: _advertisementsTable,
+      columnName: 'business_id',
+      definition: 'TEXT',
+    );
+    await _addColumnIfMissing(
+      database,
+      tableName: _advertisementsTable,
+      columnName: 'placement',
+      definition: "TEXT NOT NULL DEFAULT 'home_top'",
+    );
+  }
+
+  static Future<void> _addColumnIfMissing(
+    DatabaseExecutor database, {
+    required String tableName,
+    required String columnName,
+    required String definition,
+  }) async {
+    if (await _columnExists(database, tableName, columnName)) {
+      return;
+    }
+
+    await database.execute(
+      'ALTER TABLE $tableName ADD COLUMN $columnName $definition',
+    );
+  }
+
+  static Future<bool> _tableExists(
+    DatabaseExecutor database,
+    String tableName,
+  ) async {
+    final rows = await database.rawQuery(
+      '''
+      SELECT 1
+      FROM sqlite_master
+      WHERE type = 'table' AND name = ?
+      LIMIT 1
+      ''',
+      [tableName],
+    );
+
+    return rows.isNotEmpty;
+  }
+
+  static Future<bool> _columnExists(
+    DatabaseExecutor database,
+    String tableName,
+    String columnName,
+  ) async {
+    if (!await _tableExists(database, tableName)) {
+      return false;
+    }
+
+    final rows = await database.rawQuery(
+      'PRAGMA table_info($tableName)',
+    );
+
+    return rows.any((row) => row['name']?.toString() == columnName);
   }
 
   static Future<void> _createSyncQueueSchema(
@@ -560,9 +788,12 @@ class LocalDirectoryDatabase {
     }
 
     final now = DateTime.now().toUtc();
-    final advertisements = advertisementRows
+    final advertisementItems = advertisementRows
         .map(_advertisementFromRow)
         .where((advertisement) => advertisement.isVisibleAt(now))
+        .toList(growable: false);
+    final advertisements = advertisementItems
+        .where((advertisement) => advertisement.placement == 'home_top')
         .map((advertisement) => advertisement.title)
         .where((title) => title.trim().isNotEmpty)
         .toList(growable: false);
@@ -577,6 +808,7 @@ class LocalDirectoryDatabase {
           .where((business) => !business.isDeleted)
           .toList(growable: false),
       advertisements: advertisements,
+      advertisementItems: advertisementItems,
       isInitialized: metadata[_initializedKey] == '1',
       isSeedData: metadata[_cacheKindKey] != 'remote',
       lastSyncVersion: int.tryParse(
@@ -1579,6 +1811,8 @@ class LocalDirectoryDatabase {
     return {
       'id': advertisement.id,
       'title': advertisement.title,
+      'business_id': advertisement.businessId,
+      'placement': advertisement.placement,
       'image_path': advertisement.imagePath,
       'target_url': advertisement.targetUrl,
       'sort_order': advertisement.sortOrder,
@@ -1597,6 +1831,8 @@ class LocalDirectoryDatabase {
     return DirectoryAdvertisement(
       id: row['id']?.toString() ?? '',
       title: row['title']?.toString() ?? '',
+      businessId: _nullableString(row['business_id']),
+      placement: row['placement']?.toString() ?? 'home_top',
       imagePath: _nullableString(row['image_path']),
       targetUrl: _nullableString(row['target_url']),
       sortOrder: _readInteger(row['sort_order']),

@@ -92,6 +92,17 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(categoryModule, findsOneWidget);
+
+    final advertisementModule = find.byKey(
+      const ValueKey<String>('admin-manage-advertisements-action'),
+    );
+    await tester.scrollUntilVisible(
+      advertisementModule,
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(advertisementModule, findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

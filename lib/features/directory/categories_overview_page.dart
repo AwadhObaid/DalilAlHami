@@ -5,14 +5,18 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_text_styles.dart';
+import '../../core/utils/launch_actions.dart';
 import '../../data/directory_data_store.dart';
+import '../../models/directory_advertisement.dart';
 import '../../models/service_category.dart';
 import '../shared/widgets/directory_loading_skeleton.dart';
 import '../shared/widgets/directory_page_header.dart';
 import '../shared/widgets/directory_result_summary.dart';
 import '../shared/widgets/directory_search_field.dart';
 import '../shared/widgets/directory_status_banner.dart';
+import '../shared/widgets/inline_advertisement_banner.dart';
 import 'category_list_page.dart';
+import 'member_details_page.dart';
 
 class CategoriesOverviewPage extends StatefulWidget {
   const CategoriesOverviewPage({
@@ -216,6 +220,13 @@ class _CategoriesOverviewPageState extends State<CategoriesOverviewPage>
                 onRetry: _store.refresh,
               ),
             ),
+          if (_store.advertisementsForPlacement('category').isNotEmpty)
+            SliverToBoxAdapter(
+              child: InlineAdvertisementBanner(
+                advertisements: _store.advertisementsForPlacement('category'),
+                onOpen: _openAdvertisement,
+              ),
+            ),
           if (categories.isEmpty)
             SliverToBoxAdapter(
               child: _buildEmptyCategoriesState(),
@@ -380,6 +391,30 @@ class _CategoriesOverviewPageState extends State<CategoriesOverviewPage>
     setState(() {
       _query = '';
     });
+  }
+
+  void _openAdvertisement(DirectoryAdvertisement advertisement) {
+    final businessId = advertisement.businessId?.trim();
+    if (businessId != null && businessId.isNotEmpty) {
+      for (final business in _store.businesses) {
+        if (business.id == businessId && !business.isDeleted) {
+          Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
+              builder: (_) => MemberDetailsPage(business: business),
+            ),
+          );
+          return;
+        }
+      }
+
+      LaunchActions.showMessage(context, 'لم يعد النشاط المرتبط متاحًا.');
+      return;
+    }
+
+    final targetUrl = advertisement.targetUrl?.trim();
+    if (targetUrl != null && targetUrl.isNotEmpty) {
+      LaunchActions.openExternalUrl(context, targetUrl);
+    }
   }
 
   void _openCategory(ServiceCategory category) {

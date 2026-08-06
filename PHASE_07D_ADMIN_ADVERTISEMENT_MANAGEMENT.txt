@@ -1,0 +1,7 @@
+﻿Dalil Al Hami - Phase 07D advertisement management
+Migration: 20260806133000
+Verified at: 2026-08-06T17:40:31.5436953+03:00
+Log: F:\FlutterProjects\DalilAlHami_Clean\build_logs\phase07d_verify_20260806_174019\migration_list.combined.log
+Features: advertisement CRUD, activation, schedules, placements, targets
+Audit: public.admin_content_actions / entity_type advertisement
+Sync: placement-aware advertisement payload and local schema v7

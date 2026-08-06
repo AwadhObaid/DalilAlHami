@@ -8,11 +8,13 @@ class StickyAdvertisementHeader extends StatelessWidget {
   const StickyAdvertisementHeader({
     required this.controller,
     required this.advertisements,
+    this.onAdvertisementTap,
     super.key,
   });
 
   final PageController controller;
   final List<String> advertisements;
+  final ValueChanged<int>? onAdvertisementTap;
 
   @override
   Widget build(BuildContext context) {
@@ -22,20 +24,23 @@ class StickyAdvertisementHeader extends StatelessWidget {
 
     final textScale =
         MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.4).toDouble();
-    final safeTop = MediaQuery.paddingOf(context).top;
-    final compactExtent =
-        AppSizes.homeAdCompactHeight + safeTop + ((textScale - 1) * 34);
-    final expandedExtent =
-        AppSizes.homeAdExpandedHeight + ((textScale - 1) * 104);
+    final expandedSliderHeight =
+        (AppSizes.homeAdExpandedHeight + ((textScale - 1) * 104))
+            .clamp(AppSizes.homeAdExpandedHeight, 252.0)
+            .toDouble();
+    const maximumOuterVerticalPadding = AppSpacing.xxs + AppSpacing.xs;
+    const compactExtent =
+        AppSizes.homeAdCompactHeight + maximumOuterVerticalPadding;
+    final expandedExtent = expandedSliderHeight + maximumOuterVerticalPadding;
 
     return SliverPersistentHeader(
       pinned: true,
       delegate: _StickyAdvertisementDelegate(
         controller: controller,
         advertisements: advertisements,
+        onAdvertisementTap: onAdvertisementTap,
         compactExtent: compactExtent,
         expandedExtent: expandedExtent,
-        safeTop: safeTop,
       ),
     );
   }
@@ -45,16 +50,16 @@ class _StickyAdvertisementDelegate extends SliverPersistentHeaderDelegate {
   const _StickyAdvertisementDelegate({
     required this.controller,
     required this.advertisements,
+    required this.onAdvertisementTap,
     required this.compactExtent,
     required this.expandedExtent,
-    required this.safeTop,
   });
 
   final PageController controller;
   final List<String> advertisements;
+  final ValueChanged<int>? onAdvertisementTap;
   final double compactExtent;
   final double expandedExtent;
-  final double safeTop;
 
   @override
   double get minExtent => compactExtent;
@@ -73,21 +78,20 @@ class _StickyAdvertisementDelegate extends SliverPersistentHeaderDelegate {
         ? 1.0
         : (shrinkOffset / collapseRange).clamp(0.0, 1.0).toDouble();
 
-    final topInset = safeTop * collapseProgress;
-
     return ColoredBox(
       key: const ValueKey<String>('sticky-advertisement-header'),
       color: AppColors.pageBackground,
       child: Padding(
         padding: EdgeInsets.fromLTRB(
           AppSpacing.md,
-          AppSpacing.xxs + topInset,
+          AppSpacing.xxs,
           AppSpacing.md,
           overlapsContent ? AppSpacing.xs : AppSpacing.xxs,
         ),
         child: AdSlider(
           controller: controller,
           advertisements: advertisements,
+          onAdvertisementTap: onAdvertisementTap,
           collapseProgress: collapseProgress,
           expandToFill: true,
         ),
@@ -99,8 +103,8 @@ class _StickyAdvertisementDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _StickyAdvertisementDelegate oldDelegate) {
     return oldDelegate.controller != controller ||
         oldDelegate.advertisements != advertisements ||
+        oldDelegate.onAdvertisementTap != onAdvertisementTap ||
         oldDelegate.compactExtent != compactExtent ||
-        oldDelegate.expandedExtent != expandedExtent ||
-        oldDelegate.safeTop != safeTop;
+        oldDelegate.expandedExtent != expandedExtent;
   }
 }

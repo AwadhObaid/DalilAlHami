@@ -3,6 +3,8 @@ class DirectoryAdvertisement {
     required this.id,
     required this.title,
     required this.sortOrder,
+    this.businessId,
+    this.placement = 'home_top',
     this.imagePath,
     this.targetUrl,
     this.isActive = true,
@@ -16,6 +18,8 @@ class DirectoryAdvertisement {
   final String id;
   final String title;
   final int sortOrder;
+  final String? businessId;
+  final String placement;
   final String? imagePath;
   final String? targetUrl;
   final bool isActive;
@@ -47,6 +51,8 @@ class DirectoryAdvertisement {
       id: data['id']?.toString() ?? '',
       title: data['title']?.toString() ?? '',
       sortOrder: _readInteger(data['sort_order']),
+      businessId: _nullableString(data['business_id']),
+      placement: _readPlacement(data['placement']),
       imagePath: _nullableString(data['image_path']),
       targetUrl: _nullableString(data['target_url']),
       isActive: _readBoolean(data['is_active'], fallback: true),
@@ -64,6 +70,15 @@ class DirectoryAdvertisement {
       ),
       syncVersion: _readInteger(data['sync_version']),
     );
+  }
+
+  static String _readPlacement(Object? value) {
+    return switch (value?.toString()) {
+      'home_middle' => 'home_middle',
+      'category' => 'category',
+      'business_list' => 'business_list',
+      _ => 'home_top',
+    };
   }
 
   static bool _readBoolean(

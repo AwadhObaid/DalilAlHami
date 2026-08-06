@@ -1,0 +1,9 @@
+Dalil Al Hami — Phase 07D compatibility regression fix v2
+
+- Restores the approved Phase 06A home experience while preserving placement-aware advertisements.
+- Restores the Phase 06B category overview and category-list search, responsive layout, and categoryIcon API.
+- Connects home_top, home_middle, category, and business_list advertisement placements without reverting prior UX.
+- Passes HomeHeader onOpenSearch and onOpenFilters callbacks required by the current design.
+- Replaces deprecated DropdownButtonFormField value parameters with initialValue.
+- Adds a source contract that blocks future regression to stale home or directory implementations.
+- No new Supabase migration is introduced.
