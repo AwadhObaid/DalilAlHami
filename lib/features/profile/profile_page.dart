@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/location/business_location.dart';
 import '../../core/services/auth_session_store.dart';
 import '../../core/services/media_upload_service.dart';
 import '../../data/directory_data_store.dart';
@@ -11,6 +12,7 @@ import '../../data/repositories/account_repository.dart';
 import '../../models/account_business.dart';
 import '../../models/account_profile.dart';
 import '../shared/widgets/business_gallery_manager.dart';
+import '../shared/widgets/business_location_picker.dart';
 import '../shared/widgets/cached_directory_image.dart';
 import 'widgets/add_business_button.dart';
 import 'widgets/business_category_dropdown.dart';
@@ -51,6 +53,7 @@ class _ProfilePageState extends State<ProfilePage> {
   String? _selectedCategoryId;
   String? _selectedImagePath;
   List<String> _selectedGalleryPaths = const <String>[];
+  BusinessLocation? _selectedBusinessLocation;
 
   bool _isLoading = true;
   bool _isSaving = false;
@@ -147,6 +150,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _selectedImagePath = null;
     _selectedGalleryPaths =
         snapshot.business?.localGalleryPaths ?? const <String>[];
+    _selectedBusinessLocation = snapshot.business?.location;
 
     _selectedCategoryId = snapshot.business?.categoryId;
   }
@@ -264,6 +268,8 @@ class _ProfilePageState extends State<ProfilePage> {
         whatsapp: _whatsappController.text,
         description: _descriptionController.text,
         address: _addressController.text,
+        latitude: _selectedBusinessLocation?.latitude,
+        longitude: _selectedBusinessLocation?.longitude,
         businessId: _business?.id,
         baseSyncVersion: _business?.syncVersion,
         selectedImagePath: _selectedImagePath,
@@ -475,6 +481,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _selectedCategoryId = null;
     _selectedImagePath = null;
     _selectedGalleryPaths = const <String>[];
+    _selectedBusinessLocation = null;
   }
 
   void _startCreatingBusiness() {
@@ -638,6 +645,14 @@ class _ProfilePageState extends State<ProfilePage> {
                   lines: 3,
                 ),
               ]),
+              const SizedBox(height: 12),
+              BusinessLocationPicker(
+                location: _selectedBusinessLocation,
+                enabled: !_isSaving,
+                onChanged: (location) {
+                  setState(() => _selectedBusinessLocation = location);
+                },
+              ),
               const SizedBox(height: 20),
               if (_business != null &&
                   !_business!.isWaitingForSync &&
@@ -809,6 +824,14 @@ class _ProfilePageState extends State<ProfilePage> {
                   'العنوان',
                   business.address,
                 ),
+                if (business.hasLocation) ...[
+                  const Divider(),
+                  _buildInfoRow(
+                    Icons.map_outlined,
+                    'إحداثيات الموقع',
+                    business.location!.coordinatesLabel,
+                  ),
+                ],
                 const Divider(),
                 _buildInfoRow(
                   Icons.description,

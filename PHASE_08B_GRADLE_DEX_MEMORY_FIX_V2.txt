@@ -1,0 +1,8 @@
+Dalil Al Hami - Phase 08B Gradle DEX Memory Fix v2
+
+- Configures an adaptive Gradle JVM heap based on physical memory.
+- Uses one Gradle worker and disables parallel task execution.
+- Runs the Kotlin compiler in-process to avoid a second large JVM.
+- Retries DEX merging with an emergency heap only after a memory failure.
+- Clears project DEX and Gradle intermediates before the controlled retry.
+- Keeps the Phase 08B maps, location, Supabase, and SQLite behavior unchanged.

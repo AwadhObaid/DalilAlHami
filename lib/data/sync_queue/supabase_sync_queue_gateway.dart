@@ -34,11 +34,11 @@ class SupabaseSyncQueueGateway implements SyncQueueRemoteGateway {
       payload.remove(localGalleryPathsKey),
     );
 
+    final hasLocationPayload =
+        payload.containsKey('latitude') || payload.containsKey('longitude');
     final result = await _executeDirectoryOperation(item, payload);
     if (result.isConflict ||
-        item.operationType == SyncQueueOperationType.deleteEntity ||
-        ((localLogoPath == null || localLogoPath.isEmpty) &&
-            localGalleryPaths.isEmpty)) {
+        item.operationType == SyncQueueOperationType.deleteEntity) {
       return result;
     }
 
@@ -48,10 +48,23 @@ class SupabaseSyncQueueGateway implements SyncQueueRemoteGateway {
         : item.entityId?.trim() ?? '';
     if (businessId.isEmpty) {
       throw const SyncQueueExecutionException(
-        message: 'A business ID is required to finalize queued media.',
+        message: 'A business ID is required to finalize queued data.',
         code: '22023',
         isRetryable: false,
       );
+    }
+
+    if (hasLocationPayload) {
+      await _applyOwnedBusinessLocation(
+        businessId: businessId,
+        latitude: payload['latitude'],
+        longitude: payload['longitude'],
+      );
+    }
+
+    if ((localLogoPath == null || localLogoPath.isEmpty) &&
+        localGalleryPaths.isEmpty) {
+      return result;
     }
 
     String? logoUrl;
@@ -134,6 +147,25 @@ class SupabaseSyncQueueGateway implements SyncQueueRemoteGateway {
       );
     }
     return result;
+  }
+
+  Future<void> _applyOwnedBusinessLocation({
+    required String businessId,
+    required Object? latitude,
+    required Object? longitude,
+  }) async {
+    try {
+      await _client.rpc(
+        'owner_set_business_location',
+        params: <String, dynamic>{
+          'p_business_id': businessId,
+          'p_latitude': latitude,
+          'p_longitude': longitude,
+        },
+      );
+    } on PostgrestException catch (error) {
+      throw _postgrestFailure(error);
+    }
   }
 
   Future<MediaUploadResult> _uploadQueuedImage({

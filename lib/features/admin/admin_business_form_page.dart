@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
+import '../../core/location/business_location.dart';
 import '../../core/services/media_upload_service.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../models/admin_content_management.dart';
 import '../shared/widgets/admin_media_field.dart';
 import '../shared/widgets/business_gallery_manager.dart';
+import '../shared/widgets/business_location_picker.dart';
 
 typedef AdminBusinessSaveAction = Future<AdminContentMutationResult> Function(
   AdminBusinessDraft draft,
@@ -35,11 +37,10 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
   late final TextEditingController _phoneController;
   late final TextEditingController _whatsappController;
   late final TextEditingController _addressController;
-  late final TextEditingController _latitudeController;
-  late final TextEditingController _longitudeController;
   late final TextEditingController _logoController;
   late final TextEditingController _coverController;
   String? _categoryId;
+  BusinessLocation? _businessLocation;
   bool _saving = false;
 
   List<AdminCategoryItem> get _activeCategories => widget.categories
@@ -57,11 +58,9 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
     _whatsappController = TextEditingController(text: business?.whatsapp ?? '');
     _addressController =
         TextEditingController(text: business?.address ?? 'الحامي');
-    _latitudeController = TextEditingController(
-      text: business?.latitude?.toString() ?? '',
-    );
-    _longitudeController = TextEditingController(
-      text: business?.longitude?.toString() ?? '',
+    _businessLocation = BusinessLocation.fromNullable(
+      business?.latitude,
+      business?.longitude,
     );
     _logoController = TextEditingController(text: business?.logoUrl ?? '');
     _coverController = TextEditingController(text: business?.coverUrl ?? '');
@@ -80,8 +79,6 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
     _phoneController.dispose();
     _whatsappController.dispose();
     _addressController.dispose();
-    _latitudeController.dispose();
-    _longitudeController.dispose();
     _logoController.dispose();
     _coverController.dispose();
     super.dispose();
@@ -106,8 +103,8 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
           phone: _phoneController.text,
           whatsapp: _whatsappController.text,
           address: _addressController.text,
-          latitude: _optionalDouble(_latitudeController.text),
-          longitude: _optionalDouble(_longitudeController.text),
+          latitude: _businessLocation?.latitude,
+          longitude: _businessLocation?.longitude,
           logoUrl: _logoController.text,
           coverUrl: _coverController.text,
         ),
@@ -119,11 +116,6 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
-  }
-
-  double? _optionalDouble(String value) {
-    final text = value.trim();
-    return text.isEmpty ? null : double.tryParse(text);
   }
 
   void _showError(String message) {
@@ -257,41 +249,12 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            Text('الموقع الجغرافي — اختياري', style: AppTextStyles.titleSmall),
-            const SizedBox(height: AppSpacing.xs),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    key:
-                        const ValueKey<String>('admin-business-latitude-field'),
-                    controller: _latitudeController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                      signed: true,
-                    ),
-                    textDirection: TextDirection.ltr,
-                    decoration: const InputDecoration(labelText: 'Latitude'),
-                    validator: (value) => _coordinateValidator(value, -90, 90),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: TextFormField(
-                    key: const ValueKey<String>(
-                        'admin-business-longitude-field'),
-                    controller: _longitudeController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                      signed: true,
-                    ),
-                    textDirection: TextDirection.ltr,
-                    decoration: const InputDecoration(labelText: 'Longitude'),
-                    validator: (value) =>
-                        _coordinateValidator(value, -180, 180),
-                  ),
-                ),
-              ],
+            BusinessLocationPicker(
+              location: _businessLocation,
+              enabled: !_saving,
+              onChanged: (location) {
+                setState(() => _businessLocation = location);
+              },
             ),
             const SizedBox(height: AppSpacing.md),
             AdminMediaField(
@@ -326,16 +289,6 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
         ),
       ),
     );
-  }
-
-  String? _coordinateValidator(String? value, double min, double max) {
-    final text = value?.trim() ?? '';
-    if (text.isEmpty) return null;
-    final number = double.tryParse(text);
-    if (number == null || number < min || number > max) {
-      return 'قيمة غير صحيحة.';
-    }
-    return null;
   }
 }
 

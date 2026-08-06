@@ -40,6 +40,38 @@ abstract final class ExternalLauncherService {
     }
   }
 
+  static Uri buildDirectionsUri({
+    required double latitude,
+    required double longitude,
+  }) {
+    final destination =
+        '${latitude.toStringAsFixed(7)},${longitude.toStringAsFixed(7)}';
+    return Uri.https(
+      'www.google.com',
+      '/maps/dir/',
+      <String, String>{
+        'api': '1',
+        'destination': destination,
+        'travelmode': 'driving',
+      },
+    );
+  }
+
+  static Future<bool> openDirections({
+    required double latitude,
+    required double longitude,
+  }) async {
+    final uri = buildDirectionsUri(
+      latitude: latitude,
+      longitude: longitude,
+    );
+    try {
+      return launchUrl(uri, mode: LaunchMode.externalApplication);
+    } on Exception {
+      return false;
+    }
+  }
+
   static Future<bool> openWhatsApp(
     String phoneNumber, {
     String? message,

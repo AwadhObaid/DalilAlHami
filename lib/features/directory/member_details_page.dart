@@ -9,6 +9,7 @@ import '../../core/utils/launch_actions.dart';
 import '../../models/business.dart';
 import 'widgets/business_gallery_section.dart';
 import 'widgets/business_image.dart';
+import 'widgets/business_location_section.dart';
 
 class MemberDetailsPage extends StatelessWidget {
   const MemberDetailsPage({
@@ -41,6 +42,13 @@ class MemberDetailsPage extends StatelessWidget {
                   _buildQuickActions(context),
                   const SizedBox(height: AppSpacing.md),
                   _buildInformationCard(context),
+                  if (business.location case final location?) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    BusinessLocationSection(
+                      location: location,
+                      address: business.displayPlace,
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.md),
                   _buildDescriptionCard(),
                   if (business.activeGalleryImages.isNotEmpty) ...[
@@ -246,11 +254,24 @@ class MemberDetailsPage extends StatelessWidget {
         const SizedBox(width: AppSpacing.xs),
         Expanded(
           child: _QuickAction(
-            label: 'نسخ الرقم',
-            icon: Icons.copy_rounded,
+            label: business.hasLocation ? 'الموقع' : 'نسخ الرقم',
+            icon: business.hasLocation
+                ? Icons.directions_rounded
+                : Icons.copy_rounded,
             color: AppColors.textSecondary,
-            enabled: business.hasPhone,
-            onPressed: () => _copyPhone(context),
+            enabled: business.hasLocation || business.hasPhone,
+            onPressed: () {
+              final location = business.location;
+              if (location != null) {
+                LaunchActions.openDirections(
+                  context,
+                  latitude: location.latitude,
+                  longitude: location.longitude,
+                );
+              } else {
+                _copyPhone(context);
+              }
+            },
           ),
         ),
       ],

@@ -1,3 +1,4 @@
+import '../core/location/business_location.dart';
 import 'business_gallery_image.dart';
 
 class Business {
@@ -14,6 +15,8 @@ class Business {
     this.categorySlug = '',
     this.logoUrl,
     this.coverUrl,
+    this.latitude,
+    this.longitude,
     this.isFeatured = false,
     this.isRemote = false,
     this.createdAt,
@@ -35,6 +38,8 @@ class Business {
   final String categorySlug;
   final String? logoUrl;
   final String? coverUrl;
+  final double? latitude;
+  final double? longitude;
   final bool isFeatured;
   final bool isRemote;
   final DateTime? createdAt;
@@ -42,6 +47,11 @@ class Business {
   final DateTime? deletedAt;
   final int syncVersion;
   final List<BusinessGalleryImage> galleryImages;
+
+  BusinessLocation? get location =>
+      BusinessLocation.fromNullable(latitude, longitude);
+
+  bool get hasLocation => location != null;
 
   List<BusinessGalleryImage> get activeGalleryImages =>
       BusinessGalleryImage.readList(
@@ -139,6 +149,9 @@ class Business {
     String? categorySlug,
     String? logoUrl,
     String? coverUrl,
+    double? latitude,
+    double? longitude,
+    bool clearLocation = false,
     bool? isFeatured,
     bool? isRemote,
     DateTime? createdAt,
@@ -161,6 +174,8 @@ class Business {
       categorySlug: categorySlug ?? this.categorySlug,
       logoUrl: logoUrl ?? this.logoUrl,
       coverUrl: coverUrl ?? this.coverUrl,
+      latitude: clearLocation ? null : latitude ?? this.latitude,
+      longitude: clearLocation ? null : longitude ?? this.longitude,
       isFeatured: isFeatured ?? this.isFeatured,
       isRemote: isRemote ?? this.isRemote,
       createdAt: createdAt ?? this.createdAt,
@@ -185,6 +200,8 @@ class Business {
       'category_slug': categorySlug,
       'logo_url': logoUrl,
       'cover_url': coverUrl,
+      'latitude': latitude,
+      'longitude': longitude,
       'is_featured': isFeatured,
       'is_remote': isRemote,
       'created_at': createdAt?.toIso8601String(),
@@ -210,6 +227,8 @@ class Business {
       categorySlug: map['category_slug']?.toString() ?? '',
       logoUrl: _nullableString(map['logo_url']),
       coverUrl: _nullableString(map['cover_url']),
+      latitude: _readDouble(map['latitude']),
+      longitude: _readDouble(map['longitude']),
       isFeatured: _readBoolean(map['is_featured']),
       isRemote: _readBoolean(map['is_remote']),
       createdAt: DateTime.tryParse(
@@ -246,6 +265,8 @@ class Business {
       categorySlug: categoryMap['slug']?.toString() ?? '',
       logoUrl: _nullableString(data['logo_url']),
       coverUrl: _nullableString(data['cover_url']),
+      latitude: _readDouble(data['latitude']),
+      longitude: _readDouble(data['longitude']),
       isFeatured: _readBoolean(data['is_featured']),
       isRemote: true,
       createdAt: DateTime.tryParse(
@@ -276,6 +297,13 @@ class Business {
 
   static bool _readBoolean(Object? value) {
     return value == true || value == 1 || value?.toString() == '1';
+  }
+
+  static double? _readDouble(Object? value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    return double.tryParse(value?.toString() ?? '');
   }
 
   static int _readInteger(Object? value) {

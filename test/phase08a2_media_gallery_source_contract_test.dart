@@ -39,7 +39,12 @@ void main() {
     expect(manager, contains('business-gallery-reorder-list'));
     expect(manager, contains('استبدال الصورة'));
     expect(details, contains('BusinessGallerySection'));
-    expect(database, contains('schemaVersion = 9'));
+    final schemaMatch = RegExp(
+      r'static const int schemaVersion\s*=\s*(\d+);',
+    ).firstMatch(database);
+    expect(schemaMatch, isNotNull);
+    final schemaVersion = int.parse(schemaMatch!.group(1)!);
+    expect(schemaVersion, greaterThanOrEqualTo(9));
     expect(database, contains('local_gallery_json'));
     expect(syncGateway, contains('localGalleryPathsKey'));
     expect(syncGateway, contains('finalize_owner_business_media'));

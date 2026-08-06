@@ -1,0 +1,7 @@
+Dalil Al Hami - Phase 08B v4
+================================
+
+- Removes the redundant sqflite_common/sqlite_api.dart import from the SQLite reopen test.
+- Keeps Database supplied by sqflite_common_ffi/sqflite_ffi.dart.
+- Adds an installer contract that prevents the redundant import from returning.
+- No runtime, SQLite schema, Supabase, map, media, or Android label behavior changes.

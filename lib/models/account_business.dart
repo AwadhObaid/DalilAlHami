@@ -1,3 +1,4 @@
+import '../core/location/business_location.dart';
 import 'business_gallery_image.dart';
 
 class AccountBusiness {
@@ -17,6 +18,8 @@ class AccountBusiness {
     this.localLogoPath,
     this.galleryImages = const <BusinessGalleryImage>[],
     this.localGalleryPaths = const <String>[],
+    this.latitude,
+    this.longitude,
     this.rejectionReason,
     this.syncVersion = 0,
     this.updatedAt,
@@ -37,9 +40,16 @@ class AccountBusiness {
   final String? localLogoPath;
   final List<BusinessGalleryImage> galleryImages;
   final List<String> localGalleryPaths;
+  final double? latitude;
+  final double? longitude;
   final String? rejectionReason;
   final int syncVersion;
   final DateTime? updatedAt;
+
+  BusinessLocation? get location =>
+      BusinessLocation.fromNullable(latitude, longitude);
+
+  bool get hasLocation => location != null;
 
   bool get isApproved => status == 'approved';
 
@@ -77,6 +87,9 @@ class AccountBusiness {
     String? localLogoPath,
     List<BusinessGalleryImage>? galleryImages,
     List<String>? localGalleryPaths,
+    double? latitude,
+    double? longitude,
+    bool clearLocation = false,
     String? rejectionReason,
     int? syncVersion,
     DateTime? updatedAt,
@@ -97,6 +110,8 @@ class AccountBusiness {
       localLogoPath: localLogoPath ?? this.localLogoPath,
       galleryImages: galleryImages ?? this.galleryImages,
       localGalleryPaths: localGalleryPaths ?? this.localGalleryPaths,
+      latitude: clearLocation ? null : latitude ?? this.latitude,
+      longitude: clearLocation ? null : longitude ?? this.longitude,
       rejectionReason: rejectionReason ?? this.rejectionReason,
       syncVersion: syncVersion ?? this.syncVersion,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -129,6 +144,8 @@ class AccountBusiness {
       localLogoPath: _nullableText(data['local_logo_path']),
       galleryImages: BusinessGalleryImage.readList(data['business_images']),
       localGalleryPaths: _readStringList(data['local_gallery_paths']),
+      latitude: _readDouble(data['latitude']),
+      longitude: _readDouble(data['longitude']),
       rejectionReason: _nullableText(data['rejection_reason']),
       syncVersion: _readInteger(data['sync_version']),
       updatedAt: DateTime.tryParse(
@@ -146,6 +163,13 @@ class AccountBusiness {
       );
     }
     return const <String>[];
+  }
+
+  static double? _readDouble(Object? value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    return double.tryParse(value?.toString() ?? '');
   }
 
   static int _readInteger(Object? value) {

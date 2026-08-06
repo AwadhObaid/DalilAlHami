@@ -1,0 +1,8 @@
+﻿Dalil Al Hami - Phase 08B maps and location
+Migration: 20260807010000
+Verified at: 2026-08-07T01:59:42.9740809+03:00
+Log: F:\FlutterProjects\DalilAlHami_Clean\build_logs\phase08b_location_verify_20260807_015932\migration_list.combined.log
+Map provider: OpenStreetMap
+Foreground location permission: enabled
+Owner location RPC: enabled
+Local cache schema: 10

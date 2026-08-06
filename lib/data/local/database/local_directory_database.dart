@@ -48,7 +48,7 @@ class LocalDirectoryDatabase {
 
   static final LocalDirectoryDatabase instance = LocalDirectoryDatabase();
 
-  static const int schemaVersion = 9;
+  static const int schemaVersion = 10;
 
   static const String _categoriesTable = 'directory_categories';
   static const String _businessesTable = 'directory_businesses';
@@ -68,17 +68,47 @@ class LocalDirectoryDatabase {
   final String? _providedPath;
 
   Database? _database;
+  Future<Database>? _openingDatabase;
 
   Future<Database> get database async {
     final existing = _database;
-    if (existing != null) {
+    if (existing != null && existing.isOpen) {
       return existing;
     }
+    if (existing != null) {
+      _database = null;
+    }
 
+    final activeOpening = _openingDatabase;
+    if (activeOpening != null) {
+      final opened = await activeOpening;
+      if (opened.isOpen) {
+        return opened;
+      }
+      _openingDatabase = null;
+    }
+
+    final opening = _openDatabase();
+    _openingDatabase = opening;
+    try {
+      final opened = await opening;
+      if (!opened.isOpen) {
+        throw StateError('SQLite returned a closed database connection.');
+      }
+      _database = opened;
+      return opened;
+    } finally {
+      if (identical(_openingDatabase, opening)) {
+        _openingDatabase = null;
+      }
+    }
+  }
+
+  Future<Database> _openDatabase() async {
     final factory = _providedFactory ?? await resolveDirectoryDatabaseFactory();
     final path = _providedPath ?? await resolveDirectoryDatabasePath(factory);
 
-    final opened = await factory.openDatabase(
+    return factory.openDatabase(
       path,
       options: OpenDatabaseOptions(
         version: schemaVersion,
@@ -89,9 +119,6 @@ class LocalDirectoryDatabase {
         onUpgrade: _upgradeSchema,
       ),
     );
-
-    _database = opened;
-    return opened;
   }
 
   Future<void> _createSchema(
@@ -130,6 +157,8 @@ class LocalDirectoryDatabase {
         category_slug TEXT NOT NULL DEFAULT '',
         logo_url TEXT,
         cover_url TEXT,
+        latitude REAL,
+        longitude REAL,
         gallery_json TEXT NOT NULL DEFAULT '[]',
         is_featured INTEGER NOT NULL DEFAULT 0,
         is_remote INTEGER NOT NULL DEFAULT 0,
@@ -348,6 +377,33 @@ class LocalDirectoryDatabase {
       );
     }
 
+    if (oldVersion < 10) {
+      await _addColumnIfMissing(
+        database,
+        tableName: _businessesTable,
+        columnName: 'latitude',
+        definition: 'REAL',
+      );
+      await _addColumnIfMissing(
+        database,
+        tableName: _businessesTable,
+        columnName: 'longitude',
+        definition: 'REAL',
+      );
+      await _addColumnIfMissing(
+        database,
+        tableName: _accountBusinessesTable,
+        columnName: 'latitude',
+        definition: 'REAL',
+      );
+      await _addColumnIfMissing(
+        database,
+        tableName: _accountBusinessesTable,
+        columnName: 'longitude',
+        definition: 'REAL',
+      );
+    }
+
     await database.execute(
       '''
       CREATE INDEX IF NOT EXISTS directory_businesses_category_id_idx
@@ -397,6 +453,8 @@ class LocalDirectoryDatabase {
         category_slug TEXT NOT NULL DEFAULT '',
         logo_url TEXT,
         cover_url TEXT,
+        latitude REAL,
+        longitude REAL,
         gallery_json TEXT NOT NULL DEFAULT '[]',
         is_featured INTEGER NOT NULL DEFAULT 0,
         is_remote INTEGER NOT NULL DEFAULT 0,
@@ -668,6 +726,8 @@ class LocalDirectoryDatabase {
         local_logo_path TEXT,
         gallery_json TEXT NOT NULL DEFAULT '[]',
         local_gallery_json TEXT NOT NULL DEFAULT '[]',
+        latitude REAL,
+        longitude REAL,
         status TEXT NOT NULL DEFAULT 'draft',
         rejection_reason TEXT,
         is_active INTEGER NOT NULL DEFAULT 1,
@@ -733,6 +793,8 @@ class LocalDirectoryDatabase {
         local_logo_path TEXT,
         gallery_json TEXT NOT NULL DEFAULT '[]',
         local_gallery_json TEXT NOT NULL DEFAULT '[]',
+        latitude REAL,
+        longitude REAL,
         status TEXT NOT NULL DEFAULT 'draft',
         rejection_reason TEXT,
         is_active INTEGER NOT NULL DEFAULT 1,
@@ -1118,6 +1180,8 @@ class LocalDirectoryDatabase {
           business.galleryImages.map((image) => image.toMap()).toList(),
         ),
         'local_gallery_json': jsonEncode(business.localGalleryPaths),
+        'latitude': business.latitude,
+        'longitude': business.longitude,
         'status': business.status,
         'rejection_reason': business.rejectionReason,
         'is_active': business.isActive ? 1 : 0,
@@ -1184,6 +1248,8 @@ class LocalDirectoryDatabase {
       localLogoPath: _nullableString(row['local_logo_path']),
       galleryImages: _galleryImagesFromJson(row['gallery_json']),
       localGalleryPaths: _stringListFromJson(row['local_gallery_json']),
+      latitude: _readDouble(row['latitude']),
+      longitude: _readDouble(row['longitude']),
       rejectionReason: _nullableString(row['rejection_reason']),
       syncVersion: _readInteger(row['sync_version']),
       updatedAt: DateTime.tryParse(
@@ -1723,7 +1789,10 @@ class LocalDirectoryDatabase {
   Future<void> close() async {
     final database = _database;
     _database = null;
-    await database?.close();
+    _openingDatabase = null;
+    if (database != null && database.isOpen) {
+      await database.close();
+    }
   }
 
   Future<int> _readMetadataInteger(
@@ -1816,6 +1885,8 @@ class LocalDirectoryDatabase {
       'category_slug': business.categorySlug,
       'logo_url': business.logoUrl,
       'cover_url': business.coverUrl,
+      'latitude': business.latitude,
+      'longitude': business.longitude,
       'gallery_json': jsonEncode(
         business.galleryImages.map((image) => image.toMap()).toList(),
       ),
@@ -1844,6 +1915,8 @@ class LocalDirectoryDatabase {
       categorySlug: row['category_slug']?.toString() ?? '',
       logoUrl: _nullableString(row['logo_url']),
       coverUrl: _nullableString(row['cover_url']),
+      latitude: _readDouble(row['latitude']),
+      longitude: _readDouble(row['longitude']),
       galleryImages: _galleryImagesFromJson(row['gallery_json']),
       isFeatured: _readBoolean(row['is_featured']),
       isRemote: _readBoolean(row['is_remote']),
@@ -1912,6 +1985,13 @@ class LocalDirectoryDatabase {
 
   static bool _readBoolean(Object? value) {
     return value == true || value == 1 || value?.toString() == '1';
+  }
+
+  static double? _readDouble(Object? value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    return double.tryParse(value?.toString() ?? '');
   }
 
   static int _readInteger(Object? value) {

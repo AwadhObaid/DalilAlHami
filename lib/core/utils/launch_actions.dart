@@ -43,6 +43,26 @@ abstract final class LaunchActions {
     );
   }
 
+  static Future<void> openDirections(
+    BuildContext context, {
+    required double latitude,
+    required double longitude,
+  }) async {
+    final opened = await ExternalLauncherService.openDirections(
+      latitude: latitude,
+      longitude: longitude,
+    );
+
+    if (!context.mounted || opened) {
+      return;
+    }
+
+    _showFailure(
+      context,
+      'تعذر فتح تطبيق الخرائط أو المتصفح.',
+    );
+  }
+
   static Future<void> openWhatsApp(
     BuildContext context,
     String phoneNumber, {

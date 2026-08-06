@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/location/business_location.dart';
 import '../../core/services/supabase_service.dart';
 import '../../models/account_business.dart';
 import '../../models/account_profile.dart';
@@ -170,6 +171,8 @@ class AccountRepository {
     required String whatsapp,
     required String description,
     required String address,
+    double? latitude,
+    double? longitude,
     String? businessId,
     int? baseSyncVersion,
     String? selectedImagePath,
@@ -183,6 +186,12 @@ class AccountRepository {
     final normalizedBusinessPhone = businessPhone.trim();
     final normalizedWhatsApp =
         whatsapp.trim().isEmpty ? normalizedBusinessPhone : whatsapp.trim();
+
+    try {
+      BusinessLocation.validatePair(latitude, longitude);
+    } on ArgumentError catch (error) {
+      throw AccountFailure(error.message?.toString() ?? 'الموقع غير صالح.');
+    }
 
     if (normalizedName.isEmpty ||
         normalizedBusinessName.isEmpty ||
@@ -245,6 +254,8 @@ class AccountRepository {
       localLogoPath: localLogoPath,
       galleryImages: cachedBusiness?.galleryImages ?? const [],
       localGalleryPaths: localGalleryPaths,
+      latitude: latitude,
+      longitude: longitude,
       syncVersion: baseSyncVersion ?? 0,
     );
     await _database.upsertOwnedBusinessCache(localBusiness);
@@ -256,6 +267,8 @@ class AccountRepository {
       'phone': normalizedBusinessPhone,
       'whatsapp': normalizedWhatsApp,
       'address': normalizedAddress,
+      'latitude': latitude,
+      'longitude': longitude,
       if (localLogoPath != null)
         SupabaseSyncQueueGateway.localLogoPathKey: localLogoPath,
       if (localGalleryPaths.isNotEmpty)
@@ -395,7 +408,7 @@ class AccountRepository {
         .from('businesses')
         .select(
           'id, owner_id, category_id, name, description, phone, '
-          'whatsapp, address, logo_url, status, rejection_reason, '
+          'whatsapp, address, latitude, longitude, logo_url, status, rejection_reason, '
           'is_active, sync_version, created_at, updated_at, '
           'categories!businesses_category_id_fkey(id, name_ar, slug), '
           'business_images(id, business_id, storage_path, public_url, '
