@@ -9,8 +9,8 @@ import '../../data/directory_data_store.dart';
 import '../../data/repositories/account_repository.dart';
 import '../../models/account_business.dart';
 import '../../models/account_profile.dart';
-import '../../models/service_category.dart';
 import 'widgets/add_business_button.dart';
+import 'widgets/business_category_dropdown.dart';
 import 'widgets/empty_owned_business_state.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -43,7 +43,7 @@ class _ProfilePageState extends State<ProfilePage> {
   AccountProfile? _profile;
   AccountBusiness? _business;
   AccountBusiness? _businessBeforeCreate;
-  ServiceCategory? _selectedCategory;
+  String? _selectedCategoryId;
   String? _selectedImagePath;
 
   bool _isLoading = true;
@@ -139,22 +139,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _descriptionController.text = snapshot.business?.description ?? '';
     _selectedImagePath = null;
 
-    final categoryId = snapshot.business?.categoryId;
-    _selectedCategory = _findCategory(categoryId);
-  }
-
-  ServiceCategory? _findCategory(String? categoryId) {
-    if (categoryId == null || categoryId.isEmpty) {
-      return null;
-    }
-
-    for (final category in _directoryStore.categories) {
-      if (category.id == categoryId) {
-        return category;
-      }
-    }
-
-    return null;
+    _selectedCategoryId = snapshot.business?.categoryId;
   }
 
   Future<void> _pickImage() async {
@@ -178,7 +163,10 @@ class _ProfilePageState extends State<ProfilePage> {
       return;
     }
 
-    final selectedCategory = _selectedCategory;
+    final selectedCategory = BusinessCategoryDropdown.categoryForId(
+      _directoryStore.categories,
+      _selectedCategoryId,
+    );
 
     if (_fullNameController.text.trim().isEmpty ||
         _businessNameController.text.trim().isEmpty ||
@@ -198,7 +186,7 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       final result = await _repository.saveAccount(
         fullName: _fullNameController.text,
-        categoryId: selectedCategory.id,
+        categoryId: selectedCategory.id.trim(),
         categoryName: selectedCategory.name,
         businessName: _businessNameController.text,
         businessPhone: _phoneController.text,
@@ -412,7 +400,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _whatsappController.clear();
     _addressController.text = 'الحامي';
     _descriptionController.clear();
-    _selectedCategory = null;
+    _selectedCategoryId = null;
     _selectedImagePath = null;
   }
 
@@ -946,38 +934,15 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildCategoryDropdown() {
-    final categories = _directoryStore.categories;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<ServiceCategory>(
-          hint: const Text('اختر النشاط'),
-          isExpanded: true,
-          value: _selectedCategory,
-          items: categories.map((category) {
-            return DropdownMenuItem<ServiceCategory>(
-              value: category,
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: Text(category.name),
-              ),
-            );
-          }).toList(),
-          onChanged: _isSaving
-              ? null
-              : (value) {
-                  setState(() {
-                    _selectedCategory = value;
-                  });
-                },
-        ),
-      ),
+    return BusinessCategoryDropdown(
+      categories: _directoryStore.categories,
+      selectedCategoryId: _selectedCategoryId,
+      enabled: !_isSaving,
+      onChanged: (value) {
+        setState(() {
+          _selectedCategoryId = value;
+        });
+      },
     );
   }
 

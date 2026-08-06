@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../models/business.dart';
+import '../../shared/widgets/cached_directory_image.dart';
 
 class BusinessImage extends StatelessWidget {
   const BusinessImage({
@@ -30,7 +31,15 @@ class BusinessImage extends StatelessWidget {
       child: SizedBox(
         width: width,
         height: height,
-        child: _buildImage(),
+        child: CachedDirectoryImage(
+          source: business.preferredImageUrl,
+          bucket: 'business-media',
+          width: width,
+          height: height,
+          fit: fit,
+          placeholder: _placeholder(),
+          errorWidget: _placeholder(),
+        ),
       ),
     );
 
@@ -41,41 +50,6 @@ class BusinessImage extends StatelessWidget {
     return Hero(
       tag: 'business-image-${business.id}',
       child: image,
-    );
-  }
-
-  Widget _buildImage() {
-    final imageUrl = business.preferredImageUrl;
-    if (imageUrl.isEmpty) {
-      return _placeholder();
-    }
-
-    return Image.network(
-      imageUrl,
-      width: width,
-      height: height,
-      fit: fit,
-      filterQuality: FilterQuality.medium,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) {
-          return child;
-        }
-
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            _placeholder(),
-            const Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2.2),
-              ),
-            ),
-          ],
-        );
-      },
-      errorBuilder: (context, error, stackTrace) => _placeholder(),
     );
   }
 

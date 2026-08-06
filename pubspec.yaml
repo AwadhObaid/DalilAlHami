@@ -13,6 +13,9 @@ dependencies:
   # المكتبات المستخدمة
   url_launcher: ^6.2.1
   image_picker: ^1.0.4
+  # مثبت على 4.8.0 لتوافق xml 6.x مع flutter_local_notifications 19.5.0
+  image: 4.8.0
+  cached_network_image: ^3.4.1
   cupertino_icons: ^1.0.2
   supabase_flutter: ^2.16.0
   sqflite: ^2.4.3

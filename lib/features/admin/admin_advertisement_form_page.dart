@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
+import '../../core/services/media_upload_service.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../models/admin_advertisement_management.dart';
 import '../../models/admin_content_management.dart';
+import '../shared/widgets/admin_media_field.dart';
 
 typedef AdminAdvertisementSaveAction = Future<AdminContentMutationResult>
     Function(AdminAdvertisementDraft draft);
@@ -31,6 +33,7 @@ class _AdminAdvertisementFormPageState
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
   late final TextEditingController _imagePathController;
+  late final TextEditingController _compactImagePathController;
   late final TextEditingController _targetUrlController;
   late final TextEditingController _sortOrderController;
 
@@ -51,6 +54,9 @@ class _AdminAdvertisementFormPageState
     _imagePathController = TextEditingController(
       text: initial?.imagePath ?? '',
     );
+    _compactImagePathController = TextEditingController(
+      text: initial?.compactImagePath ?? '',
+    );
     _targetUrlController = TextEditingController(
       text: initial?.targetUrl ?? '',
     );
@@ -68,6 +74,7 @@ class _AdminAdvertisementFormPageState
   void dispose() {
     _titleController.dispose();
     _imagePathController.dispose();
+    _compactImagePathController.dispose();
     _targetUrlController.dispose();
     _sortOrderController.dispose();
     super.dispose();
@@ -96,6 +103,7 @@ class _AdminAdvertisementFormPageState
           id: _initial?.id,
           title: _titleController.text.trim(),
           imagePath: _imagePathController.text.trim(),
+          compactImagePath: _compactImagePathController.text.trim(),
           placement: _placement,
           sortOrder: int.parse(_sortOrderController.text.trim()),
           targetType: _targetType,
@@ -238,19 +246,30 @@ class _AdminAdvertisementFormPageState
               validator: (value) => _requiredText(value, 'عنوان الإعلان'),
             ),
             const SizedBox(height: AppSpacing.md),
-            TextFormField(
+            AdminMediaField(
               key: const ValueKey<String>('admin-advertisement-image-field'),
+              label: 'صورة الإعلان — العرض الكامل',
+              helperText: 'المقاس الموصى به 1440×810 بنسبة 16:9.',
               controller: _imagePathController,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'مسار الصورة أو رابطها',
-                hintText: 'advertisements/banner.jpg أو https://...',
-                helperText:
-                    'رفع الصور وإدارتها بصريًا سيكتمل في مرحلة الصور والوسائط.',
-                prefixIcon: Icon(Icons.image_rounded),
+              kind: MediaAssetKind.advertisementExpanded,
+              entityId: _initial?.id ?? 'new',
+              aspectRatio: 16 / 9,
+              isRequired: true,
+              enabled: !_saving,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AdminMediaField(
+              key: const ValueKey<String>(
+                'admin-advertisement-compact-image-field',
               ),
-              validator: (value) =>
-                  _requiredText(value, 'صورة الإعلان', minLength: 3),
+              label: 'صورة الإعلان — الهيدر المصغّر',
+              helperText:
+                  'المقاس الموصى به 1600×360. عند تركها فارغة تستخدم الصورة الكاملة.',
+              controller: _compactImagePathController,
+              kind: MediaAssetKind.advertisementCompact,
+              entityId: _initial?.id ?? 'new',
+              aspectRatio: 40 / 9,
+              enabled: !_saving,
             ),
             const SizedBox(height: AppSpacing.md),
             DropdownButtonFormField<AdminAdvertisementPlacement>(

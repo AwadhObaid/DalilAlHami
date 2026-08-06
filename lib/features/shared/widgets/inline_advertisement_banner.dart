@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
-import '../../../core/services/supabase_service.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../models/directory_advertisement.dart';
+import 'cached_directory_image.dart';
 
 class InlineAdvertisementBanner extends StatefulWidget {
   const InlineAdvertisementBanner({
@@ -255,7 +255,6 @@ class _InlineAdvertisementPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = _publicImageUrl(advertisement.imagePath);
     final canOpen = onOpen != null &&
         ((advertisement.businessId?.isNotEmpty ?? false) ||
             (advertisement.targetUrl?.isNotEmpty ?? false));
@@ -270,26 +269,26 @@ class _InlineAdvertisementPage extends StatelessWidget {
             SizedBox(
               width: imageWidth,
               height: double.infinity,
-              child: imageUrl == null
-                  ? const ColoredBox(
-                      color: AppColors.advertisementGoldSoft,
-                      child: Icon(
-                        Icons.campaign_rounded,
-                        size: 38,
-                        color: AppColors.advertisementInk,
-                      ),
-                    )
-                  : Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const ColoredBox(
-                        color: AppColors.advertisementGoldSoft,
-                        child: Icon(
-                          Icons.broken_image_outlined,
-                          color: AppColors.advertisementInk,
-                        ),
-                      ),
-                    ),
+              child: CachedDirectoryImage(
+                source: advertisement.imagePath,
+                bucket: 'advertisements',
+                fit: BoxFit.cover,
+                placeholder: const ColoredBox(
+                  color: AppColors.advertisementGoldSoft,
+                  child: Icon(
+                    Icons.campaign_rounded,
+                    size: 38,
+                    color: AppColors.advertisementInk,
+                  ),
+                ),
+                errorWidget: const ColoredBox(
+                  color: AppColors.advertisementGoldSoft,
+                  child: Icon(
+                    Icons.broken_image_outlined,
+                    color: AppColors.advertisementInk,
+                  ),
+                ),
+              ),
             ),
             Expanded(
               child: Padding(
@@ -349,20 +348,5 @@ class _InlineAdvertisementPage extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String? _publicImageUrl(String? value) {
-    final path = value?.trim();
-    if (path == null || path.isEmpty) return null;
-    final uri = Uri.tryParse(path);
-    if (uri != null &&
-        uri.hasAuthority &&
-        (uri.scheme == 'http' || uri.scheme == 'https')) {
-      return path;
-    }
-    if (!SupabaseService.isInitialized) return null;
-    return SupabaseService.client.storage
-        .from('advertisements')
-        .getPublicUrl(path);
   }
 }

@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hami_guide/core/theme/app_theme.dart';
+import 'package:hami_guide/data/directory_data_store.dart';
+import 'package:hami_guide/features/home/home_screen.dart';
 import 'package:hami_guide/features/home/widgets/sticky_advertisement_header.dart';
 
 void main() {
+  setUpAll(() {
+    DirectoryDataStore.instance.prepareBundledDataForTesting();
+  });
+
   testWidgets(
     'الإعلان يتحول إلى شريط مصغر ويبقى مثبتًا أثناء التمرير',
     (WidgetTester tester) async {
@@ -139,6 +145,59 @@ void main() {
         find.byKey(const ValueKey<String>('sticky-advertisement-header')),
         findsOneWidget,
       );
+    },
+  );
+
+  testWidgets(
+    'الإعلان المصغر يحترم الحافة الآمنة ولا يدخل خلف شريط حالة الهاتف',
+    (WidgetTester tester) async {
+      const statusBarInset = 30.0;
+
+      await tester.binding.setSurfaceSize(const Size(360, 760));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          builder: (context, child) {
+            final mediaQuery = MediaQuery.of(context);
+            const safePadding = EdgeInsets.only(top: statusBarInset);
+
+            return MediaQuery(
+              data: mediaQuery.copyWith(
+                padding: safePadding,
+                viewPadding: safePadding,
+              ),
+              child: child!,
+            );
+          },
+          home: const HomeScreen(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey<String>('home-safe-area-shell')),
+        findsOneWidget,
+      );
+
+      final scrollView = find.byKey(
+        const PageStorageKey<String>('home-dashboard-scroll'),
+      );
+      expect(scrollView, findsOneWidget);
+
+      await tester.drag(scrollView, const Offset(0, -720));
+      await tester.pumpAndSettle();
+
+      final headerFinder = find.byKey(
+        const ValueKey<String>('sticky-advertisement-header'),
+      );
+      final headerRect = tester.getRect(headerFinder);
+
+      expect(headerFinder, findsOneWidget);
+      expect(headerRect.top, closeTo(statusBarInset, 1.5));
+      expect(headerRect.height, lessThan(110));
+      expect(tester.takeException(), isNull);
     },
   );
 }

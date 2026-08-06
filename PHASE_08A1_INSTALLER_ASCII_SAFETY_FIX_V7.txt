@@ -1,0 +1,7 @@
+Phase 08A-1 v7 - Installer ASCII Safety Fix
+================================================
+- Keeps the v6 category-id dropdown correction.
+- Makes install.ps1 ASCII-only for Windows PowerShell 5.1.
+- Replaces Arabic source-text checks with stable ASCII test markers.
+- Adds an installer self-check that rejects non-ASCII bytes.
+- No Flutter, Supabase, SQLite, or migration behavior changes.

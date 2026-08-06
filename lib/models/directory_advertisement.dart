@@ -6,6 +6,7 @@ class DirectoryAdvertisement {
     this.businessId,
     this.placement = 'home_top',
     this.imagePath,
+    this.compactImagePath,
     this.targetUrl,
     this.isActive = true,
     this.startsAt,
@@ -21,6 +22,7 @@ class DirectoryAdvertisement {
   final String? businessId;
   final String placement;
   final String? imagePath;
+  final String? compactImagePath;
   final String? targetUrl;
   final bool isActive;
   final DateTime? startsAt;
@@ -54,6 +56,7 @@ class DirectoryAdvertisement {
       businessId: _nullableString(data['business_id']),
       placement: _readPlacement(data['placement']),
       imagePath: _nullableString(data['image_path']),
+      compactImagePath: _nullableString(data['compact_image_path']),
       targetUrl: _nullableString(data['target_url']),
       isActive: _readBoolean(data['is_active'], fallback: true),
       startsAt: DateTime.tryParse(

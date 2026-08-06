@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
+import '../../core/services/media_upload_service.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../models/admin_content_management.dart';
 import '../../models/service_category.dart';
+import '../shared/widgets/admin_media_field.dart';
 
 typedef AdminCategorySaveAction = Future<AdminContentMutationResult> Function(
   AdminCategoryDraft draft,
@@ -123,6 +125,26 @@ class _AdminCategoryFormPageState extends State<AdminCategoryFormPage> {
       appBar: AppBar(
         title: Text(editing ? 'تعديل القسم' : 'إضافة قسم'),
       ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.xs,
+          AppSpacing.md,
+          AppSpacing.md,
+        ),
+        child: FilledButton.icon(
+          key: const ValueKey<String>('admin-save-category-button'),
+          onPressed: _saving ? null : _save,
+          icon: _saving
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.save_rounded),
+          label: Text(_saving ? 'جارٍ الحفظ…' : 'حفظ القسم'),
+        ),
+      ),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -223,28 +245,18 @@ class _AdminCategoryFormPageState extends State<AdminCategoryFormPage> {
               },
             ),
             const SizedBox(height: AppSpacing.sm),
-            TextFormField(
+            AdminMediaField(
               key: const ValueKey<String>('admin-category-image-field'),
+              label: 'صورة القسم',
+              helperText:
+                  'صورة مربعة أو قريبة من المربع؛ المقاس الموصى به 1200×1200.',
               controller: _imageController,
-              keyboardType: TextInputType.url,
-              textDirection: TextDirection.ltr,
-              decoration: const InputDecoration(
-                labelText: 'رابط الصورة — اختياري',
-                prefixIcon: Icon(Icons.image_outlined),
-              ),
+              kind: MediaAssetKind.category,
+              entityId: widget.initialCategory?.id ?? 'new',
+              aspectRatio: 1,
+              enabled: !_saving,
             ),
             const SizedBox(height: AppSpacing.xl),
-            FilledButton.icon(
-              key: const ValueKey<String>('admin-save-category-button'),
-              onPressed: _saving ? null : _save,
-              icon: _saving
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save_rounded),
-              label: Text(_saving ? 'جارٍ الحفظ…' : 'حفظ القسم'),
-            ),
           ],
         ),
       ),

@@ -5,6 +5,7 @@ import '../../../core/constants/app_dimensions.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../models/service_category.dart';
+import '../../shared/widgets/cached_directory_image.dart';
 
 class CategoryCircleItem extends StatelessWidget {
   const CategoryCircleItem({
@@ -58,10 +59,18 @@ class CategoryCircleItem extends StatelessWidget {
                       boxShadow:
                           emphasized ? AppShadows.card : AppShadows.subtle,
                     ),
-                    child: Icon(
-                      category.icon,
-                      color: emphasized ? AppColors.white : visual.foreground,
-                      size: 28,
+                    child: ClipOval(
+                      child: (category.imageUrl?.trim().isNotEmpty ?? false)
+                          ? CachedDirectoryImage(
+                              source: category.imageUrl,
+                              bucket: 'category-media',
+                              width: AppSizes.categoryIcon,
+                              height: AppSizes.categoryIcon,
+                              fit: BoxFit.cover,
+                              placeholder: _categoryIcon(visual),
+                              errorWidget: _categoryIcon(visual),
+                            )
+                          : _categoryIcon(visual),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
@@ -95,6 +104,19 @@ class CategoryCircleItem extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _categoryIcon(_CategoryVisual visual) {
+    return ColoredBox(
+      color: emphasized ? AppColors.primaryTeal : visual.fill,
+      child: Center(
+        child: Icon(
+          category.icon,
+          color: emphasized ? AppColors.white : visual.foreground,
+          size: 28,
         ),
       ),
     );

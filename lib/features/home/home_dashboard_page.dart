@@ -135,25 +135,35 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
   Widget build(BuildContext context) {
     super.build(context);
 
-    return AnimatedBuilder(
-      animation: _directoryStore,
-      builder: (context, child) {
-        if (_directoryStore.isInitialLoading) {
-          return Column(
-            children: [
-              HomeHeader(
-                onOpenSearch: widget.onOpenSearch,
-                onOpenFilters: () => _openCategoriesOverview(),
-              ),
-              const Expanded(
-                child: DirectoryLoadingSkeleton(itemCount: 3),
-              ),
-            ],
-          );
-        }
+    return ColoredBox(
+      key: const ValueKey<String>('home-safe-area-shell'),
+      color: AppColors.primaryTeal,
+      child: SafeArea(
+        bottom: false,
+        child: ColoredBox(
+          color: AppColors.pageBackground,
+          child: AnimatedBuilder(
+            animation: _directoryStore,
+            builder: (context, child) {
+              if (_directoryStore.isInitialLoading) {
+                return Column(
+                  children: [
+                    HomeHeader(
+                      onOpenSearch: widget.onOpenSearch,
+                      onOpenFilters: () => _openCategoriesOverview(),
+                    ),
+                    const Expanded(
+                      child: DirectoryLoadingSkeleton(itemCount: 3),
+                    ),
+                  ],
+                );
+              }
 
-        return _buildContent();
-      },
+              return _buildContent();
+            },
+          ),
+        ),
+      ),
     );
   }
 
@@ -195,6 +205,12 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
             controller: _adPageController,
             advertisements: homeTopAdvertisements
                 .map((advertisement) => advertisement.title)
+                .toList(growable: false),
+            imagePaths: homeTopAdvertisements
+                .map((advertisement) => advertisement.imagePath)
+                .toList(growable: false),
+            compactImagePaths: homeTopAdvertisements
+                .map((advertisement) => advertisement.compactImagePath)
                 .toList(growable: false),
             onAdvertisementTap: (index) {
               if (index < 0 || index >= homeTopAdvertisements.length) {

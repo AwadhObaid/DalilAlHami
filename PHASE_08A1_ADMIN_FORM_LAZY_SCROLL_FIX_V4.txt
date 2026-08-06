@@ -1,0 +1,7 @@
+Dalil Al Hami — Phase 08A-1 v4
+Admin advertisement form lazy-scroll test fix
+
+- Keeps ListView lazy construction in the long advertisement form.
+- Updates the widget test to scroll the form until media URL and placement fields are built and visible.
+- Avoids replacing the form with an eager SingleChildScrollView that would load off-screen image previews unnecessarily.
+- No production behavior, migration, SQLite schema, Supabase policy, or dependency changed.

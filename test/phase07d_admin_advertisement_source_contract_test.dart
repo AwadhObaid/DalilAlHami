@@ -51,7 +51,7 @@ void main() {
     expect(form, contains('admin-save-advertisement-button'));
     expect(form, contains('bottomNavigationBar: SafeArea'));
 
-    expect(localDatabase, contains('static const int schemaVersion = 7'));
+    expect(localDatabase, contains('static const int schemaVersion = 8'));
     expect(localDatabase, contains("advertisement.placement == 'home_top'"));
     expect(advertisementModel, contains('final String placement'));
     expect(advertisementModel, contains('final String? businessId'));

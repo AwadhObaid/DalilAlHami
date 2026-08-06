@@ -210,7 +210,7 @@ class AdminContentRepository {
       await _client
           .from('advertisements')
           .select(
-            'id, business_id, title, image_path, target_url, placement, '
+            'id, business_id, title, image_path, compact_image_path, target_url, placement, '
             'starts_at, ends_at, sort_order, is_active, created_at, '
             'updated_at, deleted_at, '
             'businesses!advertisements_business_id_fkey(id, name)',
@@ -257,6 +257,7 @@ class AdminContentRepository {
                   : null,
           'p_title': draft.title.trim(),
           'p_image_path': draft.imagePath.trim(),
+          'p_compact_image_path': _nullable(draft.compactImagePath),
           'p_target_url':
               draft.targetType == AdminAdvertisementTargetType.external
                   ? _nullable(draft.targetUrl)

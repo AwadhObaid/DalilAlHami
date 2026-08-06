@@ -8,12 +8,16 @@ class StickyAdvertisementHeader extends StatelessWidget {
   const StickyAdvertisementHeader({
     required this.controller,
     required this.advertisements,
+    this.imagePaths = const <String?>[],
+    this.compactImagePaths = const <String?>[],
     this.onAdvertisementTap,
     super.key,
   });
 
   final PageController controller;
   final List<String> advertisements;
+  final List<String?> imagePaths;
+  final List<String?> compactImagePaths;
   final ValueChanged<int>? onAdvertisementTap;
 
   @override
@@ -38,6 +42,8 @@ class StickyAdvertisementHeader extends StatelessWidget {
       delegate: _StickyAdvertisementDelegate(
         controller: controller,
         advertisements: advertisements,
+        imagePaths: imagePaths,
+        compactImagePaths: compactImagePaths,
         onAdvertisementTap: onAdvertisementTap,
         compactExtent: compactExtent,
         expandedExtent: expandedExtent,
@@ -50,6 +56,8 @@ class _StickyAdvertisementDelegate extends SliverPersistentHeaderDelegate {
   const _StickyAdvertisementDelegate({
     required this.controller,
     required this.advertisements,
+    required this.imagePaths,
+    required this.compactImagePaths,
     required this.onAdvertisementTap,
     required this.compactExtent,
     required this.expandedExtent,
@@ -57,6 +65,8 @@ class _StickyAdvertisementDelegate extends SliverPersistentHeaderDelegate {
 
   final PageController controller;
   final List<String> advertisements;
+  final List<String?> imagePaths;
+  final List<String?> compactImagePaths;
   final ValueChanged<int>? onAdvertisementTap;
   final double compactExtent;
   final double expandedExtent;
@@ -91,6 +101,8 @@ class _StickyAdvertisementDelegate extends SliverPersistentHeaderDelegate {
         child: AdSlider(
           controller: controller,
           advertisements: advertisements,
+          imagePaths: imagePaths,
+          compactImagePaths: compactImagePaths,
           onAdvertisementTap: onAdvertisementTap,
           collapseProgress: collapseProgress,
           expandToFill: true,
@@ -103,6 +115,8 @@ class _StickyAdvertisementDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _StickyAdvertisementDelegate oldDelegate) {
     return oldDelegate.controller != controller ||
         oldDelegate.advertisements != advertisements ||
+        oldDelegate.imagePaths != imagePaths ||
+        oldDelegate.compactImagePaths != compactImagePaths ||
         oldDelegate.onAdvertisementTap != onAdvertisementTap ||
         oldDelegate.compactExtent != compactExtent ||
         oldDelegate.expandedExtent != expandedExtent;

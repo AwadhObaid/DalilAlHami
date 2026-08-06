@@ -1,0 +1,9 @@
+Phase 08A-1 v8 - Collection Literal Lint Fix
+=============================================
+
+- Replaced the explicit LinkedHashMap constructor with a typed map literal.
+- Removed the now-unnecessary dart:collection import.
+- Preserved insertion order, duplicate-id filtering, deleted-category filtering,
+  and stable category-id selection behavior.
+- Updated the ASCII-safe installer contract to reject the old constructor.
+- No Supabase, SQLite, migration, media, or notification behavior changed.

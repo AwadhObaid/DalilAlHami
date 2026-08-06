@@ -1,0 +1,16 @@
+Phase 08A-1 v6 - Category Selection Identity Fix
+====================================================
+
+This cumulative fix removes the runtime DropdownButton assertion from the
+user business create/edit screen.
+
+Implemented safeguards:
+- Category selection is stored as category_id (String), not ServiceCategory object identity.
+- Dropdown items are deduplicated by trimmed category id.
+- Deleted and empty-id categories are excluded.
+- A reloaded ServiceCategory object with the same id remains selected safely.
+- A missing/deleted previous category becomes a null selection with a clear warning.
+- Saving resolves the current category object from the current directory list by id.
+- Widget regressions cover reloaded objects, duplicate ids, missing selections, and changes.
+
+No Supabase migration, SQLite schema change, or media behavior change is included.

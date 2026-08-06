@@ -47,7 +47,7 @@ class LocalDirectoryDatabase {
 
   static final LocalDirectoryDatabase instance = LocalDirectoryDatabase();
 
-  static const int schemaVersion = 7;
+  static const int schemaVersion = 8;
 
   static const String _categoriesTable = 'directory_categories';
   static const String _businessesTable = 'directory_businesses';
@@ -161,6 +161,7 @@ class LocalDirectoryDatabase {
         business_id TEXT,
         placement TEXT NOT NULL DEFAULT 'home_top',
         image_path TEXT,
+        compact_image_path TEXT,
         target_url TEXT,
         sort_order INTEGER NOT NULL DEFAULT 0,
         is_active INTEGER NOT NULL DEFAULT 1,
@@ -315,6 +316,15 @@ class LocalDirectoryDatabase {
       await _ensureAdvertisementSchemaV7(database);
     }
 
+    if (oldVersion < 8) {
+      await _addColumnIfMissing(
+        database,
+        tableName: _advertisementsTable,
+        columnName: 'compact_image_path',
+        definition: 'TEXT',
+      );
+    }
+
     await database.execute(
       '''
       CREATE INDEX IF NOT EXISTS directory_businesses_category_id_idx
@@ -382,6 +392,7 @@ class LocalDirectoryDatabase {
         business_id TEXT,
         placement TEXT NOT NULL DEFAULT 'home_top',
         image_path TEXT,
+        compact_image_path TEXT,
         target_url TEXT,
         sort_order INTEGER NOT NULL DEFAULT 0,
         is_active INTEGER NOT NULL DEFAULT 1,
@@ -446,6 +457,12 @@ class LocalDirectoryDatabase {
       tableName: _advertisementsTable,
       columnName: 'placement',
       definition: "TEXT NOT NULL DEFAULT 'home_top'",
+    );
+    await _addColumnIfMissing(
+      database,
+      tableName: _advertisementsTable,
+      columnName: 'compact_image_path',
+      definition: 'TEXT',
     );
   }
 
@@ -1814,6 +1831,7 @@ class LocalDirectoryDatabase {
       'business_id': advertisement.businessId,
       'placement': advertisement.placement,
       'image_path': advertisement.imagePath,
+      'compact_image_path': advertisement.compactImagePath,
       'target_url': advertisement.targetUrl,
       'sort_order': advertisement.sortOrder,
       'is_active': advertisement.isActive ? 1 : 0,
@@ -1834,6 +1852,7 @@ class LocalDirectoryDatabase {
       businessId: _nullableString(row['business_id']),
       placement: row['placement']?.toString() ?? 'home_top',
       imagePath: _nullableString(row['image_path']),
+      compactImagePath: _nullableString(row['compact_image_path']),
       targetUrl: _nullableString(row['target_url']),
       sortOrder: _readInteger(row['sort_order']),
       isActive: _readBoolean(row['is_active']),

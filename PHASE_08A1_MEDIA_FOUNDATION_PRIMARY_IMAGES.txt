@@ -1,0 +1,7 @@
+﻿Dalil Al Hami - Phase 08A-1 media foundation
+Migration: 20260806170000
+Verified at: 2026-08-06T20:39:37.4643473+03:00
+Log: F:\FlutterProjects\DalilAlHami_Clean\build_logs\phase08a_media_verify_20260806_203927\migration_list.combined.log
+Storage: category-media, business-media, advertisements
+Images: category, logo, cover, expanded ad, compact ad
+Local cache schema: 8

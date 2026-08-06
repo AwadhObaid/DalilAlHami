@@ -1,0 +1,7 @@
+Phase 08A-1 v5 — Status bar safe-area fix
+
+- HomeDashboardPage now owns a top SafeArea shell.
+- The status-bar inset is painted with the primary teal color.
+- The pinned compact advertisement stops below the system status bar.
+- Existing expanded/compact advertisement dimensions and media behavior remain unchanged.
+- No Supabase migration or SQLite schema change.

@@ -6,6 +6,34 @@ import 'package:hami_guide/models/account_profile.dart';
 import 'package:hami_guide/models/admin_advertisement_management.dart';
 import 'package:hami_guide/models/admin_content_management.dart';
 
+Future<void> _scrollAdvertisementFormUntilVisible(
+  WidgetTester tester,
+  Finder target,
+) async {
+  final formList = find.byKey(
+    const ValueKey<String>('admin-advertisement-form-list'),
+  );
+  expect(formList, findsOneWidget);
+
+  final formScrollable = find.descendant(
+    of: formList,
+    matching: find.byWidgetPredicate(
+      (widget) =>
+          widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      description: 'vertical advertisement form Scrollable',
+    ),
+  );
+  expect(formScrollable, findsOneWidget);
+
+  await tester.scrollUntilVisible(
+    target,
+    260,
+    scrollable: formScrollable,
+  );
+  await tester.pumpAndSettle();
+  expect(target, findsOneWidget);
+}
+
 void main() {
   const admin = AccountProfile(
     id: 'admin-1',
@@ -72,18 +100,28 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(const ValueKey('admin-advertisement-placement-field')),
-      findsOneWidget,
+    final titleField = find.byKey(
+      const ValueKey<String>('admin-advertisement-title-field'),
+    );
+    expect(titleField, findsOneWidget);
+    await tester.enterText(titleField, 'إعلان جديد');
+
+    final expandedImageUrlField = find.byKey(
+      const ValueKey<String>('admin-media-url-advertisementExpanded'),
+    );
+    await _scrollAdvertisementFormUntilVisible(
+      tester,
+      expandedImageUrlField,
     );
     await tester.enterText(
-      find.byKey(const ValueKey('admin-advertisement-title-field')),
-      'إعلان جديد',
-    );
-    await tester.enterText(
-      find.byKey(const ValueKey('admin-advertisement-image-field')),
+      expandedImageUrlField,
       'advertisements/new-ad.jpg',
     );
+
+    final placementField = find.byKey(
+      const ValueKey<String>('admin-advertisement-placement-field'),
+    );
+    await _scrollAdvertisementFormUntilVisible(tester, placementField);
     await tester.tap(
       find.byKey(const ValueKey('admin-save-advertisement-button')),
     );

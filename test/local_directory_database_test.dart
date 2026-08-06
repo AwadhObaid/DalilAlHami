@@ -60,6 +60,8 @@ void main() {
     const advertisement = DirectoryAdvertisement(
       id: 'remote-advertisement',
       title: 'إعلان من Supabase',
+      imagePath: 'admin/ad/expanded.jpg',
+      compactImagePath: 'admin/ad/compact.jpg',
       sortOrder: 1,
       syncVersion: 12,
     );
@@ -80,6 +82,14 @@ void main() {
     expect(snapshot.categories.single.id, 'remote-category');
     expect(snapshot.businesses.single.id, 'remote-business');
     expect(snapshot.advertisements, ['إعلان من Supabase']);
+    expect(
+      snapshot.advertisementItems.single.imagePath,
+      'admin/ad/expanded.jpg',
+    );
+    expect(
+      snapshot.advertisementItems.single.compactImagePath,
+      'admin/ad/compact.jpg',
+    );
   });
 
   test('يحدّث سجلًا ويحذف سجلًا آخر دون استبدال القاعدة كاملة', () async {

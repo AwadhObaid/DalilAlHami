@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
+import '../../core/services/media_upload_service.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../models/admin_content_management.dart';
+import '../shared/widgets/admin_media_field.dart';
 
 typedef AdminBusinessSaveAction = Future<AdminContentMutationResult> Function(
   AdminBusinessDraft draft,
@@ -291,26 +293,26 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
               ],
             ),
             const SizedBox(height: AppSpacing.md),
-            TextFormField(
+            AdminMediaField(
               key: const ValueKey<String>('admin-business-logo-field'),
+              label: 'شعار النشاط',
+              helperText: 'صورة مربعة؛ المقاس الموصى به 1024×1024.',
               controller: _logoController,
-              keyboardType: TextInputType.url,
-              textDirection: TextDirection.ltr,
-              decoration: const InputDecoration(
-                labelText: 'رابط الشعار — اختياري',
-                prefixIcon: Icon(Icons.image_rounded),
-              ),
+              kind: MediaAssetKind.businessLogo,
+              entityId: widget.initialBusiness?.id ?? 'new',
+              aspectRatio: 1,
+              enabled: !_saving,
             ),
-            const SizedBox(height: AppSpacing.sm),
-            TextFormField(
+            const SizedBox(height: AppSpacing.md),
+            AdminMediaField(
               key: const ValueKey<String>('admin-business-cover-field'),
+              label: 'صورة غلاف النشاط',
+              helperText: 'المقاس الموصى به 1600×900 بنسبة 16:9.',
               controller: _coverController,
-              keyboardType: TextInputType.url,
-              textDirection: TextDirection.ltr,
-              decoration: const InputDecoration(
-                labelText: 'رابط صورة الغلاف — اختياري',
-                prefixIcon: Icon(Icons.panorama_rounded),
-              ),
+              kind: MediaAssetKind.businessCover,
+              entityId: widget.initialBusiness?.id ?? 'new',
+              aspectRatio: 16 / 9,
+              enabled: !_saving,
             ),
             const SizedBox(height: AppSpacing.md),
           ],

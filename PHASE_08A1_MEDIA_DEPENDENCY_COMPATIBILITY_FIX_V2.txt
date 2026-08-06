@@ -1,0 +1,10 @@
+Dalil Al Hami - Phase 08A-1 v2
+Media dependency compatibility fix
+
+- Keep flutter_local_notifications on the validated 19.5.0 line.
+- Pin image exactly to 4.8.0 so pub resolves xml 6.x.
+- Do not use a caret on image 4.8.0; it would allow later 4.9.x releases.
+- Preserve all Phase 08A-1 image decoding, EXIF orientation, resize and JPEG encoding APIs.
+- Add a regression test for the dependency contract.
+
+No Supabase, SQLite, model, or UI migration changes are included in this fix.

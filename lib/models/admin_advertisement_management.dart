@@ -85,6 +85,7 @@ class AdminAdvertisementItem {
     required this.id,
     required this.title,
     required this.imagePath,
+    this.compactImagePath = '',
     required this.placement,
     required this.sortOrder,
     required this.isActive,
@@ -101,6 +102,7 @@ class AdminAdvertisementItem {
   final String id;
   final String title;
   final String imagePath;
+  final String compactImagePath;
   final AdminAdvertisementPlacement placement;
   final int sortOrder;
   final bool isActive;
@@ -167,6 +169,7 @@ class AdminAdvertisementItem {
       id: data['id']?.toString() ?? '',
       title: data['title']?.toString() ?? '',
       imagePath: data['image_path']?.toString() ?? '',
+      compactImagePath: data['compact_image_path']?.toString() ?? '',
       placement: AdminAdvertisementPlacement.fromValue(data['placement']),
       sortOrder: _readInteger(data['sort_order']),
       isActive: _readBoolean(data['is_active']),
@@ -186,6 +189,7 @@ class AdminAdvertisementDraft {
   const AdminAdvertisementDraft({
     required this.title,
     required this.imagePath,
+    this.compactImagePath = '',
     required this.placement,
     required this.sortOrder,
     required this.targetType,
@@ -199,6 +203,7 @@ class AdminAdvertisementDraft {
   final String? id;
   final String title;
   final String imagePath;
+  final String compactImagePath;
   final AdminAdvertisementPlacement placement;
   final int sortOrder;
   final AdminAdvertisementTargetType targetType;
