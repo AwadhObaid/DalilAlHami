@@ -1,0 +1,12 @@
+Dalil Al Hami - Phase 11A Arabic Encoding Fix v4
+
+Purpose:
+- Repair mojibake in Google/Supabase authentication user-facing Arabic messages.
+- Preserve the validated Phase 11A Supabase runtime build flow.
+- Add an automated source contract test that blocks recurrence of the corrupted text pattern.
+
+Scope:
+- lib/core/services/google_auth_service.dart
+- test/phase11a_arabic_encoding_contract_test.dart
+
+No Firebase, Supabase schema, authentication policy, or database configuration is changed by this fix.

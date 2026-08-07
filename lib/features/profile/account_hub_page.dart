@@ -13,6 +13,7 @@ import '../admin/admin_dashboard_page.dart';
 import '../admin/widgets/admin_dashboard_entry_card.dart';
 import '../auth/google_sign_in_page.dart';
 import '../shared/widgets/page_header.dart';
+import '../settings/app_settings_page.dart';
 import 'background_sync_settings_page.dart';
 import 'owned_businesses_page.dart';
 import 'profile_page.dart';
@@ -233,6 +234,14 @@ class _AccountHubPageState extends State<AccountHubPage>
         const SizedBox(height: AppSpacing.md),
         _buildBenefitsCard(),
         const SizedBox(height: AppSpacing.md),
+        _AccountActionCard(
+          icon: Icons.settings_rounded,
+          title: 'إعدادات التطبيق',
+          subtitle: 'حجم الخط والإشعارات واللغة',
+          color: AppColors.primaryTeal,
+          onTap: _openAppSettings,
+        ),
+        const SizedBox(height: AppSpacing.md),
         _buildConnectionCard(),
       ],
     );
@@ -377,6 +386,14 @@ class _AccountHubPageState extends State<AccountHubPage>
           onTap: accountSuspended || _directoryStore.isLoading
               ? null
               : _directoryStore.refresh,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        _AccountActionCard(
+          icon: Icons.settings_rounded,
+          title: 'إعدادات التطبيق',
+          subtitle: 'حجم الخط والإشعارات واللغة',
+          color: AppColors.primaryTeal,
+          onTap: _openAppSettings,
         ),
         const SizedBox(height: AppSpacing.md),
         _buildConnectionCard(),
@@ -534,6 +551,15 @@ class _AccountHubPageState extends State<AccountHubPage>
 
     await _refreshOwnedBusinessState();
     await _directoryStore.refresh();
+  }
+
+  Future<void> _openAppSettings() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => const AppSettingsPage(),
+      ),
+    );
   }
 
   Future<void> _openAdminDashboard() async {

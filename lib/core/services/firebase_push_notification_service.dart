@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/repositories/push_device_repository.dart';
 import 'app_notification_store.dart';
+import 'app_preferences_store.dart';
 import '../../firebase_options.dart';
 import 'background_notification_service.dart';
 import 'push_notification_navigation_service.dart';
@@ -149,11 +150,38 @@ class FirebasePushNotificationService {
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional) {
-        await _messaging.subscribeToTopic(publicTopicName);
+        await applyPublicTopicPreference(
+          AppPreferencesStore.instance.snapshot.publicNotificationsEnabled,
+        );
         await syncCurrentToken();
       }
     } catch (error, stackTrace) {
       debugPrint('FCM permission setup failed: $error\n$stackTrace');
+    }
+  }
+
+  Future<NotificationSettings> notificationSettings() {
+    return _messaging.getNotificationSettings();
+  }
+
+  Future<void> applyPublicTopicPreference(bool enabled) async {
+    if (Firebase.apps.isEmpty) {
+      return;
+    }
+
+    final settings = await _messaging.getNotificationSettings();
+    final allowed =
+        settings.authorizationStatus == AuthorizationStatus.authorized ||
+            settings.authorizationStatus == AuthorizationStatus.provisional;
+
+    if (!allowed) {
+      return;
+    }
+
+    if (enabled) {
+      await _messaging.subscribeToTopic(publicTopicName);
+    } else {
+      await _messaging.unsubscribeFromTopic(publicTopicName);
     }
   }
 

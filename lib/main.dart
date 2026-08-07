@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'app/hami_guide_app.dart';
 import 'core/services/app_notification_store.dart';
+import 'core/services/app_preferences_store.dart';
 import 'core/services/auth_session_store.dart';
 import 'core/services/background_sync_service.dart';
 import 'core/services/automatic_sync_coordinator.dart';
@@ -24,6 +25,7 @@ Future<void> main() async {
   await SupabaseService.initializeIfConfigured();
   await AuthSessionStore.instance.initialize();
   await AppNotificationStore.instance.initialize();
+  await AppPreferencesStore.instance.initialize();
   await BackgroundSyncService.instance.initialize();
   await AutomaticSyncCoordinator.instance.initialize();
   await FirebasePushNotificationService.instance.initialize();

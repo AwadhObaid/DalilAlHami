@@ -1,0 +1,15 @@
+Dalil Al Hami - Phase 11A application settings and preferences foundation
+
+- Adds a dedicated application settings page available to signed-in and signed-out users.
+- Persists user-facing preferences with SharedPreferences.
+- Adds normal and large text-size presets and applies them safely at the app root.
+- Adds a user-controlled public FCM notification preference.
+- Disabling public notifications unsubscribes this device from the dalil_alhami_public FCM topic.
+- Enabling public notifications subscribes again when Android notification permission is available.
+- Shows the current Android notification authorization state inside settings.
+- Adds a reset-to-defaults action for user-facing preferences.
+- Configures Flutter localization delegates and Arabic/English locale infrastructure.
+- Arabic remains the production language in Phase 11A; full English UI translation is intentionally completed in Phase 11B.
+- Full adaptive dark-theme conversion is intentionally completed in Phase 11B because the existing application still uses a static light design palette across many feature widgets.
+- Firebase/Supabase authentication, data, notification-center, and admin-send behavior from Phase 10A/10B remains unchanged.
+- Phase 09 favorites and ratings remains intentionally postponed.
