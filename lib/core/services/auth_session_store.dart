@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'firebase_push_notification_service.dart';
 import 'supabase_service.dart';
 
 class AuthSessionStore extends ChangeNotifier {
@@ -57,6 +58,7 @@ class AuthSessionStore extends ChangeNotifier {
       return;
     }
 
+    await FirebasePushNotificationService.instance.unregisterCurrentToken();
     await SupabaseService.client.auth.signOut();
     _session = null;
     notifyListeners();

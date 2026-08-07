@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
+import '../../core/services/push_notification_navigation_service.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../data/directory_data_store.dart';
 import '../home/home_screen.dart';
@@ -30,12 +33,18 @@ class _SplashScreenState extends State<SplashScreen> {
       return;
     }
 
-    await Navigator.pushReplacement<void, void>(
-      context,
-      MaterialPageRoute<void>(
-        builder: (context) => const HomeScreen(),
+    unawaited(
+      Navigator.pushReplacement<void, void>(
+        context,
+        MaterialPageRoute<void>(
+          builder: (context) => const HomeScreen(),
+        ),
       ),
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PushNotificationNavigationService.instance.markShellReady();
+    });
   }
 
   @override

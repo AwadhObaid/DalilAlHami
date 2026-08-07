@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+typedef NotificationTapHandler = void Function(String? payload);
 
 class BackgroundNotificationService {
   BackgroundNotificationService._();
@@ -11,12 +15,22 @@ class BackgroundNotificationService {
   static const String channelDescription =
       'نتائج المزامنة والعمليات التي تحتاج إلى تدخل.';
 
+  static const String pushChannelId = 'dalil_alhami_push';
+  static const String pushChannelName = 'إشعارات دليل الحامي';
+  static const String pushChannelDescription =
+      'التنبيهات والإشعارات المرسلة من دليل الحامي.';
+
   static const int successNotificationId = 5101;
   static const int attentionNotificationId = 5102;
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
+  NotificationTapHandler? _notificationTapHandler;
   bool _initialized = false;
+
+  void setNotificationTapHandler(NotificationTapHandler? handler) {
+    _notificationTapHandler = handler;
+  }
 
   Future<void> initialize() async {
     if (_initialized) {
@@ -27,7 +41,24 @@ class BackgroundNotificationService {
       '@mipmap/launcher_icon',
     );
     const settings = InitializationSettings(android: android);
-    await _plugin.initialize(settings);
+    await _plugin.initialize(
+      settings,
+      onDidReceiveNotificationResponse: (response) {
+        _notificationTapHandler?.call(response.payload);
+      },
+    );
+
+    final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        pushChannelId,
+        pushChannelName,
+        description: pushChannelDescription,
+        importance: Importance.high,
+      ),
+    );
+
     _initialized = true;
   }
 
@@ -37,6 +68,33 @@ class BackgroundNotificationService {
         AndroidFlutterLocalNotificationsPlugin>();
     final result = await android?.requestNotificationsPermission();
     return result ?? true;
+  }
+
+  Future<void> showPush({
+    required int notificationId,
+    required String title,
+    required String body,
+    required Map<String, dynamic> data,
+  }) async {
+    await initialize();
+    const android = AndroidNotificationDetails(
+      pushChannelId,
+      pushChannelName,
+      channelDescription: pushChannelDescription,
+      importance: Importance.high,
+      priority: Priority.high,
+      icon: '@mipmap/launcher_icon',
+      category: AndroidNotificationCategory.message,
+    );
+    const details = NotificationDetails(android: android);
+
+    await _plugin.show(
+      notificationId,
+      title,
+      body,
+      details,
+      payload: jsonEncode(data),
+    );
   }
 
   Future<void> showSuccess({

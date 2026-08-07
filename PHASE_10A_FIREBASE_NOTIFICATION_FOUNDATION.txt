@@ -1,0 +1,11 @@
+Dalil Al Hami - Phase 10A Firebase notification foundation
+
+- Firebase Cloud Messaging is used only for push notifications.
+- Supabase remains the authentication, authorization, and application-data backend.
+- Android FCM permission, foreground, background, terminated-state tap handling, and token refresh are wired.
+- Authorized installations subscribe to dalil_alhami_public for public broadcasts.
+- Signed-in device FCM tokens are stored in Supabase through authenticated security-definer RPCs.
+- Signing out unregisters the current device token before the Supabase session is closed.
+- Foreground messages use the existing flutter_local_notifications integration.
+- Notification data can navigate to home tabs or an approved business detail by business_id.
+- Phase 09 favorites and ratings remains intentionally postponed.
