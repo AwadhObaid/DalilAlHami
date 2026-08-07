@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_catalog.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
+import '../../core/services/app_notification_store.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/launch_actions.dart';
 import '../../data/directory_data_store.dart';
@@ -13,6 +14,7 @@ import '../directory/all_businesses_page.dart';
 import '../directory/categories_overview_page.dart';
 import '../directory/category_list_page.dart';
 import '../directory/member_details_page.dart';
+import '../notifications/notification_center_page.dart';
 import '../shared/widgets/directory_loading_skeleton.dart';
 import '../shared/widgets/directory_status_banner.dart';
 import '../shared/widgets/inline_advertisement_banner.dart';
@@ -47,6 +49,7 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
   );
 
   final DirectoryDataStore _directoryStore = DirectoryDataStore.instance;
+  final AppNotificationStore _notificationStore = AppNotificationStore.instance;
   final PageController _adPageController = PageController();
 
   @override
@@ -55,6 +58,9 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
   @override
   void initState() {
     super.initState();
+
+    _notificationStore.addListener(_handleNotificationChanged);
+    _notificationStore.refreshUnreadCount();
 
     if (!_directoryStore.hasLoaded) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -65,8 +71,25 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
 
   @override
   void dispose() {
+    _notificationStore.removeListener(_handleNotificationChanged);
     _adPageController.dispose();
     super.dispose();
+  }
+
+  void _handleNotificationChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _openNotificationCenter() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => const NotificationCenterPage(),
+      ),
+    );
+    await _notificationStore.refreshUnreadCount();
   }
 
   List<ServiceCategory> get _serviceCategories {
@@ -151,6 +174,8 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
                     HomeHeader(
                       onOpenSearch: widget.onOpenSearch,
                       onOpenFilters: () => _openCategoriesOverview(),
+                      onOpenNotifications: _openNotificationCenter,
+                      unreadNotificationCount: _notificationStore.unreadCount,
                     ),
                     const Expanded(
                       child: DirectoryLoadingSkeleton(itemCount: 3),
@@ -184,6 +209,8 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
             child: HomeHeader(
               onOpenSearch: widget.onOpenSearch,
               onOpenFilters: () => _openCategoriesOverview(),
+              onOpenNotifications: _openNotificationCenter,
+              unreadNotificationCount: _notificationStore.unreadCount,
             ),
           ),
           if (_directoryStore.isRefreshing)

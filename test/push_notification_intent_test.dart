@@ -2,6 +2,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hami_guide/core/services/push_notification_intent.dart';
 
 void main() {
+  test('parses notification-center target', () {
+    expect(
+      PushNotificationIntent.fromData(const {'type': 'notifications'})?.target,
+      PushNotificationTarget.notifications,
+    );
+  });
+
   test('parses supported shell notification targets', () {
     expect(
       PushNotificationIntent.fromData(const {'type': 'home'})?.target,

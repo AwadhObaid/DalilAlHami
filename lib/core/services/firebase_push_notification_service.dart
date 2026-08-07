@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/repositories/push_device_repository.dart';
+import 'app_notification_store.dart';
 import '../../firebase_options.dart';
 import 'background_notification_service.dart';
 import 'push_notification_navigation_service.dart';
@@ -157,6 +158,8 @@ class FirebasePushNotificationService {
   }
 
   Future<void> _handleForegroundMessage(RemoteMessage message) async {
+    AppNotificationStore.instance.notifyPushReceived();
+
     final title =
         message.notification?.title ?? message.data['title']?.toString();
     final body = message.notification?.body ?? message.data['body']?.toString();
@@ -178,6 +181,7 @@ class FirebasePushNotificationService {
   }
 
   void _handleOpenedMessage(RemoteMessage message) {
+    AppNotificationStore.instance.notifyPushReceived();
     PushNotificationNavigationService.instance.handleData(message.data);
   }
 

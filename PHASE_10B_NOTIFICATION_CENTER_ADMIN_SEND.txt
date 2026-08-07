@@ -1,0 +1,14 @@
+Dalil Al Hami - Phase 10B notification center and administrator sending
+
+- Adds a durable in-app notification center backed by Supabase.
+- Public and user-targeted notification records share one secure center.
+- Per-user read state, unread count, mark-one-read, and mark-all-read are provided by authenticated RPCs.
+- The existing home notification button now opens the center and shows an unread badge.
+- Push taps can open the notification center, home tabs, search, account, or a selected business.
+- Administrators get a dedicated notification management page.
+- Administrators can send a broadcast to the public FCM topic or a targeted message to one active user's registered devices.
+- Server-side sending is implemented by the admin-notifications Supabase Edge Function using Firebase HTTP v1.
+- Firebase service-account JSON is stored only as a Supabase Edge Function secret named FIREBASE_SERVICE_ACCOUNT_JSON.
+- No Firebase private key or Supabase service-role credential is embedded in the Flutter APK.
+- Recent administrator notification delivery results are visible in the management page.
+- Phase 09 favorites and ratings remains intentionally postponed.

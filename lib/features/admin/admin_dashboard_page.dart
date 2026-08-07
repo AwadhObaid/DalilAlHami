@@ -12,6 +12,7 @@ import 'admin_business_management_page.dart';
 import 'admin_business_review_page.dart';
 import 'admin_category_management_page.dart';
 import 'admin_media_management_page.dart';
+import 'admin_notification_management_page.dart';
 import 'admin_user_management_page.dart';
 
 typedef AdminProfileLoader = Future<AccountProfile> Function();
@@ -275,6 +276,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             color: AppColors.primaryDark,
             onTap: _openUserManagement,
           ),
+          const SizedBox(height: AppSpacing.sm),
+          _AdminModuleCard(
+            key: const ValueKey<String>('admin-manage-notifications-action'),
+            icon: Icons.notifications_active_rounded,
+            title: 'إدارة الإشعارات',
+            subtitle: 'إرسال تنبيه عام أو لمستخدم محدد مع وجهة داخل التطبيق',
+            badge: 'Firebase FCM',
+            color: AppColors.primaryTeal,
+            onTap: _openNotificationManagement,
+          ),
           const SizedBox(height: AppSpacing.lg),
           _FoundationNotice(loadedAt: snapshot.loadedAt),
         ],
@@ -334,6 +345,18 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => const AdminMediaManagementPage(),
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    await _loadDashboard();
+  }
+
+  Future<void> _openNotificationManagement() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const AdminNotificationManagementPage(),
       ),
     );
     if (!mounted) {

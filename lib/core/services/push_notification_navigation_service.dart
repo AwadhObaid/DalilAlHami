@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
@@ -6,7 +7,9 @@ import '../../data/directory_data_store.dart';
 import '../../models/business.dart';
 import '../../features/directory/member_details_page.dart';
 import '../../features/home/home_screen.dart';
+import '../../features/notifications/notification_center_page.dart';
 import '../navigation/app_navigator.dart';
+import 'app_notification_store.dart';
 import 'push_notification_intent.dart';
 
 class PushNotificationNavigationService {
@@ -20,6 +23,7 @@ class PushNotificationNavigationService {
   bool _navigating = false;
 
   void handleData(Map<String, dynamic> data) {
+    _markNotificationRead(data);
     final intent = PushNotificationIntent.fromData(data);
     if (intent != null) {
       unawaited(openOrQueue(intent));
@@ -27,9 +31,40 @@ class PushNotificationNavigationService {
   }
 
   void handleLocalPayload(String? payload) {
+    final value = payload?.trim();
+    if (value != null && value.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(value);
+        if (decoded is Map) {
+          _markNotificationRead(
+            decoded.map(
+              (key, item) => MapEntry(key.toString(), item),
+            ),
+          );
+        }
+      } catch (_) {}
+    }
+
     final intent = PushNotificationIntent.fromPayload(payload);
     if (intent != null) {
       unawaited(openOrQueue(intent));
+    }
+  }
+
+  void _markNotificationRead(Map<String, dynamic> data) {
+    final notificationId = data['notification_id']?.toString().trim();
+    if (notificationId == null || notificationId.isEmpty) {
+      return;
+    }
+    unawaited(_markNotificationReadSafely(notificationId));
+  }
+
+  Future<void> _markNotificationReadSafely(String notificationId) async {
+    try {
+      await AppNotificationStore.instance.markRead(notificationId);
+    } catch (_) {
+      // Notification navigation must remain available even when read-state
+      // synchronization is temporarily unavailable.
     }
   }
 
@@ -52,6 +87,9 @@ class PushNotificationNavigationService {
     _navigating = true;
     try {
       switch (intent.target) {
+        case PushNotificationTarget.notifications:
+          await _openNotifications(navigator);
+          break;
         case PushNotificationTarget.home:
           await _openHomeTab(navigator, 0);
           break;
@@ -76,6 +114,17 @@ class PushNotificationNavigationService {
         unawaited(openOrQueue(queued));
       }
     }
+  }
+
+  Future<void> _openNotifications(NavigatorState navigator) async {
+    unawaited(
+      navigator.push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => const NotificationCenterPage(),
+        ),
+      ),
+    );
+    await Future<void>.delayed(Duration.zero);
   }
 
   Future<void> _openHomeTab(NavigatorState navigator, int index) async {

@@ -11,11 +11,15 @@ class HomeHeader extends StatelessWidget {
   const HomeHeader({
     required this.onOpenSearch,
     required this.onOpenFilters,
+    this.onOpenNotifications,
+    this.unreadNotificationCount = 0,
     super.key,
   });
 
   final VoidCallback onOpenSearch;
   final VoidCallback onOpenFilters;
+  final VoidCallback? onOpenNotifications;
+  final int unreadNotificationCount;
 
   @override
   Widget build(BuildContext context) {
@@ -72,30 +76,47 @@ class HomeHeader extends StatelessWidget {
                                   _HeaderIconButton(
                                     keyName: 'home-notification-button',
                                     tooltip: 'الإشعارات',
-                                    icon: Icons.notifications_none_rounded,
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'ستظهر إشعارات الدليل والمزامنة هنا.',
+                                    icon: unreadNotificationCount > 0
+                                        ? Icons.notifications_active_rounded
+                                        : Icons.notifications_none_rounded,
+                                    onPressed: onOpenNotifications ?? () {},
+                                  ),
+                                  if (unreadNotificationCount > 0)
+                                    PositionedDirectional(
+                                      top: -5,
+                                      end: -6,
+                                      child: Container(
+                                        constraints: const BoxConstraints(
+                                          minWidth: 20,
+                                          minHeight: 20,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 5,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.advertisementGold,
+                                          borderRadius: BorderRadius.circular(
+                                            AppRadius.pill,
+                                          ),
+                                          border: Border.all(
+                                            color: AppColors.white,
+                                            width: 1.5,
                                           ),
                                         ),
-                                      );
-                                    },
-                                  ),
-                                  PositionedDirectional(
-                                    top: 2,
-                                    end: 2,
-                                    child: Container(
-                                      width: 8,
-                                      height: 8,
-                                      decoration: const BoxDecoration(
-                                        color: AppColors.advertisementGold,
-                                        shape: BoxShape.circle,
+                                        child: Text(
+                                          unreadNotificationCount > 99
+                                              ? '99+'
+                                              : '$unreadNotificationCount',
+                                          textAlign: TextAlign.center,
+                                          style:
+                                              AppTextStyles.labelSmall.copyWith(
+                                            color: AppColors.advertisementInk,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
                                 ],
                               ),
                             ],

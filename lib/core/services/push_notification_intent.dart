@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 enum PushNotificationTarget {
+  notifications,
   home,
   categories,
   search,
@@ -13,6 +14,9 @@ class PushNotificationIntent {
     required this.target,
     this.businessId,
   });
+
+  const PushNotificationIntent.notifications()
+      : this._(target: PushNotificationTarget.notifications);
 
   const PushNotificationIntent.home()
       : this._(target: PushNotificationTarget.home);
@@ -40,6 +44,9 @@ class PushNotificationIntent {
         (data['type'] ?? data['target'])?.toString().trim().toLowerCase();
 
     return switch (type) {
+      'notifications' ||
+      'notification_center' =>
+        const PushNotificationIntent.notifications(),
       'home' => const PushNotificationIntent.home(),
       'categories' => const PushNotificationIntent.categories(),
       'search' => const PushNotificationIntent.search(),
