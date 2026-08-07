@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/constants/app_colors.dart';
@@ -85,7 +87,11 @@ class _OtpPageState extends State<OtpPage> {
               const SizedBox(height: AppSpacing.xs),
               Text.rich(
                 TextSpan(
-                  text: 'تم إرسال الرمز إلى ',
+                  text: AppLocaleText.pick(
+                    context,
+                    ar: 'تم إرسال الرمز إلى ',
+                    en: 'The code was sent to ',
+                  ),
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: AppColors.textSecondary,
                   ),

@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
@@ -51,7 +53,8 @@ class DirectoryStatusBanner extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.xs),
           IconButton(
-            tooltip: 'إعادة المحاولة',
+            tooltip: AppLocaleText.pick(context,
+                ar: 'إعادة المحاولة', en: 'Try again'),
             onPressed: isRefreshing ? null : onRetry,
             icon: isRefreshing
                 ? const SizedBox(

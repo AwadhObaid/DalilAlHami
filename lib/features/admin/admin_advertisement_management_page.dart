@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -366,7 +367,8 @@ class _AdminAdvertisementManagementPageState
             controller: _searchController,
             onChanged: (value) => setState(() => _query = value),
             decoration: InputDecoration(
-              hintText: 'ابحث بالعنوان أو الوجهة أو رابط الصورة',
+              hintText: AppLocaleText.runtime(
+                  'ابحث بالعنوان أو الوجهة أو رابط الصورة'),
               prefixIcon: const Icon(Icons.search_rounded),
               suffixIcon: _query.isEmpty
                   ? null
@@ -406,8 +408,8 @@ class _AdminAdvertisementManagementPageState
             ),
             initialValue: _placementFilter,
             isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'تصفية حسب موضع الظهور',
+            decoration: InputDecoration(
+              labelText: AppLocaleText.runtime('تصفية حسب موضع الظهور'),
               prefixIcon: Icon(Icons.view_quilt_rounded),
             ),
             items: <DropdownMenuItem<AdminAdvertisementPlacement?>>[
@@ -618,7 +620,7 @@ class _AdvertisementCard extends StatelessWidget {
                 key: ValueKey<String>(
                   'admin-advertisement-actions-${advertisement.id}',
                 ),
-                tooltip: 'إجراءات الإعلان',
+                tooltip: AppLocaleText.runtime('إجراءات الإعلان'),
                 onSelected: (value) {
                   if (value == 'edit') {
                     onEdit();

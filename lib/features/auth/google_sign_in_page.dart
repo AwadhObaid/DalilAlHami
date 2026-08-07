@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/services/auth_session_store.dart';

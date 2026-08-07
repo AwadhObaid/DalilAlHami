@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
@@ -427,8 +428,9 @@ class _BusinessGalleryAltDialogState extends State<_BusinessGalleryAltDialog> {
         key: const ValueKey<String>('business-gallery-alt-field'),
         controller: _controller,
         maxLength: 120,
-        decoration: const InputDecoration(
-          hintText: 'مثال: واجهة المحل أو صالة الاستقبال',
+        decoration: InputDecoration(
+          hintText:
+              AppLocaleText.runtime('مثال: واجهة المحل أو صالة الاستقبال'),
         ),
       ),
       actions: [
@@ -516,7 +518,7 @@ class _GalleryItem extends StatelessWidget {
             PopupMenuButton<String>(
               key: ValueKey<String>('business-gallery-actions-${image.id}'),
               enabled: enabled,
-              tooltip: 'خيارات الصورة',
+              tooltip: AppLocaleText.runtime('خيارات الصورة'),
               onSelected: (value) {
                 switch (value) {
                   case 'primary':

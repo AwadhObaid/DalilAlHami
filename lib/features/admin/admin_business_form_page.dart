@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -170,8 +171,8 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
             DropdownButtonFormField<String>(
               key: const ValueKey<String>('admin-business-category-field'),
               initialValue: _categoryId,
-              decoration: const InputDecoration(
-                labelText: 'القسم',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('القسم'),
                 prefixIcon: Icon(Icons.category_rounded),
               ),
               items: _activeCategories
@@ -183,19 +184,20 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
                   )
                   .toList(growable: false),
               onChanged: (value) => setState(() => _categoryId = value),
-              validator: (value) => value == null ? 'اختر القسم.' : null,
+              validator: (value) =>
+                  value == null ? AppLocaleText.runtime('اختر القسم.') : null,
             ),
             const SizedBox(height: AppSpacing.sm),
             TextFormField(
               key: const ValueKey<String>('admin-business-name-field'),
               controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'اسم النشاط',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('اسم النشاط'),
                 prefixIcon: Icon(Icons.storefront_rounded),
               ),
               textInputAction: TextInputAction.next,
               validator: (value) => (value?.trim().length ?? 0) < 2
-                  ? 'اكتب اسمًا واضحًا للنشاط.'
+                  ? AppLocaleText.runtime('اكتب اسمًا واضحًا للنشاط.')
                   : null,
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -204,13 +206,13 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
               controller: _phoneController,
               keyboardType: TextInputType.phone,
               textDirection: TextDirection.ltr,
-              decoration: const InputDecoration(
-                labelText: 'رقم الهاتف',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('رقم الهاتف'),
                 prefixIcon: Icon(Icons.phone_rounded),
               ),
               textInputAction: TextInputAction.next,
               validator: (value) => (value?.trim().length ?? 0) < 5
-                  ? 'أدخل رقم هاتف صحيحًا.'
+                  ? AppLocaleText.runtime('أدخل رقم هاتف صحيحًا.')
                   : null,
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -219,8 +221,8 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
               controller: _whatsappController,
               keyboardType: TextInputType.phone,
               textDirection: TextDirection.ltr,
-              decoration: const InputDecoration(
-                labelText: 'واتساب — اختياري',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('واتساب — اختياري'),
                 prefixIcon: Icon(Icons.chat_rounded),
               ),
               textInputAction: TextInputAction.next,
@@ -229,13 +231,14 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
             TextFormField(
               key: const ValueKey<String>('admin-business-address-field'),
               controller: _addressController,
-              decoration: const InputDecoration(
-                labelText: 'العنوان',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('العنوان'),
                 prefixIcon: Icon(Icons.location_on_rounded),
               ),
               textInputAction: TextInputAction.next,
-              validator: (value) =>
-                  (value?.trim().isEmpty ?? true) ? 'اكتب عنوان النشاط.' : null,
+              validator: (value) => (value?.trim().isEmpty ?? true)
+                  ? AppLocaleText.runtime('اكتب عنوان النشاط.')
+                  : null,
             ),
             const SizedBox(height: AppSpacing.sm),
             TextFormField(
@@ -243,8 +246,8 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
               controller: _descriptionController,
               minLines: 3,
               maxLines: 6,
-              decoration: const InputDecoration(
-                labelText: 'الوصف',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('الوصف'),
                 alignLabelWithHint: true,
                 prefixIcon: Icon(Icons.notes_rounded),
               ),
@@ -261,7 +264,8 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
             AdminMediaField(
               key: const ValueKey<String>('admin-business-logo-field'),
               label: 'شعار النشاط',
-              helperText: 'صورة مربعة؛ المقاس الموصى به 1024×1024.',
+              helperText: AppLocaleText.runtime(
+                  'صورة مربعة؛ المقاس الموصى به 1024×1024.'),
               controller: _logoController,
               kind: MediaAssetKind.businessLogo,
               entityId: widget.initialBusiness?.id ?? 'new',
@@ -272,7 +276,8 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
             AdminMediaField(
               key: const ValueKey<String>('admin-business-cover-field'),
               label: 'صورة غلاف النشاط',
-              helperText: 'المقاس الموصى به 1600×900 بنسبة 16:9.',
+              helperText: AppLocaleText.runtime(
+                  'المقاس الموصى به 1600×900 بنسبة 16:9.'),
               controller: _coverController,
               kind: MediaAssetKind.businessCover,
               entityId: widget.initialBusiness?.id ?? 'new',

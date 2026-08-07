@@ -1,0 +1,3 @@
+Phase 11B2A v3
+Removes localization adapter imports from UI files that render no translatable Text widgets.
+The localized surface manifest now contains only surfaces that actually use AppLocalizedText.

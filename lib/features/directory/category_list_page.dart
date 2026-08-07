@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -101,7 +103,11 @@ class _CategoryListPageState extends State<CategoryListPage> {
                   },
                   onClear: _clearSearch,
                   fieldKey: 'category-list-search-field',
-                  hintText: 'ابحث داخل قسم ${widget.categoryName}…',
+                  hintText: AppLocaleText.pick(
+                    context,
+                    ar: 'ابحث داخل قسم ${widget.categoryName}…',
+                    en: 'Search ${AppLocaleText.translate(context, widget.categoryName)}…',
+                  ),
                 ),
               ),
               DirectoryResultSummary(

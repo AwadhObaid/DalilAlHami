@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
@@ -66,7 +68,8 @@ class HomeHeader extends StatelessWidget {
                             children: [
                               _HeaderIconButton(
                                 keyName: 'home-menu-button',
-                                tooltip: 'الأقسام',
+                                tooltip: AppLocaleText.pick(context,
+                                    ar: 'الأقسام', en: 'Categories'),
                                 icon: Icons.menu_rounded,
                                 onPressed: onOpenFilters,
                               ),
@@ -76,7 +79,8 @@ class HomeHeader extends StatelessWidget {
                                 children: [
                                   _HeaderIconButton(
                                     keyName: 'home-notification-button',
-                                    tooltip: 'الإشعارات',
+                                    tooltip: AppLocaleText.pick(context,
+                                        ar: 'الإشعارات', en: 'Notifications'),
                                     icon: unreadNotificationCount > 0
                                         ? Icons.notifications_active_rounded
                                         : Icons.notifications_none_rounded,
@@ -282,7 +286,8 @@ class _SearchLauncher extends StatelessWidget {
               end: AppSpacing.sm,
             ),
             child: IconButton(
-              tooltip: 'فتح البحث',
+              tooltip: AppLocaleText.pick(context,
+                  ar: 'فتح البحث', en: 'Open search'),
               onPressed: onOpenSearch,
               icon: const Icon(
                 Icons.search_rounded,

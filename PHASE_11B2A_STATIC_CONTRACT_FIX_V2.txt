@@ -1,0 +1,3 @@
+Phase 11B2A v2
+Static contract fix: localized surface coverage is limited to lib/*.dart UI sources.
+The Phase 11B2A test file remains a test and is no longer treated as a localized UI surface.

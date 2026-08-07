@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -390,7 +391,8 @@ class _AdminBusinessManagementPageState
                 controller: _searchController,
                 onChanged: (value) => setState(() => _query = value),
                 decoration: InputDecoration(
-                  hintText: 'ابحث بالنشاط أو المالك أو الهاتف…',
+                  hintText: AppLocaleText.runtime(
+                      'ابحث بالنشاط أو المالك أو الهاتف…'),
                   prefixIcon: const Icon(Icons.search_rounded),
                   suffixIcon: _query.isEmpty
                       ? null
@@ -439,8 +441,8 @@ class _AdminBusinessManagementPageState
               child: DropdownButtonFormField<String>(
                 key: const ValueKey<String>('admin-business-category-filter'),
                 initialValue: _categoryFilter ?? '',
-                decoration: const InputDecoration(
-                  labelText: 'تصفية حسب القسم',
+                decoration: InputDecoration(
+                  labelText: AppLocaleText.runtime('تصفية حسب القسم'),
                   prefixIcon: Icon(Icons.category_rounded),
                 ),
                 items: <DropdownMenuItem<String>>[
@@ -664,7 +666,7 @@ class _BusinessCard extends StatelessWidget {
               const Spacer(),
               PopupMenuButton<_BusinessMenuAction>(
                 key: ValueKey<String>('business-actions-${business.id}'),
-                tooltip: 'إجراءات النشاط',
+                tooltip: AppLocaleText.runtime('إجراءات النشاط'),
                 onSelected: (action) async {
                   switch (action) {
                     case _BusinessMenuAction.feature:
@@ -845,8 +847,9 @@ class _SuspensionReasonDialogState extends State<_SuspensionReasonDialog> {
           if (valid != _valid) setState(() => _valid = valid);
         },
         onSubmitted: (_) => _submit(),
-        decoration: const InputDecoration(
-          hintText: 'اكتب سببًا واضحًا لا يقل عن خمسة أحرف…',
+        decoration: InputDecoration(
+          hintText:
+              AppLocaleText.runtime('اكتب سببًا واضحًا لا يقل عن خمسة أحرف…'),
         ),
       ),
       actions: [

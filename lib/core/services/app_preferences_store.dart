@@ -115,19 +115,25 @@ class AppPreferencesStore extends ChangeNotifier {
     await _preferences!.setString(themeModeKey, preset.storageValue);
   }
 
-  /// Arabic remains the production locale in Phase 11B1. The persisted locale
-  /// contract stays ready for Phase 11B2, where the complete English UI is
-  /// enabled after every application surface has been localized.
   Future<void> setLocaleCode(String value) async {
     final normalized = value.trim().toLowerCase();
     if (normalized != 'ar' && normalized != 'en') {
       throw ArgumentError.value(value, 'value', 'Unsupported locale code.');
     }
 
-    final preferences = await _ensurePreferences();
-    await preferences.setString(localeKey, normalized);
+    if (!_initialized) {
+      await initialize();
+    }
+    if (_snapshot.localeCode == normalized) {
+      return;
+    }
+
+    // Mirror the instant theme-switch contract: visible locale/direction changes
+    // must not wait for SharedPreferences I/O.
     _snapshot = _snapshot.copyWith(localeCode: normalized);
     notifyListeners();
+
+    await _preferences!.setString(localeKey, normalized);
   }
 
   Future<void> setPublicNotificationsEnabled(bool value) async {
@@ -155,10 +161,8 @@ class AppPreferencesStore extends ChangeNotifier {
   }
 
   AppPreferencesSnapshot _readSnapshot(SharedPreferences preferences) {
-    // Phase 11B1 intentionally keeps Arabic active until the complete English
-    // phrase migration lands in Phase 11B2. Existing stored English values are
-    // normalized back to Arabic so a partially translated UI cannot appear.
-    const safeLocale = 'ar';
+    final rawLocale = preferences.getString(localeKey)?.trim().toLowerCase();
+    final safeLocale = rawLocale == 'en' ? 'en' : 'ar';
 
     final rawScale = preferences.getString(textScaleKey);
     final scale = AppTextScalePreset.values.firstWhere(

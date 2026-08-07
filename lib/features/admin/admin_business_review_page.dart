@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -228,12 +229,13 @@ class _AdminBusinessReviewPageState extends State<AdminBusinessReviewPage> {
                   });
                 },
                 decoration: InputDecoration(
-                  hintText: 'ابحث باسم النشاط أو صاحبه أو القسم…',
+                  hintText: AppLocaleText.runtime(
+                      'ابحث باسم النشاط أو صاحبه أو القسم…'),
                   prefixIcon: const Icon(Icons.search_rounded),
                   suffixIcon: _query.isEmpty
                       ? null
                       : IconButton(
-                          tooltip: 'مسح البحث',
+                          tooltip: AppLocaleText.runtime('مسح البحث'),
                           onPressed: () {
                             _searchController.clear();
                             setState(() {

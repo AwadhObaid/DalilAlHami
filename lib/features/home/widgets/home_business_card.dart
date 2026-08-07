@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
@@ -185,7 +187,8 @@ class _BusinessContent extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.xs),
             IconButton.outlined(
-              tooltip: 'عرض التفاصيل',
+              tooltip: AppLocaleText.pick(context,
+                  ar: 'عرض التفاصيل', en: 'View details'),
               onPressed: onOpen,
               style: IconButton.styleFrom(
                 minimumSize: const Size(38, 38),

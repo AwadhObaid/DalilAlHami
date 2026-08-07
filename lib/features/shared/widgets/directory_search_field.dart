@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
@@ -50,7 +52,7 @@ class DirectorySearchField extends StatelessWidget {
           autofocus: autofocus,
           onChanged: onChanged,
           onSubmitted: onChanged,
-          textAlign: TextAlign.right,
+          textAlign: TextAlign.start,
           textInputAction: TextInputAction.search,
           style: AppTextStyles.bodyLarge,
           decoration: InputDecoration(
@@ -67,7 +69,8 @@ class DirectorySearchField extends StatelessWidget {
                 ? null
                 : IconButton(
                     key: ValueKey<String>('$fieldKey-clear'),
-                    tooltip: 'مسح البحث',
+                    tooltip: AppLocaleText.pick(context,
+                        ar: 'مسح البحث', en: 'Clear search'),
                     onPressed: onClear,
                     icon: Icon(
                       Icons.close_rounded,

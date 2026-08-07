@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -250,7 +251,7 @@ class _AdminNotificationManagementPageState
         title: const Text('إدارة الإشعارات'),
         actions: [
           IconButton(
-            tooltip: 'تحديث',
+            tooltip: AppLocaleText.runtime('تحديث'),
             onPressed: _loading || _sending ? null : _load,
             icon: const Icon(Icons.refresh_rounded),
           ),
@@ -359,14 +360,14 @@ class _AdminNotificationManagementPageState
               enabled: !_sending,
               maxLength: 120,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'عنوان الإشعار',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('عنوان الإشعار'),
                 prefixIcon: Icon(Icons.title_rounded),
               ),
               validator: (value) {
                 final text = value?.trim() ?? '';
                 if (text.length < 2) {
-                  return 'اكتب عنوانًا واضحًا.';
+                  return AppLocaleText.runtime('اكتب عنوانًا واضحًا.');
                 }
                 return null;
               },
@@ -379,21 +380,22 @@ class _AdminNotificationManagementPageState
               minLines: 3,
               maxLines: 5,
               maxLength: 600,
-              decoration: const InputDecoration(
-                labelText: 'نص الإشعار',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('نص الإشعار'),
                 alignLabelWithHint: true,
                 prefixIcon: Icon(Icons.message_rounded),
               ),
-              validator: (value) =>
-                  (value?.trim().isEmpty ?? true) ? 'اكتب نص الإشعار.' : null,
+              validator: (value) => (value?.trim().isEmpty ?? true)
+                  ? AppLocaleText.runtime('اكتب نص الإشعار.')
+                  : null,
             ),
             const SizedBox(height: AppSpacing.sm),
             DropdownButtonFormField<AdminNotificationAudience>(
               key: const ValueKey<String>('admin-notification-audience-field'),
               initialValue: _audience,
               isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'المستلمون',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('المستلمون'),
                 prefixIcon: Icon(Icons.groups_rounded),
               ),
               items: AdminNotificationAudience.values
@@ -427,8 +429,8 @@ class _AdminNotificationManagementPageState
                     ? _targetUserId
                     : null,
                 isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'المستخدم المستهدف',
+                decoration: InputDecoration(
+                  labelText: AppLocaleText.runtime('المستخدم المستهدف'),
                   prefixIcon: Icon(Icons.person_search_rounded),
                 ),
                 items: _users
@@ -445,8 +447,9 @@ class _AdminNotificationManagementPageState
                 onChanged: _sending
                     ? null
                     : (value) => setState(() => _targetUserId = value),
-                validator: (_) =>
-                    _targetUserId == null ? 'اختر المستخدم المستهدف.' : null,
+                validator: (_) => _targetUserId == null
+                    ? AppLocaleText.runtime('اختر المستخدم المستهدف.')
+                    : null,
               ),
             ],
             const SizedBox(height: AppSpacing.sm),
@@ -456,8 +459,8 @@ class _AdminNotificationManagementPageState
               ),
               initialValue: _navigation,
               isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'عند الضغط على الإشعار',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('عند الضغط على الإشعار'),
                 prefixIcon: Icon(Icons.ads_click_rounded),
               ),
               items: AdminNotificationNavigation.values
@@ -491,8 +494,8 @@ class _AdminNotificationManagementPageState
                     ? _businessId
                     : null,
                 isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'النشاط المرتبط',
+                decoration: InputDecoration(
+                  labelText: AppLocaleText.runtime('النشاط المرتبط'),
                   prefixIcon: Icon(Icons.storefront_rounded),
                 ),
                 items: _businesses
@@ -509,8 +512,9 @@ class _AdminNotificationManagementPageState
                 onChanged: _sending
                     ? null
                     : (value) => setState(() => _businessId = value),
-                validator: (_) =>
-                    _businessId == null ? 'اختر النشاط المرتبط.' : null,
+                validator: (_) => _businessId == null
+                    ? AppLocaleText.runtime('اختر النشاط المرتبط.')
+                    : null,
               ),
             ],
             const SizedBox(height: AppSpacing.lg),

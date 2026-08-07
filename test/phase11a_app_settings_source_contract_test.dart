@@ -25,7 +25,7 @@ void main() {
       'settings-text-scale-large',
       'settings-public-notifications-switch',
       'settings-notification-permission-status',
-      'settings-language-en-coming',
+      'settings-language-en',
       'settings-reset-defaults',
     ]) {
       expect(settings, contains(token), reason: token);

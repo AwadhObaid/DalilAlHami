@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -214,14 +215,14 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
     } else {
       reason = await showDialog<String>(
         context: context,
-        builder: (_) => const _AdminUserReasonDialog(
+        builder: (_) => _AdminUserReasonDialog(
           title: 'إيقاف الحساب',
           message:
               'سيُمنع المستخدم من تجديد الجلسة وتعديل بياناته حتى إعادة التفعيل.',
           fieldKey: 'admin-user-suspension-reason',
           confirmKey: 'admin-user-status-confirm',
           cancelKey: 'admin-user-suspension-reason-cancel',
-          labelText: 'سبب الإيقاف',
+          labelText: AppLocaleText.runtime('سبب الإيقاف'),
           confirmLabel: 'إيقاف',
         ),
       );
@@ -279,14 +280,14 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
     if (targetDeleted) {
       reason = await showDialog<String>(
         context: context,
-        builder: (_) => const _AdminUserReasonDialog(
+        builder: (_) => _AdminUserReasonDialog(
           title: 'حذف الحساب ظاهريًا',
           message:
               'سيُخفى الحساب من الاستخدام ويُمنع تسجيل الدخول، من دون حذف بيانات المصادقة أو الأنشطة نهائيًا.',
           fieldKey: 'admin-user-delete-reason',
           confirmKey: 'admin-user-delete-confirm',
           cancelKey: 'admin-user-delete-reason-cancel',
-          labelText: 'سبب الحذف الظاهري',
+          labelText: AppLocaleText.runtime('سبب الحذف الظاهري'),
           confirmLabel: 'حذف ظاهري',
         ),
       );
@@ -385,7 +386,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
         title: const Text('إدارة المستخدمين'),
         actions: [
           IconButton(
-            tooltip: 'تحديث',
+            tooltip: AppLocaleText.runtime('تحديث'),
             onPressed: _isLoading ? null : _load,
             icon: const Icon(Icons.refresh_rounded),
           ),
@@ -590,7 +591,8 @@ class _AdminUserReasonDialogState extends State<_AdminUserReasonDialog> {
               },
               decoration: InputDecoration(
                 labelText: widget.labelText,
-                hintText: 'اكتب سببًا واضحًا لا يقل عن خمسة أحرف',
+                hintText: AppLocaleText.runtime(
+                    'اكتب سببًا واضحًا لا يقل عن خمسة أحرف'),
                 errorText: _validationMessage,
                 alignLabelWithHint: true,
               ),
@@ -718,10 +720,11 @@ class _UserFilters extends StatelessWidget {
             textInputAction: TextInputAction.search,
             onSubmitted: (_) => onSearch(),
             decoration: InputDecoration(
-              labelText: 'البحث بالاسم أو البريد أو الهاتف',
+              labelText:
+                  AppLocaleText.runtime('البحث بالاسم أو البريد أو الهاتف'),
               prefixIcon: const Icon(Icons.search_rounded),
               suffixIcon: IconButton(
-                tooltip: 'مسح البحث',
+                tooltip: AppLocaleText.runtime('مسح البحث'),
                 onPressed: onClear,
                 icon: const Icon(Icons.close_rounded),
               ),
@@ -734,7 +737,8 @@ class _UserFilters extends StatelessWidget {
                 key: const ValueKey<String>('admin-user-status-filter'),
                 initialValue: status,
                 isExpanded: true,
-                decoration: const InputDecoration(labelText: 'الحالة'),
+                decoration:
+                    InputDecoration(labelText: AppLocaleText.runtime('الحالة')),
                 items: const [
                   DropdownMenuItem(value: 'all', child: Text('الكل')),
                   DropdownMenuItem(value: 'active', child: Text('نشط')),
@@ -754,7 +758,8 @@ class _UserFilters extends StatelessWidget {
                 key: const ValueKey<String>('admin-user-role-filter'),
                 initialValue: role,
                 isExpanded: true,
-                decoration: const InputDecoration(labelText: 'الدور'),
+                decoration:
+                    InputDecoration(labelText: AppLocaleText.runtime('الدور')),
                 items: const [
                   DropdownMenuItem(value: 'all', child: Text('الكل')),
                   DropdownMenuItem(value: 'user', child: Text('مستخدم')),
@@ -1347,7 +1352,7 @@ class _UserStateView extends StatelessWidget {
 
 String _formatDate(DateTime? value) {
   if (value == null) {
-    return 'غير متوفر';
+    return AppLocaleText.runtime('غير متوفر');
   }
   final local = value.toLocal();
   final day = local.day.toString().padLeft(2, '0');

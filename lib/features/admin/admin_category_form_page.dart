@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -156,13 +157,13 @@ class _AdminCategoryFormPageState extends State<AdminCategoryFormPage> {
             TextFormField(
               key: const ValueKey<String>('admin-category-name-field'),
               controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'اسم القسم بالعربية',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('اسم القسم بالعربية'),
                 prefixIcon: Icon(Icons.category_rounded),
               ),
               textInputAction: TextInputAction.next,
               validator: (value) => (value?.trim().length ?? 0) < 2
-                  ? 'اكتب اسمًا واضحًا للقسم.'
+                  ? AppLocaleText.runtime('اكتب اسمًا واضحًا للقسم.')
                   : null,
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -170,8 +171,8 @@ class _AdminCategoryFormPageState extends State<AdminCategoryFormPage> {
               key: const ValueKey<String>('admin-category-slug-field'),
               controller: _slugController,
               textDirection: TextDirection.ltr,
-              decoration: const InputDecoration(
-                labelText: 'المعرّف الإنجليزي Slug',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('المعرّف الإنجليزي Slug'),
                 hintText: 'restaurants',
                 prefixIcon: Icon(Icons.link_rounded),
               ),
@@ -179,7 +180,8 @@ class _AdminCategoryFormPageState extends State<AdminCategoryFormPage> {
               validator: (value) {
                 final text = value?.trim() ?? '';
                 if (!RegExp(r'^[a-z0-9]+(?:-[a-z0-9]+)*$').hasMatch(text)) {
-                  return 'استخدم حروفًا إنجليزية صغيرة وأرقامًا وشرطة فقط.';
+                  return AppLocaleText.runtime(
+                      'استخدم حروفًا إنجليزية صغيرة وأرقامًا وشرطة فقط.');
                 }
                 return null;
               },
@@ -188,8 +190,8 @@ class _AdminCategoryFormPageState extends State<AdminCategoryFormPage> {
             DropdownButtonFormField<String>(
               key: const ValueKey<String>('admin-category-group-field'),
               initialValue: _displayGroup,
-              decoration: const InputDecoration(
-                labelText: 'مجموعة العرض',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('مجموعة العرض'),
                 prefixIcon: Icon(Icons.account_tree_rounded),
               ),
               items: const [
@@ -205,8 +207,8 @@ class _AdminCategoryFormPageState extends State<AdminCategoryFormPage> {
               key: const ValueKey<String>('admin-category-icon-field'),
               initialValue: _iconName,
               isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'أيقونة القسم',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('أيقونة القسم'),
                 prefixIcon: Icon(Icons.emoji_symbols_rounded),
               ),
               items: _iconNames
@@ -234,14 +236,15 @@ class _AdminCategoryFormPageState extends State<AdminCategoryFormPage> {
               controller: _sortController,
               keyboardType: TextInputType.number,
               textDirection: TextDirection.ltr,
-              decoration: const InputDecoration(
-                labelText: 'ترتيب الظهور',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('ترتيب الظهور'),
                 prefixIcon: Icon(Icons.format_list_numbered_rounded),
               ),
               validator: (value) {
                 final number = int.tryParse(value?.trim() ?? '');
                 return number == null || number < 0
-                    ? 'أدخل رقم ترتيب صحيحًا يبدأ من صفر.'
+                    ? AppLocaleText.runtime(
+                        'أدخل رقم ترتيب صحيحًا يبدأ من صفر.')
                     : null;
               },
             ),
@@ -249,8 +252,8 @@ class _AdminCategoryFormPageState extends State<AdminCategoryFormPage> {
             AdminMediaField(
               key: const ValueKey<String>('admin-category-image-field'),
               label: 'صورة القسم',
-              helperText:
-                  'صورة مربعة أو قريبة من المربع؛ المقاس الموصى به 1200×1200.',
+              helperText: AppLocaleText.runtime(
+                  'صورة مربعة أو قريبة من المربع؛ المقاس الموصى به 1200×1200.'),
               controller: _imageController,
               kind: MediaAssetKind.category,
               entityId: widget.initialCategory?.id ?? 'new',

@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
@@ -136,7 +137,7 @@ class _AdminMediaFieldState extends State<AdminMediaField> {
       initialValue: current,
       validator: (_) {
         if (widget.isRequired && widget.controller.text.trim().isEmpty) {
-          return '${widget.label} مطلوبة.';
+          return AppLocaleText.runtime('${widget.label} مطلوبة.');
         }
         return null;
       },
@@ -216,8 +217,8 @@ class _AdminMediaFieldState extends State<AdminMediaField> {
               enabled: widget.enabled && !_uploading,
               keyboardType: TextInputType.url,
               textDirection: TextDirection.ltr,
-              decoration: const InputDecoration(
-                labelText: 'رابط أو مسار الصورة',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('رابط أو مسار الصورة'),
                 prefixIcon: Icon(Icons.link_rounded),
               ),
               onChanged: (_) {

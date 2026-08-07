@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
@@ -162,7 +164,7 @@ class _InlineAdvertisementBannerState extends State<InlineAdvertisementBanner> {
         .toDouble();
 
     final badgeHeight = _measureTextHeight(
-          'إعلان',
+          AppLocaleText.translate(context, 'إعلان'),
           style: AppTextStyles.labelSmall,
           maxWidth: contentWidth,
           maxLines: 1,
@@ -175,7 +177,7 @@ class _InlineAdvertisementBannerState extends State<InlineAdvertisementBanner> {
     var titleHeight = 0.0;
     for (final advertisement in widget.advertisements) {
       final measuredTitleHeight = _measureTextHeight(
-        advertisement.title,
+        AppLocaleText.translate(context, advertisement.title),
         style: AppTextStyles.titleMedium,
         maxWidth: contentWidth,
         maxLines: 2,
@@ -188,7 +190,7 @@ class _InlineAdvertisementBannerState extends State<InlineAdvertisementBanner> {
 
     final actionHeight = hasOpenAction
         ? _measureTextHeight(
-            'اضغط لعرض التفاصيل',
+            AppLocaleText.translate(context, 'اضغط لعرض التفاصيل'),
             style: AppTextStyles.bodySmall,
             maxWidth: contentWidth,
             maxLines: 1,
@@ -205,12 +207,25 @@ class _InlineAdvertisementBannerState extends State<InlineAdvertisementBanner> {
         (hasOpenAction ? AppSpacing.xxs + actionHeight : 0);
     final indicatorReserve =
         widget.advertisements.length > 1 ? AppSpacing.sm : 0.0;
-    final minimumHeight = bannerWidth < 300 ? 132.0 : 124.0;
+
+    // TextPainter gives the nominal glyph height, while the real Text widgets
+    // can still need a few extra logical pixels after font fallback/rounding,
+    // especially on narrow layouts with enlarged text. Keep a small reserve
+    // that grows with the effective title font size so the banner never relies
+    // on pixel-perfect measurement parity between TextPainter and RenderParagraph.
+    final titleFontSize = AppTextStyles.titleMedium.fontSize ?? 16.0;
+    final scaledTitleFontSize = textScaler.scale(titleFontSize);
+    final textScaleReserve = math.max(
+      4.0,
+      (scaledTitleFontSize - titleFontSize) + 4.0,
+    );
+    final baseMinimumHeight = bannerWidth < 300 ? 132.0 : 124.0;
+    final minimumHeight = baseMinimumHeight + textScaleReserve;
 
     return math
         .max(
           minimumHeight,
-          contentHeight + indicatorReserve + 2,
+          contentHeight + indicatorReserve + textScaleReserve,
         )
         .toDouble();
   }

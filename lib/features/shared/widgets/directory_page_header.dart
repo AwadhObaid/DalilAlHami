@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
@@ -64,7 +66,8 @@ class DirectoryPageHeader extends StatelessWidget {
                   children: [
                     if (onBack != null) ...[
                       _HeaderActionButton(
-                        tooltip: 'رجوع',
+                        tooltip:
+                            AppLocaleText.pick(context, ar: 'رجوع', en: 'Back'),
                         icon: Icons.arrow_forward_rounded,
                         onPressed: onBack!,
                       ),
@@ -145,7 +148,10 @@ class DirectoryHeaderRefreshButton extends StatelessWidget {
   Widget build(BuildContext context) {
     AppColors.bindToTheme(context);
     return _HeaderActionButton(
-      tooltip: isLoading ? 'جارٍ التحديث' : 'تحديث البيانات',
+      tooltip: isLoading
+          ? AppLocaleText.pick(context, ar: 'جارٍ التحديث', en: 'Refreshing')
+          : AppLocaleText.pick(context,
+              ar: 'تحديث البيانات', en: 'Refresh data'),
       icon: Icons.refresh_rounded,
       onPressed: isLoading ? null : onPressed,
       showProgress: isLoading,

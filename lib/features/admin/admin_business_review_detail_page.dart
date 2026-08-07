@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -386,7 +387,8 @@ class _AdminReviewReasonSheetState extends State<_AdminReviewReasonSheet> {
                   }
                 },
                 decoration: InputDecoration(
-                  labelText: isReject ? 'سبب الرفض' : 'التعديلات المطلوبة',
+                  labelText: AppLocaleText.runtime(
+                      isReject ? 'سبب الرفض' : 'التعديلات المطلوبة'),
                   errorText: _validationMessage,
                   alignLabelWithHint: true,
                 ),
@@ -789,7 +791,7 @@ class _ReviewActionBar extends StatelessWidget {
                   const SizedBox(width: AppSpacing.xs),
                   IconButton.filledTonal(
                     key: const ValueKey<String>('reject-business-button'),
-                    tooltip: 'رفض النشاط',
+                    tooltip: AppLocaleText.runtime('رفض النشاط'),
                     onPressed: onReject,
                     style: IconButton.styleFrom(
                       foregroundColor: AppColors.danger,

@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -320,7 +321,8 @@ class _AdminCategoryManagementPageState
                 controller: _searchController,
                 onChanged: (value) => setState(() => _query = value),
                 decoration: InputDecoration(
-                  hintText: 'ابحث باسم القسم أو المعرّف…',
+                  hintText:
+                      AppLocaleText.runtime('ابحث باسم القسم أو المعرّف…'),
                   prefixIcon: const Icon(Icons.search_rounded),
                   suffixIcon: _query.isEmpty
                       ? null
@@ -537,14 +539,14 @@ class _CategoryCard extends StatelessWidget {
               ),
               const Spacer(),
               IconButton(
-                tooltip: archived ? 'تفعيل' : 'أرشفة',
+                tooltip: AppLocaleText.runtime(archived ? 'تفعيل' : 'أرشفة'),
                 onPressed: onToggle,
                 icon: Icon(
                   archived ? Icons.restore_rounded : Icons.archive_rounded,
                 ),
               ),
               IconButton(
-                tooltip: 'حذف نهائي',
+                tooltip: AppLocaleText.runtime('حذف نهائي'),
                 onPressed: category.canDeletePermanently ? onDelete : null,
                 color: AppColors.danger,
                 icon: const Icon(Icons.delete_forever_rounded),

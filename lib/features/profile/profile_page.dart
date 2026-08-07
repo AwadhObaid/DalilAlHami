@@ -1,6 +1,7 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/constants/app_colors.dart';
@@ -430,13 +431,14 @@ class _ProfilePageState extends State<ProfilePage> {
     final text = error.toString();
 
     if (text.contains('row-level security')) {
-      return 'لم تسمح صلاحيات قاعدة البيانات بتنفيذ العملية.';
+      return AppLocaleText.runtime(
+          'لم تسمح صلاحيات قاعدة البيانات بتنفيذ العملية.');
     }
 
     if (text.contains('network') ||
         text.contains('SocketException') ||
         text.contains('Failed host lookup')) {
-      return 'تعذر الاتصال بالإنترنت.';
+      return AppLocaleText.runtime('تعذر الاتصال بالإنترنت.');
     }
 
     return text.replaceFirst('Exception: ', '');
@@ -536,7 +538,7 @@ class _ProfilePageState extends State<ProfilePage> {
         backgroundColor: AppColors.primaryTeal,
         actions: [
           IconButton(
-            tooltip: 'تسجيل الخروج',
+            tooltip: AppLocaleText.runtime('تسجيل الخروج'),
             onPressed: _isSaving ? null : _signOut,
             icon: const Icon(Icons.logout),
           ),
@@ -1023,7 +1025,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           IconButton.filledTonal(
             key: const ValueKey<String>('profile-avatar-upload-action'),
-            tooltip: 'اختيار صورة شخصية',
+            tooltip: AppLocaleText.runtime('اختيار صورة شخصية'),
             onPressed:
                 _isUploadingAvatar || _isSaving ? null : _uploadProfileAvatar,
             icon: _isUploadingAvatar

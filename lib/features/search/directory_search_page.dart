@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -130,7 +132,11 @@ class _DirectorySearchPageState extends State<DirectorySearchPage>
                   onChanged: _search,
                   onClear: _clearSearch,
                   fieldKey: 'directory-search-field',
-                  hintText: 'ابحث عن مطعم، صيدلية، ورشة أو اسم نشاط…',
+                  hintText: AppLocaleText.pick(
+                    context,
+                    ar: 'ابحث عن مطعم، صيدلية، ورشة أو اسم نشاط…',
+                    en: 'Search for a restaurant, pharmacy, workshop, or business…',
+                  ),
                 ),
               ),
               DirectoryFilterBar(

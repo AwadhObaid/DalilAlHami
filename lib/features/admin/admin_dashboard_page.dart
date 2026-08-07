@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -106,7 +107,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     if (error is AdminRepositoryFailure) {
       return error.message;
     }
-    return 'تعذر تحميل بيانات الإدارة. تحقق من الاتصال ثم أعد المحاولة.';
+    return AppLocaleText.runtime(
+        'تعذر تحميل بيانات الإدارة. تحقق من الاتصال ثم أعد المحاولة.');
   }
 
   @override

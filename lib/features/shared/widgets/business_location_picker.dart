@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/location/business_location.dart';
@@ -135,7 +136,7 @@ class BusinessLocationPicker extends StatelessWidget {
                   key: const ValueKey<String>(
                     'business-location-clear-action',
                   ),
-                  tooltip: 'إزالة الموقع',
+                  tooltip: AppLocaleText.runtime('إزالة الموقع'),
                   onPressed: enabled ? () => onChanged(null) : null,
                   icon: const Icon(Icons.location_off_outlined),
                 ),

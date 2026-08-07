@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
@@ -49,7 +51,7 @@ class _AdSliderState extends State<AdSlider> {
             .toDouble();
 
     final adContent = Semantics(
-      label: 'الإعلانات المحلية',
+      label: AppLocaleText.translate(context, 'الإعلانات المحلية'),
       child: Container(
         key: const ValueKey<String>('home-ad-slider'),
         clipBehavior: Clip.antiAlias,
@@ -446,20 +448,38 @@ class _AdvertisementBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     AppColors.bindToTheme(context);
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? AppSpacing.xs : AppSpacing.sm,
-        vertical: AppSpacing.xxs,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.advertisementGold,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-      ),
-      child: Text(
-        'إعلان',
-        style: AppTextStyles.labelSmall.copyWith(
-          color: AppColors.advertisementInk,
+    final translatedLabel = AppLocaleText.translate(context, 'إعلان');
+    final compactIconOnly = compact &&
+        (MediaQuery.sizeOf(context).width < 340 ||
+            MediaQuery.textScalerOf(context).scale(1) > 1.15);
+
+    return Semantics(
+      label: translatedLabel,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: compactIconOnly
+              ? AppSpacing.xs
+              : (compact ? AppSpacing.xs : AppSpacing.sm),
+          vertical: AppSpacing.xxs,
         ),
+        decoration: BoxDecoration(
+          color: AppColors.advertisementGold,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+        ),
+        child: compactIconOnly
+            ? Icon(
+                Icons.campaign_rounded,
+                size: 16,
+                color: AppColors.advertisementInk,
+              )
+            : Text(
+                'إعلان',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.advertisementInk,
+                ),
+              ),
       ),
     );
   }

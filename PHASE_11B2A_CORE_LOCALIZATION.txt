@@ -1,0 +1,20 @@
+Phase 11B2A Core Localization and RTL/LTR
+=========================================
+
+Scope
+-----
+- Activates persisted Arabic and English locale switching.
+- Locale updates in memory before SharedPreferences persistence for instant UI response.
+- Uses Flutter locale delegates for automatic RTL/LTR direction changes.
+- Localizes the primary user journey: splash, home shell, discovery/search,
+  directory browsing/details, notifications, authentication, application settings,
+  and shared directory presentation widgets.
+- Translates the built-in service/transport category names on localized presentation surfaces.
+- Preserves business names, database values, identifiers, Supabase authorization data,
+  and other domain values exactly as stored.
+- Keeps Phase 11B1 Light/Dark/System behavior and its immediate repaint contract.
+
+Next localization slice
+-----------------------
+Phase 11B2B completes account/business-management and administration surfaces.
+This split prevents a 700+ phrase migration from being combined into one unreviewable patch.

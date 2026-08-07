@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
@@ -40,11 +42,15 @@ class SearchBox extends StatelessWidget {
           controller: controller,
           onChanged: onChanged,
           onSubmitted: onChanged,
-          textAlign: TextAlign.right,
+          textAlign: TextAlign.start,
           textInputAction: TextInputAction.search,
           style: AppTextStyles.bodyLarge,
           decoration: InputDecoration(
-            hintText: 'ابحث عن مطعم، صيدلية، ورشة أو اسم نشاط…',
+            hintText: AppLocaleText.pick(
+              context,
+              ar: 'ابحث عن مطعم، صيدلية، ورشة أو اسم نشاط…',
+              en: 'Search for a restaurant, pharmacy, workshop, or business…',
+            ),
             hintStyle: AppTextStyles.bodyMedium.copyWith(
               color: AppColors.textMuted,
             ),
@@ -56,7 +62,8 @@ class SearchBox extends StatelessWidget {
             suffixIcon: query.isEmpty
                 ? null
                 : IconButton(
-                    tooltip: 'مسح البحث',
+                    tooltip: AppLocaleText.pick(context,
+                        ar: 'مسح البحث', en: 'Clear search'),
                     onPressed: onClear,
                     icon: Icon(
                       Icons.close_rounded,

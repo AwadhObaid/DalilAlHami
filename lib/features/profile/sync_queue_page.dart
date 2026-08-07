@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -205,7 +206,7 @@ class _SyncQueuePageState extends State<SyncQueuePage> {
         backgroundColor: AppColors.primaryTeal,
         actions: <Widget>[
           IconButton(
-            tooltip: 'تحديث',
+            tooltip: AppLocaleText.runtime('تحديث'),
             onPressed: _isLoading ? null : _load,
             icon: const Icon(Icons.refresh_rounded),
           ),

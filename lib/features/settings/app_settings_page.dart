@@ -1,5 +1,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -232,25 +234,32 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
             icon: Icons.language_rounded,
             child: Column(
               children: [
-                const ListTile(
-                  key: ValueKey<String>('settings-language-ar'),
-                  leading: Icon(Icons.language_rounded),
-                  title: Text('العربية'),
-                  subtitle: Text('لغة التطبيق الحالية'),
-                  trailing: Icon(
-                    Icons.check_circle_rounded,
-                    color: AppColors.primaryTeal,
-                  ),
+                ListTile(
+                  key: const ValueKey<String>('settings-language-ar'),
+                  onTap: () => _preferences.setLocaleCode('ar'),
+                  leading: const Icon(Icons.language_rounded),
+                  title: const Text('العربية'),
+                  subtitle: const Text('واجهة عربية من اليمين إلى اليسار'),
+                  trailing: snapshot.localeCode == 'ar'
+                      ? const Icon(
+                          Icons.check_circle_rounded,
+                          color: AppColors.primaryTeal,
+                        )
+                      : const Icon(Icons.circle_outlined),
                 ),
                 const Divider(height: 1),
-                const ListTile(
-                  key: ValueKey<String>('settings-language-en-coming'),
-                  enabled: false,
-                  leading: Icon(Icons.translate_rounded),
-                  title: Text('English'),
-                  subtitle:
-                      Text('تفعيل الواجهة الإنجليزية الكاملة في Phase 11B2'),
-                  trailing: Chip(label: Text('قريبًا')),
+                ListTile(
+                  key: const ValueKey<String>('settings-language-en'),
+                  onTap: () => _preferences.setLocaleCode('en'),
+                  leading: const Icon(Icons.translate_rounded),
+                  title: const Text('English'),
+                  subtitle: const Text('واجهة إنجليزية من اليسار إلى اليمين'),
+                  trailing: snapshot.localeCode == 'en'
+                      ? const Icon(
+                          Icons.check_circle_rounded,
+                          color: AppColors.primaryTeal,
+                        )
+                      : const Icon(Icons.circle_outlined),
                 ),
               ],
             ),
@@ -288,7 +297,8 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                   title: const Text('إذن إشعارات Android'),
                   subtitle: Text(_permissionLabel(_authorizationStatus)),
                   trailing: IconButton(
-                    tooltip: 'تحديث الحالة',
+                    tooltip: AppLocaleText.pick(context,
+                        ar: 'تحديث الحالة', en: 'Refresh status'),
                     onPressed: _refreshNotificationStatus,
                     icon: const Icon(Icons.refresh_rounded),
                   ),

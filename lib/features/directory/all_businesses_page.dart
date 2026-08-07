@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -115,7 +117,11 @@ class _AllBusinessesPageState extends State<AllBusinessesPage> {
                   },
                   onClear: _clearSearch,
                   fieldKey: 'all-businesses-search-field',
-                  hintText: 'ابحث داخل جميع الأنشطة…',
+                  hintText: AppLocaleText.pick(
+                    context,
+                    ar: 'ابحث داخل جميع الأنشطة…',
+                    en: 'Search all businesses…',
+                  ),
                 ),
               ),
               DirectoryFilterBar(

@@ -33,7 +33,7 @@ class HamiGuideApp extends StatelessWidget {
         return MaterialApp(
           navigatorKey: appNavigatorKey,
           debugShowCheckedModeBanner: false,
-          title: 'دليل الحامي',
+          title: snapshot.localeCode == 'en' ? 'Al Hami Guide' : 'دليل الحامي',
           locale: Locale(snapshot.localeCode),
           supportedLocales: const [
             Locale('ar'),

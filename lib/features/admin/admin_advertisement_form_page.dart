@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -186,7 +187,7 @@ class _AdminAdvertisementFormPageState
   String? _requiredText(String? value, String label, {int minLength = 2}) {
     final text = value?.trim() ?? '';
     if (text.length < minLength) {
-      return '$label مطلوب.';
+      return AppLocaleText.runtime('$label مطلوب.');
     }
     return null;
   }
@@ -194,7 +195,7 @@ class _AdminAdvertisementFormPageState
   String? _validateSortOrder(String? value) {
     final number = int.tryParse(value?.trim() ?? '');
     if (number == null || number < 0) {
-      return 'اكتب ترتيبًا صحيحًا يساوي صفرًا أو أكثر.';
+      return AppLocaleText.runtime('اكتب ترتيبًا صحيحًا يساوي صفرًا أو أكثر.');
     }
     return null;
   }
@@ -208,7 +209,7 @@ class _AdminAdvertisementFormPageState
     if (uri == null ||
         !uri.hasAuthority ||
         (uri.scheme != 'http' && uri.scheme != 'https')) {
-      return 'اكتب رابطًا صحيحًا يبدأ بـ http أو https.';
+      return AppLocaleText.runtime('اكتب رابطًا صحيحًا يبدأ بـ http أو https.');
     }
     return null;
   }
@@ -239,9 +240,10 @@ class _AdminAdvertisementFormPageState
               key: const ValueKey<String>('admin-advertisement-title-field'),
               controller: _titleController,
               textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'عنوان الإعلان',
-                hintText: 'مثال: خصم خاص لزوار دليل الحامي',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('عنوان الإعلان'),
+                hintText:
+                    AppLocaleText.runtime('مثال: خصم خاص لزوار دليل الحامي'),
                 prefixIcon: Icon(Icons.title_rounded),
               ),
               validator: (value) => _requiredText(value, 'عنوان الإعلان'),
@@ -250,7 +252,8 @@ class _AdminAdvertisementFormPageState
             AdminMediaField(
               key: const ValueKey<String>('admin-advertisement-image-field'),
               label: 'صورة الإعلان — العرض الكامل',
-              helperText: 'المقاس الموصى به 1440×810 بنسبة 16:9.',
+              helperText: AppLocaleText.runtime(
+                  'المقاس الموصى به 1440×810 بنسبة 16:9.'),
               controller: _imagePathController,
               kind: MediaAssetKind.advertisementExpanded,
               entityId: _initial?.id ?? 'new',
@@ -264,8 +267,8 @@ class _AdminAdvertisementFormPageState
                 'admin-advertisement-compact-image-field',
               ),
               label: 'صورة الإعلان — الهيدر المصغّر',
-              helperText:
-                  'المقاس الموصى به 1600×360. عند تركها فارغة تستخدم الصورة الكاملة.',
+              helperText: AppLocaleText.runtime(
+                  'المقاس الموصى به 1600×360. عند تركها فارغة تستخدم الصورة الكاملة.'),
               controller: _compactImagePathController,
               kind: MediaAssetKind.advertisementCompact,
               entityId: _initial?.id ?? 'new',
@@ -279,8 +282,8 @@ class _AdminAdvertisementFormPageState
               ),
               initialValue: _placement,
               isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'موضع الظهور',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('موضع الظهور'),
                 prefixIcon: Icon(Icons.view_quilt_rounded),
               ),
               items: AdminAdvertisementPlacement.values
@@ -310,9 +313,9 @@ class _AdminAdvertisementFormPageState
               controller: _sortOrderController,
               keyboardType: TextInputType.number,
               textInputAction: TextInputAction.done,
-              decoration: const InputDecoration(
-                labelText: 'ترتيب الظهور',
-                helperText: 'الرقم الأصغر يظهر أولًا.',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('ترتيب الظهور'),
+                helperText: AppLocaleText.runtime('الرقم الأصغر يظهر أولًا.'),
                 prefixIcon: Icon(Icons.format_list_numbered_rounded),
               ),
               validator: _validateSortOrder,
@@ -324,8 +327,8 @@ class _AdminAdvertisementFormPageState
               key: const ValueKey<String>('admin-advertisement-target-type'),
               initialValue: _targetType,
               isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'نوع الوجهة',
+              decoration: InputDecoration(
+                labelText: AppLocaleText.runtime('نوع الوجهة'),
                 prefixIcon: Icon(Icons.ads_click_rounded),
               ),
               items: AdminAdvertisementTargetType.values
@@ -358,8 +361,8 @@ class _AdminAdvertisementFormPageState
                         ? _businessId
                         : null,
                 isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'النشاط المرتبط',
+                decoration: InputDecoration(
+                  labelText: AppLocaleText.runtime('النشاط المرتبط'),
                   prefixIcon: Icon(Icons.store_mall_directory_rounded),
                 ),
                 items: widget.businesses
@@ -390,8 +393,8 @@ class _AdminAdvertisementFormPageState
                 controller: _targetUrlController,
                 keyboardType: TextInputType.url,
                 textDirection: TextDirection.ltr,
-                decoration: const InputDecoration(
-                  labelText: 'الرابط الخارجي',
+                decoration: InputDecoration(
+                  labelText: AppLocaleText.runtime('الرابط الخارجي'),
                   hintText: 'https://example.com',
                   prefixIcon: Icon(Icons.link_rounded),
                 ),
@@ -483,7 +486,7 @@ class _AdminAdvertisementFormPageState
   }
 
   String _formatDateTime(DateTime? value) {
-    if (value == null) return 'غير محدد';
+    if (value == null) return AppLocaleText.runtime('غير محدد');
     final local = value.toLocal();
     String two(int number) => number.toString().padLeft(2, '0');
     return '${local.year}/${two(local.month)}/${two(local.day)} — '
@@ -589,12 +592,12 @@ class _ScheduleTile extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'اختيار',
+            tooltip: AppLocaleText.runtime('اختيار'),
             onPressed: onPick,
             icon: const Icon(Icons.edit_calendar_rounded),
           ),
           IconButton(
-            tooltip: 'مسح',
+            tooltip: AppLocaleText.runtime('مسح'),
             onPressed: onClear,
             icon: const Icon(Icons.clear_rounded),
           ),

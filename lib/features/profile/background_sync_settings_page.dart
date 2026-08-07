@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Text;
+import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
@@ -204,7 +205,7 @@ class _BackgroundSyncSettingsPageState
                   'يسجل مهمة فورية، وقد يؤخر Android تنفيذها وفق حالة الجهاز.',
                 ),
                 trailing: IconButton(
-                  tooltip: 'جدولة اختبار',
+                  tooltip: AppLocaleText.runtime('جدولة اختبار'),
                   onPressed: !snapshot.backgroundSyncEnabled || _isUpdating
                       ? null
                       : _scheduleTest,
