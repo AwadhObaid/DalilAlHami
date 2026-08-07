@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// User-facing application preferences that are safe to keep locally.
@@ -16,15 +16,33 @@ extension AppTextScalePresetValue on AppTextScalePreset {
   String get storageValue => name;
 }
 
+enum AppThemeModePreset {
+  system,
+  light,
+  dark,
+}
+
+extension AppThemeModePresetValue on AppThemeModePreset {
+  String get storageValue => name;
+
+  ThemeMode get materialThemeMode => switch (this) {
+        AppThemeModePreset.system => ThemeMode.system,
+        AppThemeModePreset.light => ThemeMode.light,
+        AppThemeModePreset.dark => ThemeMode.dark,
+      };
+}
+
 class AppPreferencesSnapshot {
   const AppPreferencesSnapshot({
     this.localeCode = 'ar',
     this.textScalePreset = AppTextScalePreset.normal,
+    this.themeModePreset = AppThemeModePreset.system,
     this.publicNotificationsEnabled = true,
   });
 
   final String localeCode;
   final AppTextScalePreset textScalePreset;
+  final AppThemeModePreset themeModePreset;
   final bool publicNotificationsEnabled;
 
   double get textScaleFactor => textScalePreset.factor;
@@ -32,11 +50,13 @@ class AppPreferencesSnapshot {
   AppPreferencesSnapshot copyWith({
     String? localeCode,
     AppTextScalePreset? textScalePreset,
+    AppThemeModePreset? themeModePreset,
     bool? publicNotificationsEnabled,
   }) {
     return AppPreferencesSnapshot(
       localeCode: localeCode ?? this.localeCode,
       textScalePreset: textScalePreset ?? this.textScalePreset,
+      themeModePreset: themeModePreset ?? this.themeModePreset,
       publicNotificationsEnabled:
           publicNotificationsEnabled ?? this.publicNotificationsEnabled,
     );
@@ -50,6 +70,7 @@ class AppPreferencesStore extends ChangeNotifier {
 
   static const String localeKey = 'app_locale_code_v1';
   static const String textScaleKey = 'app_text_scale_preset_v1';
+  static const String themeModeKey = 'phase11b_theme_mode_v1';
   static const String publicNotificationsKey =
       'phase11_public_notifications_enabled_v1';
 
@@ -78,10 +99,25 @@ class AppPreferencesStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Phase 11A keeps Arabic as the production language while Phase 11B
-  /// completes the full English translation. The persisted locale contract is
-  /// already in place so the later rollout does not need another settings
-  /// migration.
+  Future<void> setThemeModePreset(AppThemeModePreset preset) async {
+    if (!_initialized) {
+      await initialize();
+    }
+    if (_snapshot.themeModePreset == preset) {
+      return;
+    }
+
+    // Update the in-memory preference first so the UI reacts in the same frame.
+    // Persistence happens afterwards and must never block the visible theme switch.
+    _snapshot = _snapshot.copyWith(themeModePreset: preset);
+    notifyListeners();
+
+    await _preferences!.setString(themeModeKey, preset.storageValue);
+  }
+
+  /// Arabic remains the production locale in Phase 11B1. The persisted locale
+  /// contract stays ready for Phase 11B2, where the complete English UI is
+  /// enabled after every application surface has been localized.
   Future<void> setLocaleCode(String value) async {
     final normalized = value.trim().toLowerCase();
     if (normalized != 'ar' && normalized != 'en') {
@@ -105,6 +141,7 @@ class AppPreferencesStore extends ChangeNotifier {
     final preferences = await _ensurePreferences();
     await preferences.remove(localeKey);
     await preferences.remove(textScaleKey);
+    await preferences.remove(themeModeKey);
     await preferences.remove(publicNotificationsKey);
     _snapshot = const AppPreferencesSnapshot();
     notifyListeners();
@@ -118,8 +155,10 @@ class AppPreferencesStore extends ChangeNotifier {
   }
 
   AppPreferencesSnapshot _readSnapshot(SharedPreferences preferences) {
-    final locale = preferences.getString(localeKey)?.trim().toLowerCase();
-    final safeLocale = locale == 'en' ? 'en' : 'ar';
+    // Phase 11B1 intentionally keeps Arabic active until the complete English
+    // phrase migration lands in Phase 11B2. Existing stored English values are
+    // normalized back to Arabic so a partially translated UI cannot appear.
+    const safeLocale = 'ar';
 
     final rawScale = preferences.getString(textScaleKey);
     final scale = AppTextScalePreset.values.firstWhere(
@@ -127,9 +166,16 @@ class AppPreferencesStore extends ChangeNotifier {
       orElse: () => AppTextScalePreset.normal,
     );
 
+    final rawThemeMode = preferences.getString(themeModeKey);
+    final themeMode = AppThemeModePreset.values.firstWhere(
+      (value) => value.storageValue == rawThemeMode,
+      orElse: () => AppThemeModePreset.system,
+    );
+
     return AppPreferencesSnapshot(
       localeCode: safeLocale,
       textScalePreset: scale,
+      themeModePreset: themeMode,
       publicNotificationsEnabled:
           preferences.getBool(publicNotificationsKey) ?? true,
     );

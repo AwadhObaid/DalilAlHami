@@ -1,0 +1,29 @@
+Phase 11B1 Theme Rebuild Fix v5
+===============================
+
+Purpose
+-------
+Remove the remaining delayed color updates when switching between Light,
+Dark, and System themes.
+
+Root cause
+----------
+Many legacy widgets read AppColors static tokens without calling Theme.of.
+Changing ThemeMode therefore did not register those widgets as dependents of
+the inherited Material Theme. They repainted only after another state change,
+navigation event, or rebuild.
+
+Fix
+---
+- Added AppColors.bindToTheme(BuildContext).
+- Every widget build method in Phase 11B1 surfaces that reads AppColors now
+  registers a Material Theme dependency.
+- Theme switching remains immediate and non-animated in Phase 11B1.
+- Added widget and source-contract tests for same-frame theme repaint coverage.
+
+Additional implicit-animation fix
+---------------------------------
+Theme-sensitive AnimatedContainer usage was removed from the home navigation,
+automatic sync banner, and advertisement page indicators. The category icon
+surface also updates immediately; only its theme-invariant emphasis underline
+keeps the 180 ms interaction animation.

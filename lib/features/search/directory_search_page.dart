@@ -91,6 +91,7 @@ class _DirectorySearchPageState extends State<DirectorySearchPage>
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     super.build(context);
 
     final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
@@ -315,6 +316,7 @@ class _SearchPrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     const examples = ['مطاعم', 'صيدليات', 'ورش', 'نقل'];
 
     return ListView(
@@ -330,7 +332,7 @@ class _SearchPrompt extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               begin: AlignmentDirectional.topStart,
               end: AlignmentDirectional.bottomEnd,
               colors: [
@@ -424,6 +426,7 @@ class _SearchStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
@@ -436,7 +439,7 @@ class _SearchStatCard extends StatelessWidget {
           Container(
             width: 40,
             height: 40,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: AppColors.primarySoft,
               shape: BoxShape.circle,
             ),
@@ -481,6 +484,7 @@ class _EmptySearchResults extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return RefreshIndicator(
       onRefresh: DirectoryDataStore.instance.refresh,
       child: ListView(

@@ -111,6 +111,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(
@@ -383,6 +384,7 @@ class _AdminLoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return const Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -403,6 +405,7 @@ class _AdminWelcomeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -487,6 +490,7 @@ class _ResponsiveMetrics extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -528,6 +532,7 @@ class _AdminMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       constraints: const BoxConstraints(minHeight: 118),
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -581,6 +586,7 @@ class _BusinessStatusSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Wrap(
       spacing: AppSpacing.xs,
       runSpacing: AppSpacing.xs,
@@ -633,6 +639,7 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
@@ -671,6 +678,7 @@ class _AdminModuleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Material(
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -729,7 +737,7 @@ class _AdminModuleCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
-                  const Icon(
+                  Icon(
                     Icons.arrow_back_ios_new_rounded,
                     size: 16,
                     color: AppColors.textMuted,
@@ -755,6 +763,7 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -773,6 +782,7 @@ class _FoundationNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final localTime = loadedAt.toLocal();
     final time = '${localTime.hour.toString().padLeft(2, '0')}:'
         '${localTime.minute.toString().padLeft(2, '0')}';
@@ -826,6 +836,7 @@ class _AdminStateView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         return SingleChildScrollView(

@@ -48,6 +48,7 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Scaffold(
       appBar: AppBar(title: const Text('تسجيل الدخول')),
       body: SafeArea(
@@ -61,7 +62,7 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
                 child: Container(
                   width: 92,
                   height: 92,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: AppColors.primarySoft,
                     shape: BoxShape.circle,
                   ),

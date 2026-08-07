@@ -23,6 +23,7 @@ class CategoryCircleItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final visual = _CategoryVisual.forIndex(accentIndex);
 
     return Semantics(
@@ -44,8 +45,7 @@ class CategoryCircleItem extends StatelessWidget {
                 mainAxisSize: MainAxisSize.max,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
+                  Container(
                     width: AppSizes.categoryIcon,
                     height: AppSizes.categoryIcon,
                     decoration: BoxDecoration(
@@ -134,27 +134,27 @@ class _CategoryVisual {
 
   static _CategoryVisual forIndex(int index) {
     return switch (index % 6) {
-      1 => const _CategoryVisual(
+      1 => _CategoryVisual(
           fill: AppColors.categoryRoseSoft,
           foreground: Color(0xFFC34868),
         ),
-      2 => const _CategoryVisual(
+      2 => _CategoryVisual(
           fill: AppColors.categoryBlueSoft,
           foreground: Color(0xFF3979B8),
         ),
-      3 => const _CategoryVisual(
+      3 => _CategoryVisual(
           fill: AppColors.categoryLimeSoft,
           foreground: Color(0xFF43885A),
         ),
-      4 => const _CategoryVisual(
+      4 => _CategoryVisual(
           fill: AppColors.categoryPeachSoft,
           foreground: Color(0xFFB36B23),
         ),
-      5 => const _CategoryVisual(
+      5 => _CategoryVisual(
           fill: AppColors.categoryLavenderSoft,
           foreground: Color(0xFF6D55A8),
         ),
-      _ => const _CategoryVisual(
+      _ => _CategoryVisual(
           fill: AppColors.primarySoft,
           foreground: AppColors.primaryTeal,
         ),

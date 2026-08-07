@@ -160,6 +160,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final isKeyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
 
     return Scaffold(
@@ -194,6 +195,7 @@ class _AdaptiveBottomNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final mediaQuery = MediaQuery.of(context);
     final requestedScale = mediaQuery.textScaler.scale(1);
     final navigationTextScale = requestedScale.clamp(1.0, 1.08).toDouble();
@@ -204,7 +206,7 @@ class _AdaptiveBottomNavigationBar extends StatelessWidget {
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       child: DecoratedBox(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppColors.surface,
           boxShadow: AppShadows.navigation,
           borderRadius: BorderRadius.vertical(
@@ -286,6 +288,7 @@ class _BusinessActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Semantics(
       button: true,
       label: 'إضافة نشاط',
@@ -358,6 +361,7 @@ class _NavigationDestinationButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final foregroundColor =
         selected ? AppColors.primaryTeal : AppColors.textSecondary;
 
@@ -372,9 +376,7 @@ class _NavigationDestinationButton extends StatelessWidget {
           key: ValueKey<String>(keyName),
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppRadius.md),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
+          child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 7),
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.xxs,
@@ -424,6 +426,7 @@ class _MyActivitiesTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return AnimatedBuilder(
       animation: authStore,
       builder: (context, child) {
@@ -453,7 +456,7 @@ class _MyActivitiesTab extends StatelessWidget {
                   Container(
                     width: 72,
                     height: 72,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       color: AppColors.primarySoft,
                       shape: BoxShape.circle,
                     ),

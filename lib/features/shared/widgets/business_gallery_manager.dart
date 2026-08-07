@@ -306,6 +306,7 @@ class _BusinessGalleryManagerState extends State<BusinessGalleryManager> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final canAdd = widget.enabled &&
         !_mutating &&
         widget.businessId.trim().isNotEmpty &&
@@ -419,6 +420,7 @@ class _BusinessGalleryAltDialogState extends State<_BusinessGalleryAltDialog> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return AlertDialog(
       title: const Text('وصف الصورة'),
       content: TextField(
@@ -466,6 +468,7 @@ class _GalleryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Card(
       margin: const EdgeInsets.only(top: AppSpacing.xs),
       child: Padding(
@@ -573,6 +576,7 @@ class _GalleryMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
       child: Column(

@@ -119,6 +119,7 @@ class _AdminCategoryFormPageState extends State<AdminCategoryFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final editing = widget.initialCategory != null;
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
@@ -271,6 +272,7 @@ class _FormIntro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(

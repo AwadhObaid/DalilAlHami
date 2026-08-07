@@ -42,6 +42,7 @@ class BusinessLocationPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final selected = location;
     return Container(
       key: const ValueKey<String>('business-location-picker'),
@@ -61,7 +62,7 @@ class BusinessLocationPicker extends StatelessWidget {
                 color: AppColors.primaryTeal,
               ),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -84,7 +85,7 @@ class BusinessLocationPicker extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (selected == null)
-            const Text(
+            Text(
               'لم يتم تحديد موقع جغرافي.',
               style: TextStyle(color: AppColors.textSecondary),
             )

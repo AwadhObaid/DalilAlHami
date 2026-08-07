@@ -26,6 +26,7 @@ class BusinessImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final image = ClipRRect(
       borderRadius: borderRadius,
       child: SizedBox(
@@ -55,7 +56,7 @@ class BusinessImage extends StatelessWidget {
 
   Widget _placeholder() {
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,

@@ -21,6 +21,7 @@ class SearchBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
@@ -57,7 +58,7 @@ class SearchBox extends StatelessWidget {
                 : IconButton(
                     tooltip: 'مسح البحث',
                     onPressed: onClear,
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.close_rounded,
                       color: AppColors.textSecondary,
                     ),

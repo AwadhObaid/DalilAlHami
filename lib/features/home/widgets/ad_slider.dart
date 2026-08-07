@@ -35,6 +35,7 @@ class _AdSliderState extends State<AdSlider> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     if (widget.advertisements.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -152,6 +153,7 @@ class _AdvertisementPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final progress = collapseProgress.clamp(0.0, 1.0).toDouble();
     final compact = progress >= 0.55;
     final visual = _AdvertisementVisual.forIndex(variantIndex);
@@ -205,6 +207,7 @@ class _AdvertisementBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final hasImage = imagePath?.trim().isNotEmpty ?? false;
     return Stack(
       fit: StackFit.expand,
@@ -269,6 +272,7 @@ class _CompactAdvertisementContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
@@ -320,6 +324,7 @@ class _ExpandedAdvertisementContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Stack(
       children: [
         if (!hasImage) ...[
@@ -440,6 +445,7 @@ class _AdvertisementBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: compact ? AppSpacing.xs : AppSpacing.sm,

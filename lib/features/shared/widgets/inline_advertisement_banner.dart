@@ -47,6 +47,7 @@ class _InlineAdvertisementBannerState extends State<InlineAdvertisementBanner> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     if (widget.advertisements.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -109,8 +110,7 @@ class _InlineAdvertisementBannerState extends State<InlineAdvertisementBanner> {
                           mainAxisSize: MainAxisSize.min,
                           children: List<Widget>.generate(
                             widget.advertisements.length,
-                            (index) => AnimatedContainer(
-                              duration: const Duration(milliseconds: 180),
+                            (index) => Container(
                               width: index == _currentPage ? 16 : 6,
                               height: 6,
                               margin: const EdgeInsetsDirectional.only(
@@ -255,6 +255,7 @@ class _InlineAdvertisementPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final canOpen = onOpen != null &&
         ((advertisement.businessId?.isNotEmpty ?? false) ||
             (advertisement.targetUrl?.isNotEmpty ?? false));
@@ -273,7 +274,7 @@ class _InlineAdvertisementPage extends StatelessWidget {
                 source: advertisement.imagePath,
                 bucket: 'advertisements',
                 fit: BoxFit.cover,
-                placeholder: const ColoredBox(
+                placeholder: ColoredBox(
                   color: AppColors.advertisementGoldSoft,
                   child: Icon(
                     Icons.campaign_rounded,
@@ -281,7 +282,7 @@ class _InlineAdvertisementPage extends StatelessWidget {
                     color: AppColors.advertisementInk,
                   ),
                 ),
-                errorWidget: const ColoredBox(
+                errorWidget: ColoredBox(
                   color: AppColors.advertisementGoldSoft,
                   child: Icon(
                     Icons.broken_image_outlined,

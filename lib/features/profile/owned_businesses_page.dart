@@ -97,6 +97,7 @@ class _OwnedBusinessesPageState extends State<OwnedBusinessesPage> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(
@@ -176,6 +177,7 @@ class OwnedBusinessCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final color = switch (business.status) {
       'approved' => AppColors.success,
       'rejected' => AppColors.danger,
@@ -272,6 +274,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
@@ -308,6 +311,7 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
@@ -339,6 +343,7 @@ class _InfoBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(

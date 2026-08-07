@@ -18,6 +18,7 @@ class DirectoryStatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       margin: const EdgeInsets.fromLTRB(
         AppSpacing.md,

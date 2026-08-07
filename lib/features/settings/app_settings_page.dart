@@ -94,7 +94,7 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('استعادة الإعدادات'),
         content: const Text(
-          'سيتم إعادة حجم الخط والإشعارات العامة واللغة إلى القيم الافتراضية.',
+          'سيتم إعادة المظهر وحجم الخط والإشعارات العامة واللغة إلى القيم الافتراضية.',
         ),
         actions: [
           TextButton(
@@ -127,6 +127,7 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final snapshot = _preferences.snapshot;
 
     return Scaffold(
@@ -142,6 +143,49 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
           AppSpacing.xxl,
         ),
         children: [
+          _SettingsSection(
+            title: 'المظهر',
+            icon: Icons.palette_outlined,
+            child: Column(
+              children: [
+                _ThemeModeTile(
+                  keyName: 'settings-theme-system',
+                  title: 'حسب إعداد الجهاز',
+                  subtitle: 'يتبع الوضع الفاتح أو الداكن في Android',
+                  icon: Icons.brightness_auto_rounded,
+                  selected:
+                      snapshot.themeModePreset == AppThemeModePreset.system,
+                  onTap: () => _preferences.setThemeModePreset(
+                    AppThemeModePreset.system,
+                  ),
+                ),
+                const Divider(height: 1),
+                _ThemeModeTile(
+                  keyName: 'settings-theme-light',
+                  title: 'الوضع الفاتح',
+                  subtitle: 'استخدام الألوان الفاتحة دائمًا',
+                  icon: Icons.light_mode_outlined,
+                  selected:
+                      snapshot.themeModePreset == AppThemeModePreset.light,
+                  onTap: () => _preferences.setThemeModePreset(
+                    AppThemeModePreset.light,
+                  ),
+                ),
+                const Divider(height: 1),
+                _ThemeModeTile(
+                  keyName: 'settings-theme-dark',
+                  title: 'الوضع الداكن',
+                  subtitle: 'واجهة داكنة مريحة للاستخدام الليلي',
+                  icon: Icons.dark_mode_outlined,
+                  selected: snapshot.themeModePreset == AppThemeModePreset.dark,
+                  onTap: () => _preferences.setThemeModePreset(
+                    AppThemeModePreset.dark,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
           _SettingsSection(
             title: 'العرض',
             icon: Icons.text_fields_rounded,
@@ -192,7 +236,7 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                   key: ValueKey<String>('settings-language-ar'),
                   leading: Icon(Icons.language_rounded),
                   title: Text('العربية'),
-                  subtitle: Text('لغة التطبيق الأساسية'),
+                  subtitle: Text('لغة التطبيق الحالية'),
                   trailing: Icon(
                     Icons.check_circle_rounded,
                     color: AppColors.primaryTeal,
@@ -204,7 +248,8 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                   enabled: false,
                   leading: Icon(Icons.translate_rounded),
                   title: Text('English'),
-                  subtitle: Text('يتم استكمال الترجمة الكاملة في Phase 11B'),
+                  subtitle:
+                      Text('تفعيل الواجهة الإنجليزية الكاملة في Phase 11B2'),
                   trailing: Chip(label: Text('قريبًا')),
                 ),
               ],
@@ -304,6 +349,42 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
   }
 }
 
+class _ThemeModeTile extends StatelessWidget {
+  const _ThemeModeTile({
+    required this.keyName,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String keyName;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
+    return ListTile(
+      key: ValueKey<String>(keyName),
+      onTap: onTap,
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      trailing: selected
+          ? const Icon(
+              Icons.check_circle_rounded,
+              color: AppColors.primaryTeal,
+            )
+          : const Icon(Icons.circle_outlined),
+    );
+  }
+}
+
 class _SettingsSection extends StatelessWidget {
   const _SettingsSection({
     required this.title,
@@ -317,6 +398,7 @@ class _SettingsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -335,6 +417,7 @@ class _SettingsSection extends StatelessWidget {
             color: AppColors.primarySoft,
             child: Row(
               children: [
+                const SizedBox(width: 0),
                 Icon(icon, color: AppColors.primaryTeal),
                 const SizedBox(width: AppSpacing.sm),
                 Text(title, style: AppTextStyles.titleSmall),

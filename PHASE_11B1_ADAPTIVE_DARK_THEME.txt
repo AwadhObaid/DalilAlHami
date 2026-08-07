@@ -1,0 +1,20 @@
+Dalil Al Hami - Phase 11B1 - Adaptive Dark Theme
+=================================================
+
+Scope:
+- Adds persisted System / Light / Dark appearance preference.
+- Adds a complete Material 3 dark ThemeData.
+- Makes the existing AppColors neutral/surface/text tokens adaptive by brightness.
+- Migrates constant UI expressions that depended on adaptive colors to runtime-safe expressions.
+- Keeps the existing teal identity colors stable.
+- Preserves Phase 11A text-size and FCM notification preferences.
+- Keeps Arabic as the active production locale until Phase 11B2 completes the English UI migration.
+- Preserves Supabase and Firebase runtime behavior.
+
+Validation:
+- flutter analyze
+- Phase 11B1 contract tests
+- all regression tests sequentially
+- Android ARM64 debug APK build with validated local Supabase runtime settings
+
+Phase 09 remains postponed by design.

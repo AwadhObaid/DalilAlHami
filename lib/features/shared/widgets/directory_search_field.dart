@@ -29,6 +29,7 @@ class DirectorySearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final radius = BorderRadius.circular(AppRadius.lg);
 
     return DecoratedBox(
@@ -68,7 +69,7 @@ class DirectorySearchField extends StatelessWidget {
                     key: ValueKey<String>('$fieldKey-clear'),
                     tooltip: 'مسح البحث',
                     onPressed: onClear,
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.close_rounded,
                       color: AppColors.textSecondary,
                     ),

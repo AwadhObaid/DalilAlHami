@@ -18,6 +18,7 @@ class AdminDashboardEntryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Material(
       key: cardKey,
       color: AppColors.primaryDeep,

@@ -22,6 +22,7 @@ class StickyAdvertisementHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     if (advertisements.isEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }

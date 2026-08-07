@@ -161,6 +161,7 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final unreadCount = _items.where((item) => !item.isRead).length;
 
     return Scaffold(
@@ -253,6 +254,7 @@ class _NotificationSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -297,6 +299,7 @@ class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Material(
       color: item.isRead ? AppColors.surface : AppColors.surfaceTint,
       borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -368,7 +371,7 @@ class _NotificationCard extends StatelessWidget {
                     const SizedBox(height: AppSpacing.sm),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.schedule_rounded,
                           size: 16,
                           color: AppColors.textMuted,
@@ -437,6 +440,7 @@ class _NotificationStateView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.xl),

@@ -15,6 +15,7 @@ class AutomaticSyncStatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final resolvedCoordinator =
         coordinator ?? AutomaticSyncCoordinator.instance;
 
@@ -31,11 +32,10 @@ class AutomaticSyncStatusBanner extends StatelessWidget {
 
         return SafeArea(
           bottom: false,
-          child: AnimatedContainer(
+          child: Container(
             key: const ValueKey<String>(
               'automatic-sync-status-banner',
             ),
-            duration: const Duration(milliseconds: 180),
             width: double.infinity,
             margin: const EdgeInsets.fromLTRB(
               AppSpacing.sm,
@@ -114,29 +114,29 @@ class AutomaticSyncStatusBanner extends StatelessWidget {
     return switch (phase) {
       AutomaticSyncPhase.checkingConnection ||
       AutomaticSyncPhase.syncing =>
-        const _AutomaticSyncVisual(
+        _AutomaticSyncVisual(
           icon: Icons.sync_rounded,
           foreground: AppColors.primaryTeal,
           background: AppColors.primarySoft,
         ),
-      AutomaticSyncPhase.completed => const _AutomaticSyncVisual(
+      AutomaticSyncPhase.completed => _AutomaticSyncVisual(
           icon: Icons.cloud_done_rounded,
           foreground: AppColors.success,
           background: AppColors.mintSoft,
         ),
       AutomaticSyncPhase.offline ||
       AutomaticSyncPhase.waitingRetry =>
-        const _AutomaticSyncVisual(
+        _AutomaticSyncVisual(
           icon: Icons.cloud_off_rounded,
           foreground: AppColors.warning,
-          background: Color(0xFFFFF4E5),
+          background: AppColors.warningSoft,
         ),
-      AutomaticSyncPhase.attentionRequired => const _AutomaticSyncVisual(
+      AutomaticSyncPhase.attentionRequired => _AutomaticSyncVisual(
           icon: Icons.sync_problem_rounded,
           foreground: AppColors.danger,
-          background: Color(0xFFFFECEC),
+          background: AppColors.dangerSoft,
         ),
-      AutomaticSyncPhase.idle => const _AutomaticSyncVisual(
+      AutomaticSyncPhase.idle => _AutomaticSyncVisual(
           icon: Icons.cloud_done_rounded,
           foreground: AppColors.textSecondary,
           background: AppColors.surfaceMuted,

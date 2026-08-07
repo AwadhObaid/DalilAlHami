@@ -378,6 +378,7 @@ class _AdminUserManagementPageState extends State<AdminUserManagementPage> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(
@@ -558,6 +559,7 @@ class _AdminUserReasonDialogState extends State<_AdminUserReasonDialog> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return AlertDialog(
       scrollable: true,
       insetPadding: const EdgeInsets.symmetric(
@@ -619,6 +621,7 @@ class _UserSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       key: const ValueKey<String>('admin-user-summary'),
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -660,6 +663,7 @@ class _SummaryPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
@@ -698,6 +702,7 @@ class _UserFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -815,6 +820,7 @@ class _UserCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final statusColor = user.isDeleted
         ? AppColors.textMuted
         : user.isActive
@@ -969,6 +975,7 @@ class _AvatarFallback extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final value = name.trim();
     return ColoredBox(
       color: AppColors.primarySoft,
@@ -996,6 +1003,7 @@ class _UserChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
@@ -1040,6 +1048,7 @@ class _PaginationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Row(
       children: [
         Expanded(
@@ -1083,6 +1092,7 @@ class _UserDetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final user = detail.user;
     return SafeArea(
       child: DraggableScrollableSheet(
@@ -1242,6 +1252,7 @@ class _DetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.xs),
       child: Row(
@@ -1270,6 +1281,7 @@ class _DetailErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return SizedBox(
       height: 300,
       child: Center(
@@ -1287,7 +1299,8 @@ class _EmptyUsersView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
+    AppColors.bindToTheme(context);
+    return Padding(
       padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
       child: Column(
         children: [
@@ -1309,6 +1322,7 @@ class _UserStateView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),

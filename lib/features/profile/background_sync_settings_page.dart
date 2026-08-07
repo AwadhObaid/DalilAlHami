@@ -110,6 +110,7 @@ class _BackgroundSyncSettingsPageState
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final snapshot = _settings.snapshot;
     final permission = snapshot.notificationPermissionGranted;
 
@@ -244,6 +245,7 @@ class _StatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final enabled = snapshot.backgroundSyncEnabled;
     final status = snapshot.lastRunStatus;
     final color = enabled ? AppColors.primaryTeal : AppColors.textSecondary;
@@ -302,6 +304,7 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,

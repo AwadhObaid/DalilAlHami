@@ -1,0 +1,22 @@
+Phase 11B1 Theme Dependency Coverage Fix v6
+===========================================
+
+Purpose
+-------
+Complete the Material Theme dependency coverage for every legacy widget build
+that reads AppColors.
+
+Root cause
+----------
+Phase 11B1 v5 added AppColors.bindToTheme(BuildContext), but the package payload
+only contained a subset of the legacy Dart files. The static contract correctly
+found remaining build methods that still had no inherited Theme dependency.
+
+Fix
+---
+- The installer now scans every Dart file under lib after the payload is copied.
+- Every Widget build(BuildContext context) method in a file that reads AppColors
+  is idempotently bound with AppColors.bindToTheme(context).
+- Dynamically changed Dart files are backed up before modification.
+- Existing v5 bindings are preserved and are not duplicated.
+- Static coverage and widget tests remain mandatory before flutter analyze.

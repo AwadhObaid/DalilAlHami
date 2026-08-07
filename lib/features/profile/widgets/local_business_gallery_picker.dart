@@ -45,6 +45,7 @@ class LocalBusinessGalleryPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       key: const ValueKey<String>('profile-local-gallery-picker'),
       margin: const EdgeInsets.only(top: 12),
@@ -101,7 +102,7 @@ class LocalBusinessGalleryPicker extends StatelessWidget {
                           width: 116,
                           height: 88,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const SizedBox(
+                          errorBuilder: (_, __, ___) => SizedBox(
                             width: 116,
                             height: 88,
                             child: ColoredBox(

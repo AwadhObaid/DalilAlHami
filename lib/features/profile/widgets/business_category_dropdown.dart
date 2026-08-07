@@ -71,6 +71,7 @@ class BusinessCategoryDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final selectableCategories = normalizeCategories(categories);
     final safeSelectedCategoryId = normalizeSelection(
       selectableCategories,

@@ -20,6 +20,7 @@ class HomeBusinessCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       key: ValueKey<String>('home-business-card-${business.id}'),
       decoration: BoxDecoration(
@@ -81,6 +82,7 @@ class _BusinessContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -136,7 +138,7 @@ class _BusinessContent extends StatelessWidget {
         const SizedBox(height: AppSpacing.xs),
         Row(
           children: [
-            const Icon(
+            Icon(
               Icons.location_on_outlined,
               size: 16,
               color: AppColors.textSecondary,
@@ -187,7 +189,7 @@ class _BusinessContent extends StatelessWidget {
               onPressed: onOpen,
               style: IconButton.styleFrom(
                 minimumSize: const Size(38, 38),
-                side: const BorderSide(color: AppColors.outline),
+                side: BorderSide(color: AppColors.outline),
                 foregroundColor: AppColors.textSecondary,
                 visualDensity: VisualDensity.compact,
               ),

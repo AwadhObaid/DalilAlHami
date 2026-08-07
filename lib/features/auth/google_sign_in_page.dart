@@ -110,6 +110,7 @@ class _GoogleSignInPageState extends State<GoogleSignInPage> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(

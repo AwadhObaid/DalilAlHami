@@ -156,6 +156,7 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     super.build(context);
 
     return ColoredBox(
@@ -457,6 +458,7 @@ class _ExploreDirectoryFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Align(
       alignment: Alignment.bottomCenter,
       child: Padding(
@@ -480,7 +482,7 @@ class _ExploreDirectoryFooter extends StatelessWidget {
               Container(
                 width: 44,
                 height: 44,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.surface,
                   shape: BoxShape.circle,
                 ),
@@ -553,6 +555,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -563,7 +566,7 @@ class _SectionHeader extends StatelessWidget {
           Container(
             width: 34,
             height: 34,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: AppColors.primarySoft,
               shape: BoxShape.circle,
             ),

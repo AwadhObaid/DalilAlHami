@@ -13,6 +13,7 @@ class DirectoryLoadingSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return ListView.separated(
       key: const ValueKey<String>('directory-loading-skeleton'),
       physics: const AlwaysScrollableScrollPhysics(),
@@ -36,6 +37,7 @@ class CategoryLoadingSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         final crossAxisCount = constraints.maxWidth < 360 ? 2 : 3;
@@ -72,6 +74,7 @@ class _SkeletonBusinessCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       height: 164,
       padding: const EdgeInsets.all(AppSpacing.sm),
@@ -141,6 +144,7 @@ class _SkeletonBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0.45, end: 0.82),
       duration: const Duration(milliseconds: 850),

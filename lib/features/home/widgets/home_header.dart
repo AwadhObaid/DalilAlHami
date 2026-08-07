@@ -23,6 +23,7 @@ class HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return SizedBox(
       key: const ValueKey<String>('home-hero-header'),
       height: AppSizes.homeHeaderHeight,
@@ -222,6 +223,7 @@ class _SearchLauncher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       height: AppSizes.homeSearchHeight,
       decoration: BoxDecoration(
@@ -310,6 +312,7 @@ class _HeaderIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return IconButton(
       key: ValueKey<String>(keyName),
       tooltip: tooltip,

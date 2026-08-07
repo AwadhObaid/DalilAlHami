@@ -16,6 +16,7 @@ class HomeSyncStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final resolved = coordinator ?? AutomaticSyncCoordinator.instance;
 
     return AnimatedBuilder(
@@ -144,13 +145,13 @@ class _SyncVisual {
     return switch (phase) {
       AutomaticSyncPhase.checkingConnection ||
       AutomaticSyncPhase.syncing =>
-        const _SyncVisual(
+        _SyncVisual(
           title: 'جاري المزامنة',
           icon: Icons.sync_rounded,
           foreground: AppColors.primaryTeal,
           background: AppColors.primarySoft,
         ),
-      AutomaticSyncPhase.completed => const _SyncVisual(
+      AutomaticSyncPhase.completed => _SyncVisual(
           title: 'تمت المزامنة',
           icon: Icons.cloud_done_rounded,
           foreground: AppColors.success,
@@ -158,19 +159,19 @@ class _SyncVisual {
         ),
       AutomaticSyncPhase.offline ||
       AutomaticSyncPhase.waitingRetry =>
-        const _SyncVisual(
+        _SyncVisual(
           title: 'غير متصل حاليًا',
           icon: Icons.cloud_off_rounded,
           foreground: AppColors.warning,
           background: AppColors.warningSoft,
         ),
-      AutomaticSyncPhase.attentionRequired => const _SyncVisual(
+      AutomaticSyncPhase.attentionRequired => _SyncVisual(
           title: 'تحتاج المزامنة إلى مراجعة',
           icon: Icons.sync_problem_rounded,
           foreground: AppColors.danger,
           background: AppColors.dangerSoft,
         ),
-      AutomaticSyncPhase.idle => const _SyncVisual(
+      AutomaticSyncPhase.idle => _SyncVisual(
           title: 'المزامنة التلقائية مفعلة',
           icon: Icons.cloud_done_rounded,
           foreground: AppColors.success,

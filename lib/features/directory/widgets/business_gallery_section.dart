@@ -16,6 +16,7 @@ class BusinessGallerySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final visibleImages = BusinessGalleryImage.readList(
       images.map((image) => image.toMap()).toList(growable: false),
     );
@@ -115,6 +116,7 @@ class _PrimaryBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return DecoratedBox(
       decoration: BoxDecoration(
         color: AppColors.primaryDark.withValues(alpha: 0.88),
@@ -170,6 +172,7 @@ class _BusinessGalleryViewerState extends State<_BusinessGalleryViewer> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final image = widget.images[_index];
     return Scaffold(
       backgroundColor: Colors.black,

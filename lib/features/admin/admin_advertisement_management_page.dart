@@ -292,6 +292,7 @@ class _AdminAdvertisementManagementPageState
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(title: const Text('إدارة الإعلانات')),
@@ -476,6 +477,7 @@ class _AdvertisementSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -522,6 +524,7 @@ class _SummaryPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
@@ -556,6 +559,7 @@ class _AdvertisementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final state = advertisement.runtimeStateAt(now);
     final stateColor = switch (state) {
       AdminAdvertisementRuntimeState.visible => AppColors.success,
@@ -775,6 +779,7 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       constraints: const BoxConstraints(maxWidth: 240),
       padding: const EdgeInsets.symmetric(
@@ -813,6 +818,7 @@ class _DetailLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -836,6 +842,7 @@ class _AdvertisementEmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       key: const ValueKey<String>('admin-advertisements-empty'),
       padding: const EdgeInsets.symmetric(
@@ -849,7 +856,7 @@ class _AdvertisementEmptyView extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Icon(
+          Icon(
             Icons.campaign_outlined,
             size: 52,
             color: AppColors.textMuted,
@@ -886,6 +893,7 @@ class _AdvertisementStateView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),

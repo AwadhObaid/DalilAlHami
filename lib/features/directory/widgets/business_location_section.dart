@@ -20,6 +20,7 @@ class BusinessLocationSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final point = LatLng(location.latitude, location.longitude);
     return Container(
       key: const ValueKey<String>('business-location-section'),

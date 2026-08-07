@@ -61,6 +61,7 @@ class _CategoriesOverviewPageState extends State<CategoriesOverviewPage>
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     super.build(context);
 
     final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
@@ -458,6 +459,7 @@ class _GroupButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Material(
       key: ValueKey<String>(keyName),
       color: selected ? AppColors.primaryTeal : Colors.transparent,
@@ -517,17 +519,18 @@ class CategoryOverviewCard extends StatelessWidget {
   final VoidCallback onTap;
   final int accentIndex;
 
-  static const List<Color> _accentBackgrounds = [
-    AppColors.primarySoft,
-    AppColors.categoryBlueSoft,
-    AppColors.categoryRoseSoft,
-    AppColors.categoryLavenderSoft,
-    AppColors.categoryPeachSoft,
-    AppColors.categoryLimeSoft,
-  ];
+  static List<Color> get _accentBackgrounds => [
+        AppColors.primarySoft,
+        AppColors.categoryBlueSoft,
+        AppColors.categoryRoseSoft,
+        AppColors.categoryLavenderSoft,
+        AppColors.categoryPeachSoft,
+        AppColors.categoryLimeSoft,
+      ];
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final accent =
         _accentBackgrounds[accentIndex.abs() % _accentBackgrounds.length];
 
@@ -571,7 +574,7 @@ class CategoryOverviewCard extends StatelessWidget {
                         ),
                       ),
                       const Spacer(),
-                      const Icon(
+                      Icon(
                         Icons.arrow_back_ios_new_rounded,
                         size: 16,
                         color: AppColors.textMuted,

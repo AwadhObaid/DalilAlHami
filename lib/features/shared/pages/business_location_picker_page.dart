@@ -78,6 +78,7 @@ class _BusinessLocationPickerPageState
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final point = LatLng(
       _selectedLocation.latitude,
       _selectedLocation.longitude,

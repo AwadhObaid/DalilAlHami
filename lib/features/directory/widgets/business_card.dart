@@ -20,6 +20,7 @@ class BusinessCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Semantics(
       button: true,
       label: 'فتح تفاصيل ${business.displayName}',
@@ -60,7 +61,7 @@ class BusinessCard extends StatelessWidget {
                         child: _BusinessSummary(business: business),
                       ),
                       const SizedBox(width: AppSpacing.xxs),
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.only(top: AppSpacing.xxs),
                         child: Icon(
                           Icons.arrow_back_ios_new_rounded,
@@ -136,6 +137,7 @@ class _BusinessSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -176,7 +178,7 @@ class _BusinessSummary extends StatelessWidget {
         const SizedBox(height: AppSpacing.xs),
         Row(
           children: [
-            const Icon(
+            Icon(
               Icons.location_on_outlined,
               size: 17,
               color: AppColors.textSecondary,
@@ -208,6 +210,7 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 180),
       child: Container(
@@ -262,6 +265,7 @@ class _ContactButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return ConstrainedBox(
       constraints: const BoxConstraints(
         minHeight: AppSizes.minimumTouchTarget,

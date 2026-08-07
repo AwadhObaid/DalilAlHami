@@ -133,6 +133,7 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final editing = widget.initialBusiness != null;
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
@@ -298,6 +299,7 @@ class _BusinessFormIntro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(

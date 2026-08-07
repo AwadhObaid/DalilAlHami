@@ -18,6 +18,7 @@ class EmptyOwnedBusinessState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
@@ -40,7 +41,7 @@ class EmptyOwnedBusinessState extends StatelessWidget {
             Container(
               width: 92,
               height: 92,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: AppColors.primarySoft,
                 shape: BoxShape.circle,
               ),

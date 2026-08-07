@@ -71,6 +71,7 @@ class _AllBusinessesPageState extends State<AllBusinessesPage> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
 
     return Scaffold(
@@ -300,6 +301,7 @@ class _EmptyBusinessesState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),

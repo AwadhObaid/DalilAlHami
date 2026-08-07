@@ -20,6 +20,7 @@ class PageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(

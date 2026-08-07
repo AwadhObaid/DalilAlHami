@@ -51,6 +51,7 @@ class _OtpPageState extends State<OtpPage> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Scaffold(
       appBar: AppBar(title: const Text('التحقق من الرمز')),
       body: SafeArea(
@@ -64,7 +65,7 @@ class _OtpPageState extends State<OtpPage> {
                 child: Container(
                   width: 92,
                   height: 92,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: AppColors.mintSoft,
                     shape: BoxShape.circle,
                   ),

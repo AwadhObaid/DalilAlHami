@@ -243,6 +243,7 @@ class _AdminNotificationManagementPageState
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(
@@ -542,6 +543,7 @@ class _AdminNotificationHistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final statusColor = switch (item.deliveryStatus) {
       'sent' => AppColors.success,
       'partial' || 'no_devices' => AppColors.warning,
@@ -651,6 +653,7 @@ class _HistoryMeta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -667,6 +670,7 @@ class _AdminNotificationEmptyHistory extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
@@ -674,7 +678,7 @@ class _AdminNotificationEmptyHistory extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         border: Border.all(color: AppColors.outline),
       ),
-      child: const Column(
+      child: Column(
         children: [
           Icon(
             Icons.notifications_none_rounded,
@@ -700,6 +704,7 @@ class _AdminNotificationStateView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),

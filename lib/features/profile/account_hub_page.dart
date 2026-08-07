@@ -136,6 +136,7 @@ class _AccountHubPageState extends State<AccountHubPage>
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     super.build(context);
 
     return Column(
@@ -184,7 +185,7 @@ class _AccountHubPageState extends State<AccountHubPage>
               Container(
                 width: 88,
                 height: 88,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: AppColors.primarySoft,
                   shape: BoxShape.circle,
                 ),
@@ -655,6 +656,7 @@ class _AccountAccessBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       key: const ValueKey<String>('account-suspended-banner'),
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -708,6 +710,7 @@ class _BenefitRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Row(
       children: [
         Icon(icon, color: AppColors.primaryTeal),
@@ -740,6 +743,7 @@ class _AccountActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Material(
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(AppRadius.md),
@@ -783,7 +787,7 @@ class _AccountActionCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.arrow_back_ios_new_rounded,
                 size: 16,
                 color: AppColors.textMuted,

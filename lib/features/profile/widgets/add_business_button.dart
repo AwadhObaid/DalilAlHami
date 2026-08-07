@@ -18,6 +18,7 @@ class AddBusinessButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(

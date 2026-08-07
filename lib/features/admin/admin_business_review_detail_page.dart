@@ -189,6 +189,7 @@ class _AdminBusinessReviewDetailPageState
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(
@@ -336,6 +337,7 @@ class _AdminReviewReasonSheetState extends State<_AdminReviewReasonSheet> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final isReject = widget.decision == AdminReviewDecision.reject;
     final keyboard = MediaQuery.viewInsetsOf(context).bottom;
 
@@ -419,6 +421,7 @@ class _BusinessHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -494,7 +497,8 @@ class _LargeImagePlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const DecoratedBox(
+    AppColors.bindToTheme(context);
+    return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topRight,
@@ -526,6 +530,7 @@ class _DetailSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -564,6 +569,7 @@ class _DetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -594,6 +600,7 @@ class _BusinessImagesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final urls = <String>{
       if (business.logoUrl?.trim().isNotEmpty == true) business.logoUrl!.trim(),
       if (business.coverUrl?.trim().isNotEmpty == true)
@@ -644,6 +651,7 @@ class _ReviewHistorySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return _DetailSection(
       title: 'سجل المراجعة',
       icon: Icons.history_rounded,
@@ -667,6 +675,7 @@ class _HistoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final local = item.createdAt.toLocal();
     final date = '${local.year}/${local.month.toString().padLeft(2, '0')}/'
         '${local.day.toString().padLeft(2, '0')} '
@@ -696,6 +705,7 @@ class _ReviewSafetyNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -736,11 +746,12 @@ class _ReviewActionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return SafeArea(
       top: false,
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.sm),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppColors.surface,
           border: Border(top: BorderSide(color: AppColors.outline)),
         ),
@@ -801,6 +812,7 @@ class _DetailErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.xl),

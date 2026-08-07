@@ -58,6 +58,7 @@ class _CategoryListPageState extends State<CategoryListPage> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final keyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
 
     return Scaffold(
@@ -275,6 +276,7 @@ class _EmptyCategoryState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return ListView(
       key: const ValueKey<String>('empty-category-state'),
       physics: const AlwaysScrollableScrollPhysics(),

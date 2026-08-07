@@ -32,6 +32,7 @@ class CachedDirectoryImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final resolved = resolveSource(source, bucket: bucket);
     final fallback = placeholder ?? _defaultPlaceholder();
     if (resolved.isEmpty) {
@@ -79,7 +80,7 @@ class CachedDirectoryImage extends StatelessWidget {
   }
 
   Widget _defaultPlaceholder() {
-    return const ColoredBox(
+    return ColoredBox(
       color: AppColors.primarySoft,
       child: Center(
         child: Icon(

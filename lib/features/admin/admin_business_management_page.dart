@@ -315,6 +315,7 @@ class _AdminBusinessManagementPageState
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(title: const Text('إدارة الأنشطة')),
@@ -522,6 +523,7 @@ class _BusinessHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -567,6 +569,7 @@ class _BusinessCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -732,6 +735,7 @@ class _BusinessStatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final data = switch (status) {
       'approved' => (AppColors.mintSoft, AppColors.success),
       'pending' => (AppColors.warningSoft, AppColors.warning),
@@ -775,6 +779,7 @@ class _BusinessStateMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
@@ -824,6 +829,7 @@ class _SuspensionReasonDialogState extends State<_SuspensionReasonDialog> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return AlertDialog(
       key: const ValueKey<String>('admin-business-suspension-dialog'),
       title: const Text('سبب إيقاف النشاط'),

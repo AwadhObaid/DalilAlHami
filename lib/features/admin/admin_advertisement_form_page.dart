@@ -215,6 +215,7 @@ class _AdminAdvertisementFormPageState
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final editing = _initial != null;
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
@@ -497,6 +498,7 @@ class _FormIntro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -509,7 +511,7 @@ class _FormIntro extends StatelessWidget {
           Container(
             width: 48,
             height: 48,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: AppColors.primarySoft,
               shape: BoxShape.circle,
             ),
@@ -559,6 +561,7 @@ class _ScheduleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,

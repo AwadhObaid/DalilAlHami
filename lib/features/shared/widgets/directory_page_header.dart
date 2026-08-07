@@ -26,6 +26,7 @@ class DirectoryPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Material(
       type: MaterialType.transparency,
       child: Container(
@@ -142,6 +143,7 @@ class DirectoryHeaderRefreshButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return _HeaderActionButton(
       tooltip: isLoading ? 'جارٍ التحديث' : 'تحديث البيانات',
       icon: Icons.refresh_rounded,
@@ -166,6 +168,7 @@ class _HeaderActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return IconButton(
       tooltip: tooltip,
       onPressed: onPressed,

@@ -34,6 +34,7 @@ class DirectoryFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Material(
       type: MaterialType.transparency,
       child: Padding(
@@ -80,6 +81,7 @@ class _DirectoryFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return FilterChip(
       key: ValueKey<String>('directory-filter-${option.id}'),
       selected: selected,

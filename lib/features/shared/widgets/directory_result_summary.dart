@@ -22,6 +22,7 @@ class DirectoryResultSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Padding(
       key: summaryKey == null ? null : ValueKey<String>(summaryKey!),
       padding: const EdgeInsets.symmetric(
@@ -33,7 +34,7 @@ class DirectoryResultSummary extends StatelessWidget {
           Container(
             width: 34,
             height: 34,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: AppColors.primarySoft,
               shape: BoxShape.circle,
             ),

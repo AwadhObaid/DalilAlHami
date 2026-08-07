@@ -159,6 +159,7 @@ class _AdminBusinessReviewPageState extends State<AdminBusinessReviewPage> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(
@@ -297,6 +298,7 @@ class AdminPendingBusinessCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Material(
       key: ValueKey<String>('admin-pending-business-${business.id}'),
       color: AppColors.surface,
@@ -401,6 +403,7 @@ class _ReviewQueueHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -463,6 +466,7 @@ class _BusinessThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadius.md),
       child: SizedBox(
@@ -491,8 +495,9 @@ class _ThumbnailPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return DecoratedBox(
-      decoration: const BoxDecoration(color: AppColors.primarySoft),
+      decoration: BoxDecoration(color: AppColors.primarySoft),
       child: Center(
         child: showProgress
             ? const SizedBox(
@@ -515,6 +520,7 @@ class _PendingBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.xs,
@@ -540,6 +546,7 @@ class _CompactInformation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Row(
       children: [
         Icon(icon, size: 16, color: AppColors.textMuted),
@@ -562,6 +569,7 @@ class _ReviewQueueLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return const Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -580,6 +588,7 @@ class _EmptyReviewQueue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return const _CenteredQueueState(
       icon: Icons.task_alt_rounded,
       title: 'لا توجد أنشطة معلقة',
@@ -594,7 +603,8 @@ class _NoSearchResults extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const _CenteredQueueState(
+    AppColors.bindToTheme(context);
+    return _CenteredQueueState(
       icon: Icons.search_off_rounded,
       title: 'لا توجد نتيجة مطابقة',
       message: 'غيّر عبارة البحث أو امسحها لعرض جميع الطلبات.',
@@ -618,6 +628,7 @@ class _CenteredQueueState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
@@ -656,6 +667,7 @@ class _ReviewQueueMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.xl),

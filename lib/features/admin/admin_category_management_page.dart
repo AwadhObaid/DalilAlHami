@@ -246,6 +246,7 @@ class _AdminCategoryManagementPageState
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(title: const Text('إدارة الأقسام')),
@@ -415,6 +416,7 @@ class _CategoryHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -460,6 +462,7 @@ class _CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final archived = category.isArchived;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -560,6 +563,7 @@ class _StatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.sm,
@@ -597,6 +601,7 @@ class _StateMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
@@ -622,6 +627,7 @@ class _EmptyCategories extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return const Center(
       child: Padding(
         padding: EdgeInsets.all(AppSpacing.xl),

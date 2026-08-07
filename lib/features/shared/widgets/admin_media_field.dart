@@ -130,6 +130,7 @@ class _AdminMediaFieldState extends State<AdminMediaField> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final current = widget.controller.text.trim();
     return FormField<String>(
       initialValue: current,

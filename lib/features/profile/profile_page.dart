@@ -522,6 +522,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(
@@ -991,7 +992,7 @@ class _ProfilePageState extends State<ProfilePage> {
               bucket: 'avatars',
               width: 72,
               height: 72,
-              placeholder: const ColoredBox(
+              placeholder: ColoredBox(
                 color: AppColors.primarySoft,
                 child: Center(
                   child: Icon(
@@ -1004,7 +1005,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
           const SizedBox(width: 14),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

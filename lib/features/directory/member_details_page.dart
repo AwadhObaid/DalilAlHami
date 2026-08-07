@@ -21,6 +21,7 @@ class MemberDetailsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       body: CustomScrollView(
@@ -172,7 +173,7 @@ class MemberDetailsPage extends StatelessWidget {
           Container(
             width: 58,
             height: 58,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: AppColors.primarySoft,
               shape: BoxShape.circle,
             ),
@@ -194,7 +195,7 @@ class MemberDetailsPage extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xxs),
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.location_on_outlined,
                       size: 17,
                       color: AppColors.textSecondary,
@@ -395,7 +396,7 @@ class MemberDetailsPage extends StatelessWidget {
           AppSpacing.md,
           AppSpacing.sm,
         ),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppColors.surface,
           border: Border(
             top: BorderSide(color: AppColors.outline),
@@ -485,6 +486,7 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -546,6 +548,7 @@ class _InformationRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final content = Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
@@ -576,7 +579,7 @@ class _InformationRow extends StatelessWidget {
             ),
           ),
           if (onTap != null)
-            const Icon(
+            Icon(
               Icons.arrow_back_ios_new_rounded,
               size: 15,
               color: AppColors.textMuted,
@@ -614,6 +617,7 @@ class _QuickAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Material(
       color: enabled ? color.withValues(alpha: 0.09) : AppColors.surfaceMuted,
       borderRadius: BorderRadius.circular(AppRadius.md),

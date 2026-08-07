@@ -196,6 +196,7 @@ class _SyncQueuePageState extends State<SyncQueuePage> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(
@@ -412,6 +413,7 @@ class _QueueOperationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final pendingConflict = conflict?.isPending == true;
     final color = pendingConflict
         ? AppColors.warning
@@ -557,6 +559,7 @@ class _ConflictResolutionSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final local = conflict.localPayload;
     final server = conflict.serverSnapshot;
 
@@ -569,7 +572,7 @@ class _ConflictResolutionSheet extends StatelessWidget {
           AppSpacing.lg,
           AppSpacing.lg + MediaQuery.viewInsetsOf(context).bottom,
         ),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppColors.pageBackground,
           borderRadius: BorderRadius.vertical(
             top: Radius.circular(AppRadius.lg),
@@ -676,6 +679,7 @@ class _ConflictVersionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
@@ -732,6 +736,7 @@ class _ConflictField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final displayValue =
         value == null || value!.trim().isEmpty ? '—' : value!.trim();
 
@@ -764,6 +769,7 @@ class _SummaryValue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[

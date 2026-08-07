@@ -190,6 +190,7 @@ class _AdminMediaManagementPageState extends State<AdminMediaManagementPage> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(
@@ -269,6 +270,7 @@ class _MediaSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       key: const ValueKey<String>('admin-media-summary'),
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -315,6 +317,7 @@ class _MediaMetricGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final items = <({IconData icon, String title, int count})>[
       (
         icon: Icons.account_circle_rounded,
@@ -396,6 +399,7 @@ class _MediaMetricTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -432,6 +436,7 @@ class _CleanupPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       key: const ValueKey<String>('admin-media-cleanup-panel'),
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -511,6 +516,7 @@ class _RecentGalleryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
       decoration: BoxDecoration(
@@ -568,6 +574,7 @@ class _EmptyRecentGallery extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -599,6 +606,7 @@ class _MediaStateView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
