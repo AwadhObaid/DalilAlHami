@@ -1,0 +1,24 @@
+Dalil Al Hami - Phase 08C Supabase Verification Fix v2
+======================================================
+
+Purpose
+-------
+Fix the false-negative Supabase verification that occurred after a successful
+Phase 08C migration/function deployment.
+
+Root cause
+----------
+verify_phase_08c_supabase.ps1 wrote captured log lines to the PowerShell success
+pipeline before returning its result. Assignment therefore received log lines
+plus the intended return array, so migrationResult[0] was not the complete
+migration-list output.
+
+Fix
+---
+- Captured command logs are displayed with Write-Host only.
+- Invoke-CapturedCommand returns one PSCustomObject with Output and LogPath.
+- Migration verification requires LOCAL and REMOTE ids on the same migration row.
+- Matching migration rows are printed for diagnostics.
+- Source-contract and installer checks reject the legacy array-index parser.
+
+No database rollback or migration change is required.

@@ -1,0 +1,7 @@
+Dalil Al Hami - Phase 08C PowerShell parser verification fix v3
+
+- Fixes variable interpolation before a colon in verify_phase_08c_supabase.ps1.
+- Uses ${migrationId}: so Windows PowerShell 5.1 and PowerShell 7 parse the diagnostic line safely.
+- No database migration changes.
+- No Edge Function changes.
+- Safe to run over an already-applied Phase 08C migration.

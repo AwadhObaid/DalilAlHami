@@ -12,6 +12,7 @@ import 'admin_business_management_page.dart';
 import 'admin_business_review_page.dart';
 import 'admin_category_management_page.dart';
 import 'admin_media_management_page.dart';
+import 'admin_user_management_page.dart';
 
 typedef AdminProfileLoader = Future<AccountProfile> Function();
 typedef AdminDashboardLoader = Future<AdminDashboardSnapshot> Function();
@@ -266,15 +267,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           ),
           const SizedBox(height: AppSpacing.sm),
           _AdminModuleCard(
+            key: const ValueKey<String>('admin-manage-users-action'),
             icon: Icons.manage_accounts_rounded,
             title: 'إدارة المستخدمين',
-            subtitle: 'متابعة الحسابات وحالتها وصلاحيات الإدارة',
+            subtitle: 'البحث والحالة والصلاحيات وسجل الإجراءات',
             badge: '${snapshot.activeUsers} نشط',
             color: AppColors.primaryDark,
-            onTap: () => _showComingModule(
-              'إدارة المستخدمين',
-              'ستُفعّل بعد اكتمال مراجعة الأنشطة.',
-            ),
+            onTap: _openUserManagement,
           ),
           const SizedBox(height: AppSpacing.lg),
           _FoundationNotice(loadedAt: snapshot.loadedAt),
@@ -343,15 +342,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     await _loadDashboard();
   }
 
-  void _showComingModule(String title, String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('$title — $message'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+  Future<void> _openUserManagement() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const AdminUserManagementPage(),
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    await _loadDashboard();
   }
 }
 
@@ -772,7 +772,7 @@ class _FoundationNotice extends StatelessWidget {
           Expanded(
             child: Text(
               'تم تفعيل مراجعة الأنشطة وإدارة الأقسام والأنشطة والإعلانات '
-              'مع سجل تدقيق محمي. إدارة المستخدمين هي الوحدة الإدارية التالية. '
+              'والوسائط والمستخدمين مع سجلات تدقيق محمية. '
               'آخر تحديث: $time.',
               style: AppTextStyles.bodySmall,
             ),

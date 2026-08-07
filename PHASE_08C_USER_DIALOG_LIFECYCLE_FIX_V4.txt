@@ -1,0 +1,24 @@
+Dalil Al Hami - Phase 08C user-dialog lifecycle fix v4
+
+Root cause
+----------
+- Suspension and soft-delete dialogs created TextEditingController in the parent page.
+- The parent disposed the controller immediately after showDialog returned while the route/EditableText teardown could still be completing.
+- This caused used-after-dispose, Focus/Overlay assertions, and cascading responsive-test failures.
+
+Fix
+---
+- A dedicated StatefulWidget owns TextEditingController and FocusNode for reason dialogs.
+- Controller and focus node are disposed only from State.dispose().
+- Reason validation is rendered inside the dialog field instead of through the parent ScaffoldMessenger.
+- AlertDialog uses scrollable: true and narrow inset padding to tolerate constrained height and larger text.
+- Activation, restore, and role confirmation dialogs are scrollable as well.
+
+Regression coverage
+-------------------
+- Invalid short reasons keep the dialog open with inline validation.
+- Valid suspension and soft-delete flows complete and reload.
+- Narrow-screen test opens, edits, and cancels the reason dialog without Flutter exceptions.
+- Source contracts prohibit parent-owned reason controllers.
+
+No Supabase migration, Edge Function, or SQLite schema change is introduced by v4.

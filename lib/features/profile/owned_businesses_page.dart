@@ -23,6 +23,7 @@ class _OwnedBusinessesPageState extends State<OwnedBusinessesPage> {
   List<AccountBusiness> _businesses = const <AccountBusiness>[];
   bool _isLoading = true;
   bool _isOffline = false;
+  bool _accountSuspended = false;
   String? _error;
 
   @override
@@ -45,18 +46,32 @@ class _OwnedBusinessesPageState extends State<OwnedBusinessesPage> {
       setState(() {
         _businesses = snapshot.allBusinesses;
         _isOffline = snapshot.isOffline;
+        _accountSuspended = false;
         _isLoading = false;
+      });
+    } on AccountSuspendedFailure catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _businesses = const <AccountBusiness>[];
+        _isOffline = false;
+        _accountSuspended = true;
+        _isLoading = false;
+        _error = error.message;
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
+        _accountSuspended = false;
         _error = error.toString().replaceFirst('Exception: ', '');
       });
     }
   }
 
   Future<void> _createBusiness() async {
+    if (_accountSuspended) {
+      return;
+    }
     await Navigator.push<bool>(
       context,
       MaterialPageRoute<bool>(
@@ -108,7 +123,8 @@ class _OwnedBusinessesPageState extends State<OwnedBusinessesPage> {
               buttonKey: const ValueKey<String>(
                 'owned-businesses-add-button',
               ),
-              onPressed: _isLoading ? null : _createBusiness,
+              onPressed:
+                  _isLoading || _accountSuspended ? null : _createBusiness,
             ),
             const SizedBox(height: AppSpacing.md),
             if (_isOffline)

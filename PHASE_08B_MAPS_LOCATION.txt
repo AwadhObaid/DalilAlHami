@@ -1,8 +1,11 @@
-﻿Dalil Al Hami - Phase 08B maps and location
-Migration: 20260807010000
-Verified at: 2026-08-07T01:59:42.9740809+03:00
-Log: F:\FlutterProjects\DalilAlHami_Clean\build_logs\phase08b_location_verify_20260807_015932\migration_list.combined.log
-Map provider: OpenStreetMap
-Foreground location permission: enabled
-Owner location RPC: enabled
-Local cache schema: 10
+Dalil Al Hami - Phase 08B Maps & Location
+
+- OpenStreetMap business location picker without a paid map API key.
+- Optional foreground device location permission.
+- Owner and administrator business location editing.
+- Public approved-business map and directions action.
+- SQLite schema version 10 for offline coordinate storage.
+- Owner-safe location synchronization RPC.
+- Incremental directory sync includes latitude and longitude.
+- Android foreground permissions are patched by the installer.
+- iOS location-when-in-use description is included.

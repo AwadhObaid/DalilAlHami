@@ -36,6 +36,7 @@ class _AccountHubPageState extends State<AccountHubPage>
   bool _isCheckingOwnedBusiness = false;
   int? _ownedBusinessCount;
   AccountProfile? _accountProfile;
+  String? _accountAccessMessage;
 
   @override
   bool get wantKeepAlive => true;
@@ -67,6 +68,7 @@ class _AccountHubPageState extends State<AccountHubPage>
       setState(() {
         _ownedBusinessCount = null;
         _accountProfile = null;
+        _accountAccessMessage = null;
         _isCheckingOwnedBusiness = false;
       });
       return;
@@ -100,6 +102,17 @@ class _AccountHubPageState extends State<AccountHubPage>
       setState(() {
         _ownedBusinessCount = snapshot.allBusinesses.length;
         _accountProfile = snapshot.profile;
+        _accountAccessMessage = null;
+      });
+    } on AccountSuspendedFailure catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _ownedBusinessCount = 0;
+        _accountProfile = error.profile;
+        _accountAccessMessage = error.message;
       });
     } catch (_) {
       if (!mounted) {
@@ -109,6 +122,7 @@ class _AccountHubPageState extends State<AccountHubPage>
       setState(() {
         _ownedBusinessCount = null;
         _accountProfile = null;
+        _accountAccessMessage = null;
       });
     } finally {
       if (mounted) {
@@ -236,6 +250,7 @@ class _AccountHubPageState extends State<AccountHubPage>
     final email = user?.email ?? 'حساب Google متصل';
     final trimmedName = displayName.trim();
     final firstLetter = trimmedName.isEmpty ? 'م' : trimmedName.substring(0, 1);
+    final accountSuspended = _accountProfile?.isActive == false;
 
     return ListView(
       key: const PageStorageKey<String>('authenticated-account'),
@@ -295,7 +310,11 @@ class _AccountHubPageState extends State<AccountHubPage>
             ],
           ),
         ),
-        if (_accountProfile?.isAdmin == true) ...[
+        if (_accountAccessMessage != null) ...[
+          const SizedBox(height: AppSpacing.md),
+          _AccountAccessBanner(message: _accountAccessMessage!),
+        ],
+        if (_accountProfile?.isAdmin == true && !accountSuspended) ...[
           const SizedBox(height: AppSpacing.md),
           AdminDashboardEntryCard(
             onTap: () {
@@ -308,10 +327,14 @@ class _AccountHubPageState extends State<AccountHubPage>
           buttonKey: const ValueKey<String>(
             'account-add-business-button',
           ),
-          onPressed: _isCheckingOwnedBusiness ? null : _openCreateBusiness,
-          label: _isCheckingOwnedBusiness
-              ? 'جارٍ التحقق من الأنشطة'
-              : 'إضافة نشاط جديد',
+          onPressed: _isCheckingOwnedBusiness || accountSuspended
+              ? null
+              : _openCreateBusiness,
+          label: accountSuspended
+              ? 'الحساب موقوف'
+              : _isCheckingOwnedBusiness
+                  ? 'جارٍ التحقق من الأنشطة'
+                  : 'إضافة نشاط جديد',
         ),
         const SizedBox(height: AppSpacing.sm),
         _AccountActionCard(
@@ -323,7 +346,7 @@ class _AccountHubPageState extends State<AccountHubPage>
                   ? 'لا توجد أنشطة مسجلة حتى الآن'
                   : 'إدارة $_ownedBusinessCount نشاط ومتابعة حالاتها',
           color: AppColors.primaryTeal,
-          onTap: _openProfile,
+          onTap: accountSuspended ? null : _openProfile,
         ),
         const SizedBox(height: AppSpacing.sm),
         _AccountActionCard(
@@ -335,7 +358,7 @@ class _AccountHubPageState extends State<AccountHubPage>
                   ? 'توجد عمليات تحتاج إعادة المحاولة'
                   : 'عرض العمليات المحلية وحالة إرسالها',
           color: AppColors.warning,
-          onTap: _openSyncQueue,
+          onTap: accountSuspended ? null : _openSyncQueue,
         ),
         const SizedBox(height: AppSpacing.sm),
         _AccountActionCard(
@@ -343,7 +366,7 @@ class _AccountHubPageState extends State<AccountHubPage>
           title: 'المزامنة في الخلفية',
           subtitle: 'الجدولة والإشعارات وحالة آخر تشغيل',
           color: AppColors.lightTeal,
-          onTap: _openBackgroundSyncSettings,
+          onTap: accountSuspended ? null : _openBackgroundSyncSettings,
         ),
         const SizedBox(height: AppSpacing.sm),
         _AccountActionCard(
@@ -351,7 +374,9 @@ class _AccountHubPageState extends State<AccountHubPage>
           title: 'تحديث بيانات الدليل',
           subtitle: 'جلب أحدث الأقسام والأنشطة من Supabase',
           color: AppColors.lightTeal,
-          onTap: _directoryStore.isLoading ? null : _directoryStore.refresh,
+          onTap: accountSuspended || _directoryStore.isLoading
+              ? null
+              : _directoryStore.refresh,
         ),
         const SizedBox(height: AppSpacing.md),
         _buildConnectionCard(),
@@ -594,6 +619,55 @@ class _AccountHubPageState extends State<AccountHubPage>
     }
 
     return 'مستخدم دليل الحامي';
+  }
+}
+
+class _AccountAccessBanner extends StatelessWidget {
+  const _AccountAccessBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey<String>('account-suspended-banner'),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.dangerSoft,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: AppColors.danger.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.block_rounded,
+            color: AppColors.danger,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'الحساب موقوف',
+                  style: AppTextStyles.titleSmall.copyWith(
+                    color: AppColors.danger,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  message,
+                  style: AppTextStyles.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

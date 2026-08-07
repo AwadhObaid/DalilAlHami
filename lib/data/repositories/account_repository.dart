@@ -96,9 +96,12 @@ class AccountRepository {
 
     try {
       final profile = await _loadOrCreateProfile(user);
-      final remoteBusinesses = await _loadOwnedBusinesses(user.id);
       await _database.upsertAccountProfile(profile);
+      if (!profile.isActive) {
+        throw AccountSuspendedFailure(profile);
+      }
 
+      final remoteBusinesses = await _loadOwnedBusinesses(user.id);
       final remoteIds = remoteBusinesses.map((business) => business.id).toSet();
       final localOnly = cachedBusinesses.where((business) {
         return !remoteIds.contains(business.id) &&
@@ -119,6 +122,8 @@ class AccountRepository {
         business: _selectBusiness(merged, preferredBusinessId),
         businesses: List<AccountBusiness>.unmodifiable(merged),
       );
+    } on AccountSuspendedFailure {
+      rethrow;
     } catch (_) {
       await _database.upsertAccountProfile(fallbackProfile);
       return AccountSnapshot(
@@ -132,6 +137,7 @@ class AccountRepository {
 
   Future<AccountProfile> updateProfileAvatar(String avatarUrl) async {
     final user = _user;
+    await _ensureCachedAccountActive(user.id);
     final normalizedUrl = avatarUrl.trim();
     if (normalizedUrl.isEmpty) {
       throw const AccountFailure('رابط الصورة الشخصية غير صالح.');
@@ -179,6 +185,7 @@ class AccountRepository {
     List<String> selectedGalleryPaths = const <String>[],
   }) async {
     final user = _user;
+    await _ensureCachedAccountActive(user.id);
     final normalizedName = fullName.trim();
     final normalizedBusinessName = businessName.trim();
     final normalizedAddress =
@@ -319,6 +326,7 @@ class AccountRepository {
     String businessId,
   ) async {
     final user = _user;
+    await _ensureCachedAccountActive(user.id);
     final cachedBusiness = await _database.readOwnedBusinessCacheById(
       userId: user.id,
       businessId: businessId,
@@ -342,6 +350,13 @@ class AccountRepository {
           ? 'تم إرسال طلب حذف النشاط.'
           : 'تم حفظ طلب الحذف وسيُرسل عند عودة الإنترنت.',
     );
+  }
+
+  Future<void> _ensureCachedAccountActive(String userId) async {
+    final profile = await _database.readAccountProfile(userId: userId);
+    if (profile != null && !profile.isActive) {
+      throw AccountSuspendedFailure(profile);
+    }
   }
 
   Future<void> _trySaveProfileOnline(AccountProfile profile) async {
@@ -474,4 +489,14 @@ class AccountFailure implements Exception {
 
   @override
   String toString() => message;
+}
+
+class AccountSuspendedFailure extends AccountFailure {
+  const AccountSuspendedFailure(this.profile)
+      : super(
+          'تم إيقاف هذا الحساب من الإدارة. يمكنك تسجيل الخروج، '
+          'ولا يمكن إدارة الأنشطة أو مزامنتها حتى إعادة تفعيل الحساب.',
+        );
+
+  final AccountProfile profile;
 }

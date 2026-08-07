@@ -114,6 +114,25 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(mediaModule, findsOneWidget);
+
+    final userModule = find.byKey(
+      const ValueKey<String>('admin-manage-users-action'),
+    );
+    final dashboardList = find.byKey(
+      const PageStorageKey<String>('admin-dashboard-list'),
+    );
+    await tester.dragUntilVisible(
+      userModule,
+      dashboardList,
+      const Offset(0, -220),
+    );
+    await tester.ensureVisible(userModule);
+    await tester.pumpAndSettle();
+    expect(userModule, findsOneWidget);
+    expect(
+      find.descendant(of: userModule, matching: find.text('19 نشط')),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 

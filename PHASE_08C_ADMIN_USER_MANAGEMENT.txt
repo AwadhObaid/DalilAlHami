@@ -1,0 +1,11 @@
+﻿Dalil Al Hami - Phase 08C admin user management
+Migration: 20260807030000
+Edge Function: admin-users
+Verified at: 2026-08-07T15:47:40.1216780+03:00
+Migration log: F:\FlutterProjects\DalilAlHami_Clean\build_logs\phase08c_users_verify_20260807_154725\migration_list.combined.log
+Function log: F:\FlutterProjects\DalilAlHami_Clean\build_logs\phase08c_users_verify_20260807_154725\function_list.combined.log
+Self-account protection: enabled
+Last-active-admin protection: enabled
+Reversible soft deletion: enabled
+Audit trail: enabled
+Service role in Flutter APK: prohibited
