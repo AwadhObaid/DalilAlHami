@@ -1,0 +1,10 @@
+Dalil Al Hami - Phase 12A access-control enforcement fix v3
+
+This QA correction makes administrator role/status/soft-delete changes observable and enforced in an already-running client session.
+
+- Admin action responses are checked against the authoritative profile returned by the server.
+- The signed-in account profile is refreshed from Supabase when authentication changes, the app resumes, and protected tabs are selected.
+- Account and My Activities surfaces refresh when access state changes.
+- Suspended or soft-deleted accounts cannot open account-management flows or add businesses.
+- Soft deletion is presented distinctly from ordinary suspension.
+- Existing Supabase admin-users Edge Function and Phase 08C database transaction remain authoritative; no new migration is required.

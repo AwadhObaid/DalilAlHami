@@ -7,6 +7,8 @@ class AccountProfile {
     required this.isActive,
     this.email,
     this.avatarUrl,
+    this.deletedAt,
+    this.suspensionReason,
   });
 
   final String id;
@@ -16,8 +18,14 @@ class AccountProfile {
   final bool isActive;
   final String? email;
   final String? avatarUrl;
+  final DateTime? deletedAt;
+  final String? suspensionReason;
 
   bool get isAdmin => role.trim().toLowerCase() == 'admin';
+
+  bool get isDeleted => deletedAt != null;
+
+  bool get canUseAccount => isActive && !isDeleted;
 
   AccountProfile copyWith({
     String? id,
@@ -27,7 +35,11 @@ class AccountProfile {
     bool? isActive,
     String? email,
     String? avatarUrl,
+    DateTime? deletedAt,
+    String? suspensionReason,
     bool clearAvatarUrl = false,
+    bool clearDeletedAt = false,
+    bool clearSuspensionReason = false,
   }) {
     return AccountProfile(
       id: id ?? this.id,
@@ -37,6 +49,10 @@ class AccountProfile {
       isActive: isActive ?? this.isActive,
       email: email ?? this.email,
       avatarUrl: clearAvatarUrl ? null : avatarUrl ?? this.avatarUrl,
+      deletedAt: clearDeletedAt ? null : deletedAt ?? this.deletedAt,
+      suspensionReason: clearSuspensionReason
+          ? null
+          : suspensionReason ?? this.suspensionReason,
     );
   }
 
@@ -49,7 +65,20 @@ class AccountProfile {
       isActive: data['is_active'] != false,
       email: _nullableText(data['email']),
       avatarUrl: _nullableText(data['avatar_url']),
+      deletedAt: _readDate(data['deleted_at']),
+      suspensionReason: _nullableText(data['suspension_reason']),
     );
+  }
+
+  static DateTime? _readDate(Object? value) {
+    if (value is DateTime) {
+      return value.toUtc();
+    }
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) {
+      return null;
+    }
+    return DateTime.tryParse(text)?.toUtc();
   }
 
   static String? _nullableText(Object? value) {

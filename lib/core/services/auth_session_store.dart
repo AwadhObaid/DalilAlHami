@@ -1,12 +1,13 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../models/account_profile.dart';
 import 'firebase_push_notification_service.dart';
 import 'supabase_service.dart';
 
-class AuthSessionStore extends ChangeNotifier {
+class AuthSessionStore extends ChangeNotifier with WidgetsBindingObserver {
   AuthSessionStore._();
 
   static final AuthSessionStore instance = AuthSessionStore._();
@@ -14,6 +15,9 @@ class AuthSessionStore extends ChangeNotifier {
   StreamSubscription<AuthState>? _authSubscription;
   Session? _session;
   Object? _lastError;
+  AccountProfile? _accountProfile;
+  bool _isRefreshingAccountProfile = false;
+  DateTime? _lastAccountProfileRefreshAt;
   bool _initialized = false;
 
   Session? get session => _session;
@@ -21,6 +25,13 @@ class AuthSessionStore extends ChangeNotifier {
   User? get user => _session?.user;
 
   bool get isAuthenticated => user != null;
+
+  AccountProfile? get accountProfile => _accountProfile;
+
+  bool get isAccountProfileRefreshing => _isRefreshingAccountProfile;
+
+  bool get isAccountBlocked =>
+      _accountProfile != null && !_accountProfile!.canUseAccount;
 
   Object? get lastError => _lastError;
 
@@ -36,12 +47,25 @@ class AuthSessionStore extends ChangeNotifier {
     }
 
     _session = SupabaseService.client.auth.currentSession;
+    WidgetsBinding.instance.addObserver(this);
+    if (_session?.user != null) {
+      unawaited(refreshAccountProfile(force: true));
+    }
 
     _authSubscription = SupabaseService.client.auth.onAuthStateChange.listen(
       (authState) {
+        final previousUserId = _session?.user.id;
         _session = authState.session;
         _lastError = null;
+        final currentUserId = _session?.user.id;
+        if (previousUserId != currentUserId) {
+          _accountProfile = null;
+          _lastAccountProfileRefreshAt = null;
+        }
         notifyListeners();
+        if (currentUserId != null) {
+          unawaited(refreshAccountProfile(force: true));
+        }
       },
       onError: (Object error, StackTrace stackTrace) {
         _lastError = error;
@@ -53,6 +77,69 @@ class AuthSessionStore extends ChangeNotifier {
     );
   }
 
+  Future<AccountProfile?> refreshAccountProfile({bool force = false}) async {
+    if (!SupabaseService.isInitialized || !isAuthenticated) {
+      if (_accountProfile != null) {
+        _accountProfile = null;
+        notifyListeners();
+      }
+      return null;
+    }
+
+    if (_isRefreshingAccountProfile) {
+      return _accountProfile;
+    }
+
+    final now = DateTime.now().toUtc();
+    if (!force && _lastAccountProfileRefreshAt != null) {
+      final age = now.difference(_lastAccountProfileRefreshAt!);
+      if (age < const Duration(seconds: 20)) {
+        return _accountProfile;
+      }
+    }
+
+    final currentUser = user;
+    if (currentUser == null) {
+      return null;
+    }
+
+    _isRefreshingAccountProfile = true;
+    notifyListeners();
+    try {
+      final rows = await SupabaseService.client
+          .from('profiles')
+          .select(
+            'id, full_name, email, phone, avatar_url, role, is_active, '
+            'deleted_at, suspension_reason',
+          )
+          .eq('id', currentUser.id)
+          .limit(1);
+
+      if (rows.isEmpty) {
+        return _accountProfile;
+      }
+
+      final profile = AccountProfile.fromMap(rows.first);
+      _accountProfile = profile;
+      _lastAccountProfileRefreshAt = now;
+      return profile;
+    } catch (error) {
+      _lastError = error;
+      debugPrint('Account access refresh failed: $error');
+      return _accountProfile;
+    } finally {
+      _isRefreshingAccountProfile = false;
+      notifyListeners();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && isAuthenticated) {
+      unawaited(refreshAccountProfile(force: true));
+    }
+  }
+
   Future<void> signOut() async {
     if (!SupabaseService.isInitialized) {
       return;
@@ -61,11 +148,14 @@ class AuthSessionStore extends ChangeNotifier {
     await FirebasePushNotificationService.instance.unregisterCurrentToken();
     await SupabaseService.client.auth.signOut();
     _session = null;
+    _accountProfile = null;
+    _lastAccountProfileRefreshAt = null;
     notifyListeners();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _authSubscription?.cancel();
     super.dispose();
   }

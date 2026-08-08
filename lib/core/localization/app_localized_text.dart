@@ -914,6 +914,24 @@ abstract final class _EnglishCatalog {
     'سبب الحذف الظاهري': 'Soft-delete reason',
     'حذف ظاهري': 'Soft delete',
     'استعادة الحساب': 'Restore account',
+    'تم حذف هذا الحساب ظاهريًا من الإدارة.':
+        'This account was soft-deleted by an administrator.',
+    'تم إيقاف هذا الحساب من الإدارة.':
+        'This account was suspended by an administrator.',
+    'تم حذف هذا الحساب ظاهريًا من الإدارة. لا يمكن إدارة الأنشطة أو مزامنتها حتى استعادة الحساب.':
+        'This account was soft-deleted by an administrator. Business management and sync are blocked until the account is restored.',
+    'تم إيقاف هذا الحساب من الإدارة. لا يمكن إدارة الأنشطة أو مزامنتها حتى إعادة تفعيل الحساب.':
+        'This account was suspended by an administrator. Business management and sync are blocked until the account is reactivated.',
+    'تم حذف هذا الحساب ظاهريًا من الإدارة. لا يمكن إدارة الأنشطة حتى استعادة الحساب.':
+        'This account was soft-deleted by an administrator. Business management is blocked until the account is restored.',
+    'تم إيقاف هذا الحساب من الإدارة. لا يمكن إدارة الأنشطة حتى إعادة تفعيل الحساب.':
+        'This account was suspended by an administrator. Business management is blocked until the account is reactivated.',
+    'أعاد الخادم نجاح العملية لكن حالة الحساب لم تتطابق مع الطلب.':
+        'The server reported success, but the account status did not match the requested change.',
+    'أعاد الخادم نجاح العملية لكن حالة الحذف الظاهري لم تتطابق مع الطلب.':
+        'The server reported success, but the soft-delete state did not match the requested change.',
+    'أعاد الخادم نجاح العملية لكن صلاحية المستخدم لم تتطابق مع الطلب.':
+        'The server reported success, but the user role did not match the requested change.',
     'سيُعاد تفعيل الحساب والسماح للمستخدم بتسجيل الدخول مجددًا.':
         'The account will be reactivated and the user will be allowed to sign in again.',
     'الحساب الحالي': 'Current account',

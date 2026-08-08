@@ -1,0 +1,3 @@
+Phase 12A account access enforcement installer fix v4.
+Fixes PowerShell collision with the read-only automatic variable $HOME by using a non-reserved variable name during the static contract validation.
+The v3 access-control payload remains unchanged.

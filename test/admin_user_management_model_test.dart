@@ -99,4 +99,21 @@ void main() {
     expect(user.isSuspended, isFalse);
     expect(user.statusLabel, 'محذوف ظاهريًا');
   });
+  test('نتيجة إجراء الإدارة تحتفظ بحالة الخادم للتحقق النهائي', () {
+    final result = AdminUserActionResult.fromResponse(<String, dynamic>{
+      'user_id': 'user-3',
+      'action': 'promoted',
+      'message': 'تم منح صلاحية المدير.',
+      'profile': <String, dynamic>{
+        'id': 'user-3',
+        'role': 'admin',
+        'is_active': true,
+        'deleted_at': null,
+      },
+    });
+
+    expect(result.profileRole, 'admin');
+    expect(result.profileIsActive, isTrue);
+    expect(result.profileIsDeleted, isFalse);
+  });
 }

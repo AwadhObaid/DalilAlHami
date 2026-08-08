@@ -62,3 +62,12 @@ build_logs/
 # Local phase backup files
 *.backup_before_*
 build_logs/
+
+# Android release signing secrets
+android/key.properties
+android/app/*.jks
+android/app/*.keystore
+*.jks
+*.keystore
+*.p12
+*.pfx

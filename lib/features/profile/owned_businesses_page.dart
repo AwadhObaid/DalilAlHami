@@ -11,7 +11,12 @@ import 'profile_page.dart';
 import 'widgets/add_business_button.dart';
 
 class OwnedBusinessesPage extends StatefulWidget {
-  const OwnedBusinessesPage({super.key});
+  const OwnedBusinessesPage({
+    this.refreshSignal = 0,
+    super.key,
+  });
+
+  final int refreshSignal;
 
   @override
   State<OwnedBusinessesPage> createState() => _OwnedBusinessesPageState();
@@ -31,6 +36,14 @@ class _OwnedBusinessesPageState extends State<OwnedBusinessesPage> {
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant OwnedBusinessesPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshSignal != widget.refreshSignal) {
+      _load();
+    }
   }
 
   Future<void> _load() async {

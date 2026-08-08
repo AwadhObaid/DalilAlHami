@@ -1,0 +1,3 @@
+Phase 12A account-access Flutter analysis fix v5
+- Removed unnecessary flutter/foundation.dart import.
+- Added mounted guard before navigation after async account-access refresh.

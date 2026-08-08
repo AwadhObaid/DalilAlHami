@@ -13,4 +13,18 @@ void main() {
 
     expect(profile.isAdmin, isTrue);
   });
+
+  test('حالة الوصول تراعي الإيقاف والحذف الظاهري', () {
+    final deleted = AccountProfile.fromMap(<String, dynamic>{
+      'id': 'user-deleted',
+      'full_name': 'محذوف',
+      'phone': '',
+      'role': 'user',
+      'is_active': false,
+      'deleted_at': '2026-08-08T02:00:00Z',
+    });
+
+    expect(deleted.isDeleted, isTrue);
+    expect(deleted.canUseAccount, isFalse);
+  });
 }

@@ -22,7 +22,12 @@ import 'sync_queue_page.dart';
 import 'widgets/add_business_button.dart';
 
 class AccountHubPage extends StatefulWidget {
-  const AccountHubPage({super.key});
+  const AccountHubPage({
+    this.refreshSignal = 0,
+    super.key,
+  });
+
+  final int refreshSignal;
 
   @override
   State<AccountHubPage> createState() => _AccountHubPageState();
@@ -55,6 +60,19 @@ class _AccountHubPageState extends State<AccountHubPage>
   }
 
   @override
+  void didUpdateWidget(covariant AccountHubPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.refreshSignal != widget.refreshSignal) {
+      _accountProfile = _authStore.accountProfile ?? _accountProfile;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _refreshOwnedBusinessState();
+        }
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _authStore.removeListener(_handleChanged);
     _directoryStore.removeListener(_handleChanged);
@@ -76,7 +94,20 @@ class _AccountHubPageState extends State<AccountHubPage>
       return;
     }
 
-    setState(() {});
+    final liveProfile = _authStore.accountProfile;
+    setState(() {
+      if (liveProfile != null) {
+        _accountProfile = liveProfile;
+        if (!liveProfile.canUseAccount) {
+          _ownedBusinessCount = 0;
+          _accountAccessMessage = liveProfile.isDeleted
+              ? 'تم حذف هذا الحساب ظاهريًا من الإدارة.'
+              : 'تم إيقاف هذا الحساب من الإدارة.';
+        } else {
+          _accountAccessMessage = null;
+        }
+      }
+    });
 
     if (_ownedBusinessCount == null && !_isCheckingOwnedBusiness) {
       _refreshOwnedBusinessState();
@@ -95,6 +126,10 @@ class _AccountHubPageState extends State<AccountHubPage>
     }
 
     try {
+      final liveProfile = await _authStore.refreshAccountProfile(force: true);
+      if (liveProfile != null && !liveProfile.canUseAccount) {
+        throw AccountSuspendedFailure(liveProfile);
+      }
       final snapshot = await _accountRepository.loadCurrentAccount();
 
       if (!mounted) {
@@ -261,7 +296,8 @@ class _AccountHubPageState extends State<AccountHubPage>
     final email = user?.email ?? 'حساب Google متصل';
     final trimmedName = displayName.trim();
     final firstLetter = trimmedName.isEmpty ? 'م' : trimmedName.substring(0, 1);
-    final accountSuspended = _accountProfile?.isActive == false;
+    final accountSuspended =
+        _accountProfile != null && !_accountProfile!.canUseAccount;
 
     return ListView(
       key: const PageStorageKey<String>('authenticated-account'),

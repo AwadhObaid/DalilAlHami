@@ -56,7 +56,13 @@ class AdminUserRepository {
       'is_active': isActive,
       'reason': reason?.trim(),
     });
-    return AdminUserActionResult.fromResponse(response);
+    final result = AdminUserActionResult.fromResponse(response);
+    if (result.profileIsActive != isActive || result.profileIsDeleted == true) {
+      throw const AdminUserRepositoryFailure(
+        'أعاد الخادم نجاح العملية لكن حالة الحساب لم تتطابق مع الطلب.',
+      );
+    }
+    return result;
   }
 
   Future<AdminUserActionResult> setUserDeleted({
@@ -70,7 +76,15 @@ class AdminUserRepository {
       'is_deleted': isDeleted,
       'reason': reason?.trim(),
     });
-    return AdminUserActionResult.fromResponse(response);
+    final result = AdminUserActionResult.fromResponse(response);
+    if (result.profileIsDeleted != isDeleted ||
+        (isDeleted && result.profileIsActive != false) ||
+        (!isDeleted && result.profileIsActive != true)) {
+      throw const AdminUserRepositoryFailure(
+        'أعاد الخادم نجاح العملية لكن حالة الحذف الظاهري لم تتطابق مع الطلب.',
+      );
+    }
+    return result;
   }
 
   Future<AdminUserActionResult> setUserRole({
@@ -82,7 +96,13 @@ class AdminUserRepository {
       'user_id': userId,
       'role': role,
     });
-    return AdminUserActionResult.fromResponse(response);
+    final result = AdminUserActionResult.fromResponse(response);
+    if (result.profileRole?.trim().toLowerCase() != role.trim().toLowerCase()) {
+      throw const AdminUserRepositoryFailure(
+        'أعاد الخادم نجاح العملية لكن صلاحية المستخدم لم تتطابق مع الطلب.',
+      );
+    }
+    return result;
   }
 
   Future<Object?> _invoke(Map<String, dynamic> body) async {

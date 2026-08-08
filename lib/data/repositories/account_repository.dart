@@ -148,7 +148,10 @@ class AccountRepository {
           .from('profiles')
           .update(<String, dynamic>{'avatar_url': normalizedUrl})
           .eq('id', user.id)
-          .select('id, full_name, email, phone, avatar_url, role, is_active')
+          .select(
+            'id, full_name, email, phone, avatar_url, role, is_active, '
+            'deleted_at, suspension_reason',
+          )
           .limit(1);
       if (rows.isEmpty) {
         throw const AccountFailure('تعذر تحديث الصورة الشخصية.');
@@ -389,7 +392,10 @@ class AccountRepository {
   Future<AccountProfile> _loadOrCreateProfile(User user) async {
     final rows = await _client
         .from('profiles')
-        .select('id, full_name, email, phone, avatar_url, role, is_active')
+        .select(
+          'id, full_name, email, phone, avatar_url, role, is_active, '
+          'deleted_at, suspension_reason',
+        )
         .eq('id', user.id)
         .limit(1);
 
@@ -412,7 +418,10 @@ class AccountRepository {
           },
           onConflict: 'id',
         )
-        .select('id, full_name, email, phone, avatar_url, role, is_active')
+        .select(
+          'id, full_name, email, phone, avatar_url, role, is_active, '
+          'deleted_at, suspension_reason',
+        )
         .single();
 
     return AccountProfile.fromMap(inserted);
@@ -492,10 +501,13 @@ class AccountFailure implements Exception {
 }
 
 class AccountSuspendedFailure extends AccountFailure {
-  const AccountSuspendedFailure(this.profile)
+  AccountSuspendedFailure(this.profile)
       : super(
-          'تم إيقاف هذا الحساب من الإدارة. يمكنك تسجيل الخروج، '
-          'ولا يمكن إدارة الأنشطة أو مزامنتها حتى إعادة تفعيل الحساب.',
+          profile.isDeleted
+              ? 'تم حذف هذا الحساب ظاهريًا من الإدارة. لا يمكن إدارة الأنشطة '
+                  'أو مزامنتها حتى استعادة الحساب.'
+              : 'تم إيقاف هذا الحساب من الإدارة. لا يمكن إدارة الأنشطة أو '
+                  'مزامنتها حتى إعادة تفعيل الحساب.',
         );
 
   final AccountProfile profile;

@@ -1,0 +1,11 @@
+Phase 12A - Release Readiness Report Fix v2
+
+Purpose:
+- Fix PowerShell variable interpolation in phase12a_release_readiness_report.ps1.
+- Reuse the already successful Phase 12A analyzer, regression tests, and release-mode QA APK build.
+- Regenerate only the release-readiness report and APK SHA-256 metadata.
+
+Fix:
+- Changed $oauthScheme://login-callback/ to ${oauthScheme}://login-callback/ so PowerShell does not parse the colon as part of the variable reference.
+
+This package does NOT rerun Flutter analysis, tests, or Gradle build.

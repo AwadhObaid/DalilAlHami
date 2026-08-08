@@ -229,18 +229,38 @@ class AdminUserActionResult {
     required this.userId,
     required this.action,
     required this.message,
+    this.profileRole,
+    this.profileIsActive,
+    this.profileDeletedAt,
   });
 
   final String userId;
   final String action;
   final String message;
+  final String? profileRole;
+  final bool? profileIsActive;
+  final DateTime? profileDeletedAt;
+
+  bool? get profileIsDeleted =>
+      profileDeletedAt == null && profileRole == null && profileIsActive == null
+          ? null
+          : profileDeletedAt != null;
 
   factory AdminUserActionResult.fromResponse(Object? response) {
     final data = _readMap(response);
+    final profileValue = data['profile'];
+    final profile = profileValue is Map
+        ? profileValue.map((key, value) => MapEntry(key.toString(), value))
+        : const <String, dynamic>{};
     return AdminUserActionResult(
       userId: data['user_id']?.toString() ?? '',
       action: data['action']?.toString() ?? '',
       message: data['message']?.toString() ?? 'تم تحديث المستخدم.',
+      profileRole: _nullableText(profile['role']),
+      profileIsActive: profile.containsKey('is_active')
+          ? _readBoolean(profile['is_active'])
+          : null,
+      profileDeletedAt: _readDate(profile['deleted_at']),
     );
   }
 }

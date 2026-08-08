@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart' hide Text;
 
 import 'package:hami_guide/core/localization/app_localized_text.dart';
@@ -9,6 +11,7 @@ import '../../core/services/automatic_sync_coordinator.dart';
 import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../data/directory_data_store.dart';
+import '../../data/repositories/account_repository.dart';
 import '../auth/google_sign_in_page.dart';
 import '../directory/categories_overview_page.dart';
 import '../profile/account_hub_page.dart';
@@ -36,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
       AutomaticSyncCoordinator.instance;
 
   late int _currentIndex;
-  late final List<Widget> _pages;
+  int _accountRefreshSignal = 0;
   int _lastAnnouncedSyncEvent = 0;
 
   @override
@@ -48,19 +51,6 @@ class _HomeScreenState extends State<HomeScreen> {
         : widget.initialIndex > 3
             ? 3
             : widget.initialIndex;
-    _pages = [
-      HomeDashboardPage(
-        onOpenSearch: () => _selectTab(2),
-        onOpenCategories: _openCategoriesPage,
-      ),
-      _MyActivitiesTab(
-        authStore: _authStore,
-        onSignIn: _openSignIn,
-      ),
-      const DirectorySearchPage(),
-      const AccountHubPage(),
-    ];
-
     _authStore.addListener(_handleAuthChanged);
     _syncCoordinator.addListener(_handleAutomaticSyncChanged);
 
@@ -114,7 +104,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _selectTab(int index) {
+    final refreshAccount =
+        _authStore.isAuthenticated && (index == 1 || index == 3);
     if (_currentIndex == index) {
+      if (refreshAccount) {
+        setState(() => _accountRefreshSignal += 1);
+        unawaited(_authStore.refreshAccountProfile(force: true));
+      }
       return;
     }
 
@@ -122,7 +118,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       _currentIndex = index;
+      if (refreshAccount) {
+        _accountRefreshSignal += 1;
+      }
     });
+    if (refreshAccount) {
+      unawaited(_authStore.refreshAccountProfile(force: true));
+    }
   }
 
   Future<void> _openCategoriesPage() async {
@@ -144,6 +146,29 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openAddBusinessFlow() async {
+    if (_authStore.isAuthenticated) {
+      try {
+        final liveProfile = await _authStore.refreshAccountProfile(force: true);
+        if (liveProfile != null && !liveProfile.canUseAccount) {
+          throw AccountSuspendedFailure(liveProfile);
+        }
+        await AccountRepository().loadCurrentAccount();
+      } on AccountSuspendedFailure catch (error) {
+        if (!mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(error.message)));
+        setState(() => _accountRefreshSignal += 1);
+        return;
+      }
+    }
+
+    if (!mounted) {
+      return;
+    }
+
     await Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
@@ -165,12 +190,26 @@ class _HomeScreenState extends State<HomeScreen> {
     AppColors.bindToTheme(context);
     final isKeyboardVisible = MediaQuery.viewInsetsOf(context).bottom > 0;
 
+    final pages = <Widget>[
+      HomeDashboardPage(
+        onOpenSearch: () => _selectTab(2),
+        onOpenCategories: _openCategoriesPage,
+      ),
+      _MyActivitiesTab(
+        authStore: _authStore,
+        onSignIn: _openSignIn,
+        refreshSignal: _accountRefreshSignal,
+      ),
+      const DirectorySearchPage(),
+      AccountHubPage(refreshSignal: _accountRefreshSignal),
+    ];
+
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       resizeToAvoidBottomInset: true,
       body: IndexedStack(
         index: _currentIndex,
-        children: _pages,
+        children: pages,
       ),
       bottomNavigationBar: _AdaptiveBottomNavigationBar(
         selectedIndex: _currentIndex,
@@ -421,10 +460,12 @@ class _MyActivitiesTab extends StatelessWidget {
   const _MyActivitiesTab({
     required this.authStore,
     required this.onSignIn,
+    required this.refreshSignal,
   });
 
   final AuthSessionStore authStore;
   final VoidCallback onSignIn;
+  final int refreshSignal;
 
   @override
   Widget build(BuildContext context) {
@@ -433,7 +474,30 @@ class _MyActivitiesTab extends StatelessWidget {
       animation: authStore,
       builder: (context, child) {
         if (authStore.isAuthenticated) {
-          return const OwnedBusinessesPage();
+          final profile = authStore.accountProfile;
+          if (profile != null && !profile.canUseAccount) {
+            return Scaffold(
+              backgroundColor: AppColors.pageBackground,
+              appBar: AppBar(title: const Text('أنشطتي')),
+              body: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Text(
+                    profile.isDeleted
+                        ? 'تم حذف هذا الحساب ظاهريًا من الإدارة. '
+                            'لا يمكن إدارة الأنشطة حتى استعادة الحساب.'
+                        : 'تم إيقاف هذا الحساب من الإدارة. '
+                            'لا يمكن إدارة الأنشطة حتى إعادة تفعيل الحساب.',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodyLarge.copyWith(
+                      color: AppColors.danger,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }
+          return OwnedBusinessesPage(refreshSignal: refreshSignal);
         }
 
         return Scaffold(

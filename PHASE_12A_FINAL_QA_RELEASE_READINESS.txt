@@ -1,0 +1,16 @@
+Phase 12A - Final QA and Release Readiness
+
+Purpose:
+- Run the complete Flutter analyzer and regression suite from the stable Phase 11B2 baseline.
+- Add a release-readiness contract that remains valid after later signing/package hardening.
+- Protect future Android signing files from accidental Git commits.
+- Scan tracked source files for privileged credentials/private signing material.
+- Build an Android ARM64 release-mode QA APK with validated local Supabase client settings.
+- Generate a machine-readable release-readiness report before Phase 12B.
+
+Important:
+- The Phase 12A release-mode APK is QA-only until Phase 12B replaces debug signing with a private production keystore.
+- The current Android applicationId is still com.example.dalilalhami and must be finalized in Phase 12B before store publication.
+- Firebase Android configuration is registered to the current package name and must be regenerated if the applicationId changes.
+- The existing Supabase Google OAuth callback uses com.awadhobaid.dalilalhami://login-callback/ and must be revalidated after package identity hardening.
+- iOS Firebase options are not configured in the current baseline; iOS publication is a separate readiness item.
