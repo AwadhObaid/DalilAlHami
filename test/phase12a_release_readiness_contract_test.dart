@@ -10,7 +10,7 @@ void main() {
     test('pubspec contains a publishable semantic version', () {
       final pubspec = _read('pubspec.yaml');
       final versionPattern = RegExp(
-        r'^version:\s+[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+\s*$',
+        r'^version:\s+[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?\+[0-9]+\s*$',
         multiLine: true,
       );
       expect(versionPattern.hasMatch(pubspec), isTrue);

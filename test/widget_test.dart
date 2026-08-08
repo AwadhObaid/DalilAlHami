@@ -12,7 +12,11 @@ void main() {
   testWidgets(
     'يفتح التطبيق وينتقل من شاشة البداية إلى حاوية التنقل',
     (WidgetTester tester) async {
-      await tester.pumpWidget(const HamiGuideApp());
+      await tester.pumpWidget(
+        HamiGuideApp(
+          startupUpdateCheck: () async => null,
+        ),
+      );
 
       expect(find.text('أهلاً بك في التطبيق'), findsOneWidget);
 

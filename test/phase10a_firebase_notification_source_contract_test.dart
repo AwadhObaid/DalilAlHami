@@ -93,6 +93,6 @@ void main() {
         .map((android) => android['package_name']?.toString())
         .whereType<String>()
         .toSet();
-    expect(packageNames, contains('com.example.dalilalhami'));
+    expect(packageNames, contains('com.awadhobaid.dalilalhami'));
   });
 }

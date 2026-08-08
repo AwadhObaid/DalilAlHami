@@ -3,7 +3,7 @@ param(
     [ValidateNotNullOrEmpty()]
     [string]$ProjectRoot = "F:\FlutterProjects\DalilAlHami_Clean",
     [ValidateNotNullOrEmpty()]
-    [string]$AndroidPackageName = "com.example.dalilalhami"
+    [string]$AndroidPackageName = "com.awadhobaid.dalilalhami"
 )
 
 Set-StrictMode -Version Latest

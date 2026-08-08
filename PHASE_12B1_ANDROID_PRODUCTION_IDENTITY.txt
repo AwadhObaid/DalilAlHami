@@ -1,0 +1,7 @@
+Dalil Al Hami - Phase 12B1 Android Production Identity
+
+Production Android package: com.awadhobaid.dalilalhami
+Firebase project: dalilalhami-504320
+OAuth callback: com.awadhobaid.dalilalhami://login-callback/
+
+This phase replaces the temporary com.example Android identity and regenerates Firebase Android configuration using FlutterFire CLI. Production signing remains intentionally deferred to Phase 12B2.

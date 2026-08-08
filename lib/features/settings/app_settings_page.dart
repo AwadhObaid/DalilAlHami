@@ -1,11 +1,13 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart' hide Text;
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:hami_guide/core/localization/app_localized_text.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/services/app_preferences_store.dart';
+import '../../core/services/app_update_service.dart';
 import '../../core/services/firebase_push_notification_service.dart';
 import '../../core/theme/app_text_styles.dart';
 
@@ -20,20 +22,27 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
   final AppPreferencesStore _preferences = AppPreferencesStore.instance;
   final FirebasePushNotificationService _pushService =
       FirebasePushNotificationService.instance;
+  final AppUpdateService _updateService = AppUpdateService();
 
   AuthorizationStatus? _authorizationStatus;
+  AppUpdateCheckResult? _updateResult;
+  String _currentVersionLabel = '...';
+  String? _updateErrorMessage;
   bool _isUpdatingPush = false;
+  bool _isCheckingUpdate = false;
 
   @override
   void initState() {
     super.initState();
     _preferences.addListener(_handlePreferencesChanged);
     _refreshNotificationStatus();
+    _loadCurrentVersionLabel();
   }
 
   @override
   void dispose() {
     _preferences.removeListener(_handlePreferencesChanged);
+    _updateService.dispose();
     super.dispose();
   }
 
@@ -54,6 +63,129 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
         setState(() => _authorizationStatus = null);
       }
     }
+  }
+
+  Future<void> _loadCurrentVersionLabel() async {
+    try {
+      final version = await _updateService.currentVersionLabel();
+      if (mounted) {
+        setState(() => _currentVersionLabel = version);
+      }
+    } catch (_) {
+      // Version display is non-critical. Startup update checks run on SplashScreen.
+    }
+  }
+
+  Future<void> _checkForUpdates({required bool showNoUpdateMessage}) async {
+    if (_isCheckingUpdate) {
+      return;
+    }
+
+    setState(() {
+      _isCheckingUpdate = true;
+      _updateErrorMessage = null;
+    });
+
+    try {
+      final result = await _updateService.checkForUpdate();
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _updateResult = result;
+        _currentVersionLabel = result.currentVersionLabel;
+      });
+
+      if (showNoUpdateMessage && !result.hasUpdate) {
+        _showMessage(
+          AppLocaleText.pick(
+            context,
+            ar: 'لديك أحدث إصدار متاح حاليًا.',
+            en: 'You already have the latest available version.',
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _updateErrorMessage = AppLocaleText.pick(
+          context,
+          ar: 'تعذر التحقق من التحديثات. تحقق من اتصال الإنترنت ثم أعد المحاولة.',
+          en: 'Could not check for updates. Check your internet connection and try again.',
+        );
+      });
+      if (showNoUpdateMessage) {
+        _showMessage(_updateErrorMessage!, isError: true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isCheckingUpdate = false);
+      }
+    }
+  }
+
+  Future<void> _downloadAvailableUpdate() async {
+    final release = _updateResult?.availableRelease;
+    if (release == null) {
+      return;
+    }
+
+    final launched = await launchUrl(
+      release.preferredDownloadUri,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!mounted) {
+      return;
+    }
+    if (!launched) {
+      _showMessage(
+        AppLocaleText.pick(
+          context,
+          ar: 'تعذر فتح رابط تنزيل التحديث.',
+          en: 'Could not open the update download link.',
+        ),
+        isError: true,
+      );
+    }
+  }
+
+  String _updateStatusLabel(BuildContext context) {
+    if (_updateErrorMessage != null) {
+      return _updateErrorMessage!;
+    }
+    if (_isCheckingUpdate && _updateResult == null) {
+      return AppLocaleText.pick(
+        context,
+        ar: 'جارٍ البحث عن إصدار أحدث…',
+        en: 'Checking for a newer release…',
+      );
+    }
+
+    final release = _updateResult?.availableRelease;
+    if (release != null) {
+      return AppLocaleText.pick(
+        context,
+        ar: 'يتوفر تحديث جديد: ${release.version.normalized}',
+        en: 'New update available: ${release.version.normalized}',
+      );
+    }
+
+    if (_updateResult != null) {
+      return AppLocaleText.pick(
+        context,
+        ar: 'لديك أحدث إصدار متاح حاليًا.',
+        en: 'You have the latest available version.',
+      );
+    }
+
+    return AppLocaleText.pick(
+      context,
+      ar: 'يمكنك التحقق من الإصدارات المنشورة في مستودع التطبيق.',
+      en: 'Check the releases published in the app repository.',
+    );
   }
 
   Future<void> _setPublicNotifications(bool value) async {
@@ -308,21 +440,79 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
           ),
           const SizedBox(height: AppSpacing.md),
           _SettingsSection(
-            title: 'حول التطبيق',
-            icon: Icons.info_outline_rounded,
-            child: const Column(
+            title: 'التحديثات',
+            icon: Icons.system_update_alt_rounded,
+            child: Column(
               children: [
                 ListTile(
+                  key: const ValueKey<String>('settings-check-updates'),
+                  onTap: _isCheckingUpdate
+                      ? null
+                      : () => _checkForUpdates(showNoUpdateMessage: true),
+                  leading: _isCheckingUpdate
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh_rounded),
+                  title: const Text('التحقق من التحديثات'),
+                  subtitle: Text(_updateStatusLabel(context)),
+                  trailing: _isCheckingUpdate
+                      ? null
+                      : const Icon(Icons.chevron_right_rounded),
+                ),
+                if (_updateResult?.hasUpdate == true) ...[
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        key: const ValueKey<String>(
+                          'settings-download-update',
+                        ),
+                        onPressed: _downloadAvailableUpdate,
+                        icon: const Icon(Icons.download_rounded),
+                        label: const Text('تنزيل التحديث'),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _SettingsSection(
+            title: 'حول التطبيق',
+            icon: Icons.info_outline_rounded,
+            child: Column(
+              children: [
+                const ListTile(
                   leading: Icon(Icons.apps_rounded),
                   title: Text('دليل الحامي'),
                   subtitle: Text('دليل الخدمات والأنشطة المحلية'),
                 ),
-                Divider(height: 1),
+                const Divider(height: 1),
                 ListTile(
-                  key: ValueKey<String>('settings-app-version'),
-                  leading: Icon(Icons.tag_rounded),
-                  title: Text('الإصدار'),
-                  subtitle: Text('1.0.2+3'),
+                  key: const ValueKey<String>('settings-app-version'),
+                  leading: const Icon(Icons.tag_rounded),
+                  title: const Text('الإصدار'),
+                  subtitle: Text(_currentVersionLabel),
+                ),
+                const Divider(height: 1),
+                const ListTile(
+                  key: ValueKey<String>('settings-app-idea-credit'),
+                  leading: Icon(Icons.lightbulb_outline_rounded),
+                  title: Text('فكرة التطبيق'),
+                  subtitle: Text('الغريم سالم'),
+                ),
+                const Divider(height: 1),
+                const ListTile(
+                  key: ValueKey<String>('settings-app-development-credit'),
+                  leading: Icon(Icons.code_rounded),
+                  title: Text('برمجة وتطوير'),
+                  subtitle: Text('المهندس عوض بن قفلة'),
                 ),
               ],
             ),

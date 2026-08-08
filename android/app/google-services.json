@@ -7,6 +7,35 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:189319292547:android:d99aac0f2194f8e92fddb6",
+        "android_client_info": {
+          "package_name": "com.awadhobaid.dalilalhami"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "189319292547-vh0osrgf6tah2871ag22o7pbuj5463gf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyU9UQWTbhTKCYqn9gg9VV7uNMMCgxLko"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "189319292547-vh0osrgf6tah2871ag22o7pbuj5463gf.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:189319292547:android:7107b34a769a7a732fddb6",
         "android_client_info": {
           "package_name": "com.example.dalilalhami"

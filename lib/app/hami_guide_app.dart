@@ -8,7 +8,12 @@ import '../core/theme/app_theme.dart';
 import '../features/splash/splash_screen.dart';
 
 class HamiGuideApp extends StatelessWidget {
-  const HamiGuideApp({super.key});
+  const HamiGuideApp({
+    super.key,
+    this.startupUpdateCheck,
+  });
+
+  final StartupUpdateCheck? startupUpdateCheck;
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +70,7 @@ class HamiGuideApp extends StatelessWidget {
               child: child ?? const SizedBox.shrink(),
             );
           },
-          home: const SplashScreen(),
+          home: SplashScreen(updateCheckOverride: startupUpdateCheck),
         );
       },
     );

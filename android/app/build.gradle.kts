@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.dalilalhami"
+    namespace = "com.awadhobaid.dalilalhami"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -22,7 +22,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.dalilalhami"
+        applicationId = "com.awadhobaid.dalilalhami"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         multiDexEnabled = true

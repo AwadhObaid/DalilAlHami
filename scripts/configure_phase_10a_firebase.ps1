@@ -4,7 +4,7 @@ param(
     [string]$ProjectRoot = "F:\FlutterProjects\DalilAlHami_Clean",
     [string]$FirebaseProjectId = "",
     [ValidateNotNullOrEmpty()]
-    [string]$AndroidPackageName = "com.example.dalilalhami"
+    [string]$AndroidPackageName = "com.awadhobaid.dalilalhami"
 )
 
 Set-StrictMode -Version Latest
