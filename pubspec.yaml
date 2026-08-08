@@ -1,7 +1,7 @@
 name: hami_guide
-description: "دليل الحامي للخدمات والأنشطة المحلية."
+description: "Dalil Al Hami local services and activities guide."
 publish_to: 'none'
-version: 1.0.3-beta+4
+version: 1.0.4-beta+5
 
 environment:
   sdk: '>=3.6.0 <4.0.0'
@@ -12,7 +12,6 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  # المكتبات المستخدمة
   url_launcher: ^6.2.1
   http: ^1.4.0
   package_info_plus: ^10.2.1
@@ -20,7 +19,6 @@ dependencies:
   latlong2: ^0.10.1
   geolocator: ^14.0.3
   image_picker: ^1.0.4
-  # مثبت على 4.8.0 لتوافق xml 6.x مع flutter_local_notifications 19.5.0
   image: 4.8.0
   cached_network_image: ^3.4.1
   cupertino_icons: ^1.0.2
@@ -41,23 +39,21 @@ dev_dependencies:
   flutter_launcher_icons: ^0.13.1
   sqflite_common_ffi: ^2.4.2
 
-# 1. إعدادات أيقونة التطبيق (تكون في مستوى منفصل)
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
   image_path: "assets/logo.png"
   min_sdk_android: 21
+  adaptive_icon_background: "#097175"
+  adaptive_icon_foreground: "assets/icon_foreground.png"
+  remove_alpha_ios: true
 
-# 2. إعدادات فلاتر (الخطوط، الصور، وأيقونات النظام)
 flutter:
-  # هذا السطر هو المسؤول عن ظهور أيقونات التطبيق (Icons.home وغيرها)
   uses-material-design: true
 
-  # تعريف مجلد الصور
   assets:
     - assets/
 
-  # تعريف الخطوط
   fonts:
     - family: Tajawal
       fonts:
