@@ -763,9 +763,9 @@ class _ProfilePageState extends State<ProfilePage> {
         const SizedBox(height: 4),
         Text(
           business.categoryName,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
-            color: Colors.grey,
+            color: AppColors.textSecondary,
           ),
         ),
         const SizedBox(height: 12),
@@ -799,7 +799,7 @@ class _ProfilePageState extends State<ProfilePage> {
           child: Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
@@ -982,7 +982,7 @@ class _ProfilePageState extends State<ProfilePage> {
       key: const ValueKey<String>('profile-avatar-editor'),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.outline),
       ),
@@ -1078,7 +1078,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: Colors.white,
+                    color: AppColors.surface,
                     width: 4,
                   ),
                   boxShadow: [
@@ -1090,13 +1090,13 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 child: CircleAvatar(
                   radius: 57,
-                  backgroundColor: Colors.grey[200],
+                  backgroundColor: AppColors.surfaceMuted,
                   backgroundImage: imageProvider,
                   child: imageProvider == null
-                      ? const Icon(
+                      ? Icon(
                           Icons.storefront,
                           size: 58,
-                          color: Colors.grey,
+                          color: AppColors.textMuted,
                         )
                       : null,
                 ),
@@ -1164,7 +1164,7 @@ class _ProfilePageState extends State<ProfilePage> {
             color: AppColors.primaryTeal,
           ),
           filled: true,
-          fillColor: Colors.grey[50],
+          fillColor: AppColors.surfaceMuted,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
@@ -1195,17 +1195,17 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey,
+                    color: AppColors.textSecondary,
                   ),
                 ),
                 Text(
                   value.isEmpty ? 'غير محدد' : value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ],
@@ -1240,7 +1240,7 @@ class _ProfilePageState extends State<ProfilePage> {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(

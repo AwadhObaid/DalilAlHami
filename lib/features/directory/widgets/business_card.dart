@@ -8,6 +8,7 @@ import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/launch_actions.dart';
 import '../../../models/business.dart';
+import 'business_favorite_button.dart';
 import 'business_image.dart';
 
 class BusinessCard extends StatelessWidget {
@@ -63,13 +64,19 @@ class BusinessCard extends StatelessWidget {
                         child: _BusinessSummary(business: business),
                       ),
                       const SizedBox(width: AppSpacing.xxs),
-                      Padding(
-                        padding: EdgeInsets.only(top: AppSpacing.xxs),
-                        child: Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          size: 17,
-                          color: AppColors.textMuted,
-                        ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          BusinessFavoriteButton(
+                            businessId: business.id,
+                            size: 20,
+                          ),
+                          Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            size: 15,
+                            color: AppColors.textMuted,
+                          ),
+                        ],
                       ),
                     ],
                   ),

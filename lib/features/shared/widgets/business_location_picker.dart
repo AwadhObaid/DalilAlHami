@@ -49,7 +49,7 @@ class BusinessLocationPicker extends StatelessWidget {
       key: const ValueKey<String>('business-location-picker'),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.outline),
       ),

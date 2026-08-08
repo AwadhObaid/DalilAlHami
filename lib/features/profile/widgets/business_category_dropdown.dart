@@ -88,7 +88,7 @@ class BusinessCategoryDropdown extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: AppColors.surfaceMuted,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -100,6 +100,7 @@ class BusinessCategoryDropdown extends StatelessWidget {
                 'profile-business-category-dropdown',
               ),
               hint: const Text('اختر النشاط'),
+              dropdownColor: AppColors.surface,
               isExpanded: true,
               value: safeSelectedCategoryId,
               items: selectableCategories.map((category) {

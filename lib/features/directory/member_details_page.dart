@@ -9,9 +9,11 @@ import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/launch_actions.dart';
 import '../../models/business.dart';
+import 'widgets/business_favorite_button.dart';
 import 'widgets/business_gallery_section.dart';
 import 'widgets/business_image.dart';
 import 'widgets/business_location_section.dart';
+import 'widgets/business_rating_section.dart';
 
 class MemberDetailsPage extends StatelessWidget {
   const MemberDetailsPage({
@@ -43,6 +45,8 @@ class MemberDetailsPage extends StatelessWidget {
                   _buildIdentityCard(),
                   const SizedBox(height: AppSpacing.md),
                   _buildQuickActions(context),
+                  const SizedBox(height: AppSpacing.md),
+                  BusinessRatingSection(businessId: business.id),
                   const SizedBox(height: AppSpacing.md),
                   _buildInformationCard(context),
                   if (business.location case final location?) ...[
@@ -80,6 +84,10 @@ class MemberDetailsPage extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
       ),
       actions: [
+        BusinessFavoriteButton(
+          businessId: business.id,
+          size: 22,
+        ),
         IconButton(
           tooltip: AppLocaleText.pick(context,
               ar: 'نسخ رقم التواصل', en: 'Copy contact number'),

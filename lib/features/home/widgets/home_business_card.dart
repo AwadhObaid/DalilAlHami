@@ -8,6 +8,7 @@ import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/launch_actions.dart';
 import '../../../models/business.dart';
+import '../../directory/widgets/business_favorite_button.dart';
 import '../../directory/widgets/business_image.dart';
 
 class HomeBusinessCard extends StatelessWidget {
@@ -186,20 +187,10 @@ class _BusinessContent extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.xs),
-            IconButton.outlined(
-              tooltip: AppLocaleText.pick(context,
-                  ar: 'عرض التفاصيل', en: 'View details'),
-              onPressed: onOpen,
-              style: IconButton.styleFrom(
-                minimumSize: const Size(38, 38),
-                side: BorderSide(color: AppColors.outline),
-                foregroundColor: AppColors.textSecondary,
-                visualDensity: VisualDensity.compact,
-              ),
-              icon: const Icon(
-                Icons.favorite_border_rounded,
-                size: 20,
-              ),
+            BusinessFavoriteButton(
+              businessId: business.id,
+              outlined: true,
+              size: 20,
             ),
           ],
         ),

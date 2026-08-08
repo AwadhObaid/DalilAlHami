@@ -16,6 +16,7 @@ import '../auth/google_sign_in_page.dart';
 import '../shared/widgets/page_header.dart';
 import '../settings/app_settings_page.dart';
 import 'background_sync_settings_page.dart';
+import 'favorite_businesses_page.dart';
 import 'owned_businesses_page.dart';
 import 'profile_page.dart';
 import 'sync_queue_page.dart';
@@ -272,6 +273,14 @@ class _AccountHubPageState extends State<AccountHubPage>
         _buildBenefitsCard(),
         const SizedBox(height: AppSpacing.md),
         _AccountActionCard(
+          icon: Icons.favorite_rounded,
+          title: 'المفضلة',
+          subtitle: 'الأنشطة التي حفظتها للعودة إليها بسرعة',
+          color: AppColors.danger,
+          onTap: _openFavorites,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        _AccountActionCard(
           icon: Icons.settings_rounded,
           title: 'إعدادات التطبيق',
           subtitle: 'حجم الخط والإشعارات واللغة',
@@ -424,6 +433,14 @@ class _AccountHubPageState extends State<AccountHubPage>
           onTap: accountSuspended || _directoryStore.isLoading
               ? null
               : _directoryStore.refresh,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        _AccountActionCard(
+          icon: Icons.favorite_rounded,
+          title: 'المفضلة',
+          subtitle: 'عرض الأنشطة المحفوظة ومزامنتها مع الحساب',
+          color: AppColors.danger,
+          onTap: _openFavorites,
         ),
         const SizedBox(height: AppSpacing.sm),
         _AccountActionCard(
@@ -589,6 +606,15 @@ class _AccountHubPageState extends State<AccountHubPage>
 
     await _refreshOwnedBusinessState();
     await _directoryStore.refresh();
+  }
+
+  Future<void> _openFavorites() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => const FavoriteBusinessesPage(),
+      ),
+    );
   }
 
   Future<void> _openAppSettings() async {

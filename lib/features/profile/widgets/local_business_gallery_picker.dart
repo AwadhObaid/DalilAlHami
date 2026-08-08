@@ -52,7 +52,7 @@ class LocalBusinessGalleryPicker extends StatelessWidget {
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.outline),
       ),
@@ -64,17 +64,20 @@ class LocalBusinessGalleryPicker extends StatelessWidget {
               const Icon(Icons.photo_library_outlined,
                   color: AppColors.primaryTeal),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'صور معرض النشاط',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     Text(
                       'يمكن إضافة حتى 5 صور، وتُرفع عند المزامنة.',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -140,12 +143,12 @@ class LocalBusinessGalleryPicker extends StatelessWidget {
               ),
             )
           else
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 10),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
               child: Text(
                 'لم تختر صورًا للمعرض بعد.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: AppColors.textSecondary),
               ),
             ),
           const SizedBox(height: 8),

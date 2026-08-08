@@ -7,8 +7,10 @@ import 'core/services/app_notification_store.dart';
 import 'core/services/app_preferences_store.dart';
 import 'core/services/auth_session_store.dart';
 import 'core/services/background_sync_service.dart';
+import 'core/services/business_rating_store.dart';
 import 'core/services/automatic_sync_coordinator.dart';
 import 'core/services/firebase_push_notification_service.dart';
+import 'core/services/favorite_store.dart';
 import 'core/services/supabase_service.dart';
 import 'firebase_options.dart';
 
@@ -26,6 +28,8 @@ Future<void> main() async {
   await AuthSessionStore.instance.initialize();
   await AppNotificationStore.instance.initialize();
   await AppPreferencesStore.instance.initialize();
+  await FavoriteStore.instance.initialize();
+  await BusinessRatingStore.instance.initialize();
   await BackgroundSyncService.instance.initialize();
   await AutomaticSyncCoordinator.instance.initialize();
   await FirebasePushNotificationService.instance.initialize();

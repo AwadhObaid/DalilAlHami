@@ -159,6 +159,32 @@ abstract final class _EnglishCatalog {
     'البحث': 'Search',
     'الأقسام': 'Categories',
     'الإشعارات': 'Notifications',
+    'المفضلة': 'Favorites',
+    'تقييم النشاط': 'Business rating',
+    'تقييمك': 'Your rating',
+    'سجل الدخول لتقييم النشاط': 'Sign in to rate this business',
+    'تم حفظ تقييمك.': 'Your rating was saved.',
+    'تم حفظ تقييمك وسيتم مزامنته عند عودة الاتصال.':
+        'Your rating was saved and will sync when the connection returns.',
+    'سجّل الدخول أولًا حتى تتمكن من تقييم النشاط.':
+        'Sign in first to rate this business.',
+    'هذا الحساب غير متاح لإضافة تقييمات.':
+        'This account cannot add ratings.',
+    'التقييم غير متاح لهذا النشاط حاليًا.':
+        'Rating is not available for this business right now.',
+    'اختر تقييمًا من نجمة إلى خمس نجوم.':
+        'Choose a rating from one to five stars.',
+    'تم حفظ التقييم على الجهاز وسيتم مزامنته عند عودة الاتصال.':
+        'The rating is saved on this device and will sync when the connection returns.',
+    'تعذر تحديث التقييم الآن. يمكنك المحاولة لاحقًا.':
+        'The rating could not be updated now. You can try again later.',
+    'الأنشطة التي حفظتها للعودة إليها بسرعة':
+        'Businesses you saved for quick access',
+    'عرض الأنشطة المحفوظة ومزامنتها مع الحساب':
+        'View saved businesses and sync them with your account',
+    'لا توجد أنشطة في المفضلة': 'No favorite businesses yet',
+    'اضغط على رمز القلب في أي نشاط ليظهر هنا.':
+        'Tap the heart on any business to save it here.',
     'بحث': 'Search',
     'عرض الكل': 'View all',
     'عرض التفاصيل': 'View details',
