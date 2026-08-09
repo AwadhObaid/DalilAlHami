@@ -15,7 +15,7 @@ void main() {
     ).readAsStringSync();
 
     expect(dashboard, contains('الفئات المميزة'));
-    expect(dashboard, contains('خدمات النقل'));
+    expect(dashboard, isNot(contains('خدمات النقل')));
     expect(dashboard, contains('أنشطة قريبة منك'));
     expect(dashboard, contains('StickyAdvertisementHeader'));
     expect(dashboard, contains('home-explore-directory-footer'));
