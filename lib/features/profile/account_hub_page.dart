@@ -15,6 +15,7 @@ import '../admin/widgets/admin_dashboard_entry_card.dart';
 import '../auth/google_sign_in_page.dart';
 import '../shared/widgets/page_header.dart';
 import '../settings/app_settings_page.dart';
+import 'account_profile_page.dart';
 import 'background_sync_settings_page.dart';
 import 'favorite_businesses_page.dart';
 import 'owned_businesses_page.dart';
@@ -379,6 +380,14 @@ class _AccountHubPageState extends State<AccountHubPage>
           ),
         ],
         const SizedBox(height: AppSpacing.md),
+        _AccountActionCard(
+          icon: Icons.account_circle_outlined,
+          title: 'بيانات الحساب',
+          subtitle: 'الاسم والصورة الشخصية وبيانات التواصل',
+          color: AppColors.primaryTeal,
+          onTap: accountSuspended ? null : _openAccountProfile,
+        ),
+        const SizedBox(height: AppSpacing.md),
         AddBusinessButton(
           buttonKey: const ValueKey<String>(
             'account-add-business-button',
@@ -572,6 +581,21 @@ class _AccountHubPageState extends State<AccountHubPage>
       setState(() {});
       await _refreshOwnedBusinessState();
     }
+  }
+
+  Future<void> _openAccountProfile() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => const AccountProfilePage(),
+      ),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    await _refreshOwnedBusinessState();
   }
 
   Future<void> _openCreateBusiness() async {

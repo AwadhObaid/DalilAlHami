@@ -25,6 +25,9 @@ void main() {
     final profilePage = File(
       'lib/features/profile/profile_page.dart',
     ).readAsStringSync();
+    final accountProfilePage = File(
+      'lib/features/profile/account_profile_page.dart',
+    ).readAsStringSync();
     final accountRepository = File(
       'lib/data/repositories/account_repository.dart',
     ).readAsStringSync();
@@ -49,9 +52,9 @@ void main() {
     expect(syncGateway, contains('localGalleryPathsKey'));
     expect(syncGateway, contains('finalize_owner_business_media'));
     expect(adminDashboard, contains('admin-manage-media-action'));
-    expect(profilePage, contains('profile-avatar-editor'));
-    expect(profilePage, contains('_deleteAvatarBestEffort'));
-    expect(profilePage, contains('MediaUploadResult? upload'));
+    expect(accountProfilePage, contains('account-profile-page'));
+    expect(accountProfilePage, contains('_deleteAvatarBestEffort'));
+    expect(accountProfilePage, contains('MediaUploadResult? upload'));
     expect(profilePage, contains('EmptyOwnedBusinessState'));
     expect(accountRepository, contains('updateProfileAvatar'));
     expect(mediaService, contains('MediaAssetKind.profileAvatar'));

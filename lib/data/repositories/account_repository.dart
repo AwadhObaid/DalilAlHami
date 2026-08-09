@@ -171,8 +171,108 @@ class AccountRepository {
     }
   }
 
-  Future<AccountSaveResult> saveAccount({
+  Future<AccountProfile> updateProfileDetails({
     required String fullName,
+    required String phone,
+  }) async {
+    final user = _user;
+    await _ensureCachedAccountActive(user.id);
+
+    final normalizedName = fullName.trim();
+    final normalizedPhone = phone.trim();
+    if (normalizedName.isEmpty) {
+      throw const AccountFailure('أدخل الاسم الشخصي.');
+    }
+
+    try {
+      final rows = await _client
+          .from('profiles')
+          .update(<String, dynamic>{
+            'full_name': normalizedName,
+            'phone': normalizedPhone,
+          })
+          .eq('id', user.id)
+          .select(
+            'id, full_name, email, phone, avatar_url, role, is_active, '
+            'deleted_at, suspension_reason',
+          )
+          .limit(1);
+
+      if (rows.isEmpty) {
+        throw const AccountFailure('تعذر تحديث بيانات الحساب.');
+      }
+
+      final profile = AccountProfile.fromMap(rows.first);
+      await _database.upsertAccountProfile(profile);
+
+      try {
+        await _client.auth.updateUser(
+          UserAttributes(
+            data: <String, dynamic>{
+              'full_name': profile.fullName,
+            },
+          ),
+        );
+      } catch (_) {
+        // The profiles row is the source of truth. Metadata refresh is best effort.
+      }
+
+      return profile;
+    } on AccountFailure {
+      rethrow;
+    } on PostgrestException catch (error) {
+      if (error.code == '42501') {
+        throw const AccountFailure('لا تملك صلاحية تحديث بيانات الحساب.');
+      }
+      throw const AccountFailure(
+        'تعذر تحديث بيانات الحساب. تحقق من الاتصال ثم أعد المحاولة.',
+      );
+    } catch (_) {
+      throw const AccountFailure(
+        'تعذر تحديث بيانات الحساب. تحقق من الاتصال ثم أعد المحاولة.',
+      );
+    }
+  }
+
+  Future<AccountProfile> clearProfileAvatar() async {
+    final user = _user;
+    await _ensureCachedAccountActive(user.id);
+
+    try {
+      final rows = await _client
+          .from('profiles')
+          .update(<String, dynamic>{'avatar_url': null})
+          .eq('id', user.id)
+          .select(
+            'id, full_name, email, phone, avatar_url, role, is_active, '
+            'deleted_at, suspension_reason',
+          )
+          .limit(1);
+
+      if (rows.isEmpty) {
+        throw const AccountFailure('تعذر حذف الصورة الشخصية.');
+      }
+
+      final profile = AccountProfile.fromMap(rows.first);
+      await _database.upsertAccountProfile(profile);
+      return profile;
+    } on AccountFailure {
+      rethrow;
+    } on PostgrestException catch (error) {
+      if (error.code == '42501') {
+        throw const AccountFailure('لا تملك صلاحية حذف الصورة الشخصية.');
+      }
+      throw const AccountFailure(
+        'تعذر حذف الصورة الشخصية. تحقق من الاتصال ثم أعد المحاولة.',
+      );
+    } catch (_) {
+      throw const AccountFailure(
+        'تعذر حذف الصورة الشخصية. تحقق من الاتصال ثم أعد المحاولة.',
+      );
+    }
+  }
+
+  Future<AccountSaveResult> saveAccount({
     required String categoryId,
     required String categoryName,
     required String businessName,
@@ -189,7 +289,6 @@ class AccountRepository {
   }) async {
     final user = _user;
     await _ensureCachedAccountActive(user.id);
-    final normalizedName = fullName.trim();
     final normalizedBusinessName = businessName.trim();
     final normalizedAddress =
         address.trim().isEmpty ? 'الحامي' : address.trim();
@@ -203,8 +302,7 @@ class AccountRepository {
       throw AccountFailure(error.message?.toString() ?? 'الموقع غير صالح.');
     }
 
-    if (normalizedName.isEmpty ||
-        normalizedBusinessName.isEmpty ||
+    if (normalizedBusinessName.isEmpty ||
         normalizedBusinessPhone.isEmpty ||
         categoryId.trim().isEmpty) {
       throw const AccountFailure(
@@ -215,19 +313,10 @@ class AccountRepository {
     final cachedProfile = await _database.readAccountProfile(
       userId: user.id,
     );
-    final profile = AccountProfile(
-      id: user.id,
-      fullName: normalizedName,
-      phone: user.phone ?? '',
-      role: cachedProfile?.role ?? 'user',
-      isActive: cachedProfile?.isActive ?? true,
-      email: user.email,
-      avatarUrl: cachedProfile?.avatarUrl ??
-          user.userMetadata?['avatar_url']?.toString() ??
-          user.userMetadata?['picture']?.toString(),
-    );
-    await _database.upsertAccountProfile(profile);
-    unawaited(_trySaveProfileOnline(profile));
+    final profile = cachedProfile ?? _profileFromUser(user);
+    if (cachedProfile == null) {
+      await _database.upsertAccountProfile(profile);
+    }
 
     final savedBusinessId = businessId?.trim().isNotEmpty == true
         ? businessId!.trim()
@@ -359,33 +448,6 @@ class AccountRepository {
     final profile = await _database.readAccountProfile(userId: userId);
     if (profile != null && !profile.isActive) {
       throw AccountSuspendedFailure(profile);
-    }
-  }
-
-  Future<void> _trySaveProfileOnline(AccountProfile profile) async {
-    try {
-      await _client.from('profiles').upsert(
-        <String, dynamic>{
-          'id': profile.id,
-          'full_name': profile.fullName,
-          'phone': profile.phone,
-          'email': profile.email,
-        },
-        onConflict: 'id',
-      );
-      try {
-        await _client.auth.updateUser(
-          UserAttributes(
-            data: <String, dynamic>{
-              'full_name': profile.fullName,
-            },
-          ),
-        );
-      } catch (_) {
-        // Local profile remains available when metadata update fails.
-      }
-    } catch (_) {
-      // Business data is still safely queued locally.
     }
   }
 

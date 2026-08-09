@@ -7,14 +7,12 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/location/business_location.dart';
 import '../../core/services/auth_session_store.dart';
-import '../../core/services/media_upload_service.dart';
 import '../../data/directory_data_store.dart';
 import '../../data/repositories/account_repository.dart';
 import '../../models/account_business.dart';
 import '../../models/account_profile.dart';
 import '../shared/widgets/business_gallery_manager.dart';
 import '../shared/widgets/business_location_picker.dart';
-import '../shared/widgets/cached_directory_image.dart';
 import 'widgets/add_business_button.dart';
 import 'widgets/business_category_dropdown.dart';
 import 'widgets/empty_owned_business_state.dart';
@@ -38,9 +36,6 @@ class _ProfilePageState extends State<ProfilePage> {
   final AccountRepository _repository = AccountRepository();
   final DirectoryDataStore _directoryStore = DirectoryDataStore.instance;
   final ImagePicker _picker = ImagePicker();
-  final MediaUploadService _mediaUploadService = MediaUploadService();
-
-  final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _businessNameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _whatsappController = TextEditingController();
@@ -58,7 +53,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   bool _isLoading = true;
   bool _isSaving = false;
-  bool _isUploadingAvatar = false;
   bool _isEditing = false;
   String? _loadError;
 
@@ -71,7 +65,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   void dispose() {
-    _fullNameController.dispose();
     _businessNameController.dispose();
     _phoneController.dispose();
     _whatsappController.dispose();
@@ -140,11 +133,8 @@ class _ProfilePageState extends State<ProfilePage> {
     _profile = snapshot.profile;
     _business = snapshot.business;
 
-    _fullNameController.text = snapshot.profile.fullName.isNotEmpty
-        ? snapshot.profile.fullName
-        : snapshot.business?.name ?? '';
     _businessNameController.text = snapshot.business?.name ?? '';
-    _phoneController.text = snapshot.business?.phone ?? snapshot.profile.phone;
+    _phoneController.text = snapshot.business?.phone ?? '';
     _whatsappController.text = snapshot.business?.whatsapp ?? '';
     _addressController.text = snapshot.business?.address ?? 'الحامي';
     _descriptionController.text = snapshot.business?.description ?? '';
@@ -154,68 +144,6 @@ class _ProfilePageState extends State<ProfilePage> {
     _selectedBusinessLocation = snapshot.business?.location;
 
     _selectedCategoryId = snapshot.business?.categoryId;
-  }
-
-  Future<void> _uploadProfileAvatar() async {
-    final profile = _profile;
-    if (profile == null || _isUploadingAvatar || _isSaving) {
-      return;
-    }
-
-    setState(() => _isUploadingAvatar = true);
-    MediaUploadResult? upload;
-    try {
-      upload = await _mediaUploadService.pickAndUpload(
-        kind: MediaAssetKind.profileAvatar,
-        entityId: profile.id,
-      );
-      if (upload == null || !mounted) {
-        return;
-      }
-
-      final updated = await _repository.updateProfileAvatar(upload.publicUrl);
-      if (!mounted) {
-        return;
-      }
-
-      setState(() => _profile = updated);
-      await _deleteAvatarBestEffort(
-        profile.avatarUrl,
-        exceptValue: upload.publicUrl,
-      );
-      _showMessage('تم تحديث الصورة الشخصية.');
-    } catch (error) {
-      final uploadedValue = upload?.publicUrl;
-      if (uploadedValue != null) {
-        await _deleteAvatarBestEffort(uploadedValue);
-      }
-      if (mounted) {
-        _showMessage(_messageForError(error), isError: true);
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isUploadingAvatar = false);
-      }
-    }
-  }
-
-  Future<void> _deleteAvatarBestEffort(
-    String? value, {
-    String? exceptValue,
-  }) async {
-    final normalized = value?.trim() ?? '';
-    if (normalized.isEmpty || normalized == exceptValue?.trim()) {
-      return;
-    }
-    try {
-      await _mediaUploadService.deleteAsset(
-        kind: MediaAssetKind.profileAvatar,
-        value: normalized,
-      );
-    } catch (_) {
-      // Cleanup is intentionally best effort. The admin media cleanup tool can
-      // remove any unreferenced object later without blocking profile updates.
-    }
   }
 
   Future<void> _pickImage() async {
@@ -244,8 +172,7 @@ class _ProfilePageState extends State<ProfilePage> {
       _selectedCategoryId,
     );
 
-    if (_fullNameController.text.trim().isEmpty ||
-        _businessNameController.text.trim().isEmpty ||
+    if (_businessNameController.text.trim().isEmpty ||
         _phoneController.text.trim().isEmpty ||
         selectedCategory == null) {
       _showMessage(
@@ -261,7 +188,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
     try {
       final result = await _repository.saveAccount(
-        fullName: _fullNameController.text,
         categoryId: selectedCategory.id.trim(),
         categoryName: selectedCategory.name,
         businessName: _businessNameController.text,
@@ -303,55 +229,6 @@ class _ProfilePageState extends State<ProfilePage> {
           _isSaving = false;
         });
       }
-    }
-  }
-
-  Future<void> _signOut() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('تسجيل الخروج'),
-          content: const Text(
-            'هل تريد تسجيل الخروج من هذا الجهاز؟',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false);
-              },
-              child: const Text('إلغاء'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true);
-              },
-              child: const Text('تسجيل الخروج'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed != true) {
-      return;
-    }
-
-    try {
-      await AuthSessionStore.instance.signOut();
-
-      if (!mounted) {
-        return;
-      }
-
-      Navigator.of(context).popUntil(
-        (route) => route.isFirst,
-      );
-    } catch (error) {
-      _showMessage(
-        _messageForError(error),
-        isError: true,
-      );
     }
   }
 
@@ -476,7 +353,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _businessBeforeCreate ??= _business;
     _business = null;
     _businessNameController.clear();
-    _phoneController.text = _profile?.phone ?? '';
+    _phoneController.clear();
     _whatsappController.clear();
     _addressController.text = 'الحامي';
     _descriptionController.clear();
@@ -536,13 +413,6 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         centerTitle: true,
         backgroundColor: AppColors.primaryTeal,
-        actions: [
-          IconButton(
-            tooltip: AppLocaleText.runtime('تسجيل الخروج'),
-            onPressed: _isSaving ? null : _signOut,
-            icon: const Icon(Icons.logout),
-          ),
-        ],
       ),
       body: _buildBody(),
     );
@@ -605,17 +475,6 @@ class _ProfilePageState extends State<ProfilePage> {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
-              _buildSectionTitle('بيانات الحساب'),
-              _buildProfileAvatarEditor(),
-              const SizedBox(height: 12),
-              _buildInputCard([
-                _buildCustomField(
-                  'الاسم الشخصي',
-                  _fullNameController,
-                  Icons.person_outline,
-                ),
-              ]),
-              const SizedBox(height: 20),
               _buildSectionTitle('تفاصيل النشاط'),
               _buildInputCard([
                 _buildCustomField(
@@ -732,11 +591,6 @@ class _ProfilePageState extends State<ProfilePage> {
       return Column(
         children: [
           const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: _buildProfileAvatarEditor(),
-          ),
-          const SizedBox(height: 12),
           EmptyOwnedBusinessState(
             onAddPressed: _startCreatingBusiness,
           ),
@@ -810,12 +664,6 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             child: Column(
               children: [
-                _buildInfoRow(
-                  Icons.person,
-                  'صاحب الحساب',
-                  _profile?.fullName ?? '',
-                ),
-                const Divider(),
                 _buildInfoRow(
                   Icons.phone,
                   'رقم الهاتف',
@@ -972,70 +820,6 @@ class _ProfilePageState extends State<ProfilePage> {
           color: color,
           fontWeight: FontWeight.bold,
         ),
-      ),
-    );
-  }
-
-  Widget _buildProfileAvatarEditor() {
-    final profile = _profile;
-    return Container(
-      key: const ValueKey<String>('profile-avatar-editor'),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.outline),
-      ),
-      child: Row(
-        children: [
-          ClipOval(
-            child: CachedDirectoryImage(
-              source: profile?.avatarUrl,
-              bucket: 'avatars',
-              width: 72,
-              height: 72,
-              placeholder: ColoredBox(
-                color: AppColors.primarySoft,
-                child: Center(
-                  child: Icon(
-                    Icons.person_rounded,
-                    color: AppColors.primaryTeal,
-                    size: 38,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'الصورة الشخصية',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'تظهر داخل حسابك، وهي مستقلة عن شعار النشاط.',
-                  style: TextStyle(color: AppColors.textSecondary),
-                ),
-              ],
-            ),
-          ),
-          IconButton.filledTonal(
-            key: const ValueKey<String>('profile-avatar-upload-action'),
-            tooltip: AppLocaleText.runtime('اختيار صورة شخصية'),
-            onPressed:
-                _isUploadingAvatar || _isSaving ? null : _uploadProfileAvatar,
-            icon: _isUploadingAvatar
-                ? const SizedBox.square(
-                    dimension: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.add_a_photo_rounded),
-          ),
-        ],
       ),
     );
   }

@@ -498,7 +498,21 @@ abstract final class _EnglishCatalog {
     'إدارة نشاطي': 'Manage my business',
     'تعديل النشاط': 'Edit business',
     'بيانات الحساب': 'Account details',
+    'الاسم والصورة الشخصية وبيانات التواصل':
+        'Name, profile photo, and contact details',
     'الاسم الشخصي': 'Personal name',
+    'البريد الإلكتروني': 'Email',
+    'البريد الإلكتروني مرتبط بحساب Google ولا يتم تغييره من هنا.':
+        'Email is linked to your Google account and cannot be changed here.',
+    'حفظ التغييرات': 'Save changes',
+    'تغيير الصورة الشخصية': 'Change profile photo',
+    'حذف الصورة الشخصية': 'Delete profile photo',
+    'هل تريد حذف الصورة الشخصية من حسابك؟':
+        'Do you want to delete your profile photo?',
+    'تم تحديث بيانات الحساب.': 'Account details updated.',
+    'تم حذف الصورة الشخصية.': 'Profile photo deleted.',
+    'تعذر تحميل بيانات الحساب.': 'Could not load account details.',
+    'أدخل الاسم الشخصي.': 'Enter your personal name.',
     'تفاصيل النشاط': 'Business details',
     'اسم النشاط': 'Business name',
     'رقم هاتف النشاط': 'Business phone number',
