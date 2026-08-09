@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart' hide Text;
 
 import 'package:hami_guide/core/localization/app_localized_text.dart';
@@ -32,8 +34,153 @@ class AdSlider extends StatefulWidget {
   State<AdSlider> createState() => _AdSliderState();
 }
 
-class _AdSliderState extends State<AdSlider> {
+class _AdSliderState extends State<AdSlider>
+    with WidgetsBindingObserver {
+  static const Duration _autoSlideInterval = Duration(seconds: 4);
+  static const Duration _resumeDelay = Duration(seconds: 5);
+  static const Duration _slideDuration = Duration(milliseconds: 550);
+
+  Timer? _autoSlideTimer;
+  Timer? _resumeTimer;
   int _currentPage = 0;
+  bool _isAnimating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scheduleAutoSlide();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant AdSlider oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.advertisements.length != widget.advertisements.length) {
+      _currentPage = 0;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !widget.controller.hasClients) {
+          return;
+        }
+        widget.controller.jumpToPage(0);
+      });
+      _scheduleAutoSlide();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _scheduleAutoSlide();
+      return;
+    }
+
+    _cancelAutoSlide();
+  }
+
+  @override
+  void dispose() {
+    _cancelAutoSlide();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  void _cancelAutoSlide() {
+    _autoSlideTimer?.cancel();
+    _autoSlideTimer = null;
+    _resumeTimer?.cancel();
+    _resumeTimer = null;
+  }
+
+  void _scheduleAutoSlide({Duration delay = _autoSlideInterval}) {
+    _autoSlideTimer?.cancel();
+    _autoSlideTimer = null;
+
+    if (!mounted || widget.advertisements.length <= 1) {
+      return;
+    }
+
+    final lifecycleState = WidgetsBinding.instance.lifecycleState;
+    if (lifecycleState != null && lifecycleState != AppLifecycleState.resumed) {
+      return;
+    }
+
+    _autoSlideTimer = Timer(delay, _advanceAutomatically);
+  }
+
+  Future<void> _advanceAutomatically() async {
+    if (!mounted ||
+        widget.advertisements.length <= 1 ||
+        !widget.controller.hasClients ||
+        _isAnimating) {
+      _scheduleAutoSlide();
+      return;
+    }
+
+    _isAnimating = true;
+    try {
+      await widget.controller.nextPage(
+        duration: _slideDuration,
+        curve: Curves.easeInOutCubic,
+      );
+    } catch (_) {
+      // The controller can detach while the page is being replaced.
+    } finally {
+      _isAnimating = false;
+      if (mounted) {
+        _scheduleAutoSlide();
+      }
+    }
+  }
+
+  void _pauseForInteraction() {
+    _autoSlideTimer?.cancel();
+    _autoSlideTimer = null;
+    _resumeTimer?.cancel();
+    _resumeTimer = null;
+  }
+
+  void _resumeAfterInteraction() {
+    _resumeTimer?.cancel();
+    if (!mounted || widget.advertisements.length <= 1) {
+      return;
+    }
+
+    _resumeTimer = Timer(_resumeDelay, _scheduleAutoSlide);
+  }
+
+  void _handlePageChanged(int pageIndex) {
+    final count = widget.advertisements.length;
+    if (count <= 0) {
+      return;
+    }
+
+    final normalizedPage = pageIndex == count ? 0 : pageIndex % count;
+    if (mounted && normalizedPage != _currentPage) {
+      setState(() => _currentPage = normalizedPage);
+    }
+
+    if (pageIndex == count) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !widget.controller.hasClients) {
+          return;
+        }
+        widget.controller.jumpToPage(0);
+      });
+    }
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollStartNotification &&
+        notification.dragDetails != null) {
+      _pauseForInteraction();
+    } else if (notification is ScrollEndNotification) {
+      _resumeAfterInteraction();
+    }
+    return false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,31 +211,48 @@ class _AdSliderState extends State<AdSlider> {
         ),
         child: Stack(
           children: [
-            PageView.builder(
-              controller: widget.controller,
-              itemCount: widget.advertisements.length,
-              onPageChanged: (index) {
-                setState(() => _currentPage = index);
-              },
-              itemBuilder: (context, index) {
-                final expandedImage = _valueAt(widget.imagePaths, index);
-                final compactImage =
-                    _valueAt(widget.compactImagePaths, index) ?? expandedImage;
-                return _AdvertisementPage(
-                  key: ValueKey<String>(
-                    compact
-                        ? 'sticky-ad-compact-content'
-                        : 'sticky-ad-expanded-content',
-                  ),
-                  message: widget.advertisements[index],
-                  imagePath: compact ? compactImage : expandedImage,
-                  onTap: widget.onAdvertisementTap == null
-                      ? null
-                      : () => widget.onAdvertisementTap!(index),
-                  collapseProgress: progress,
-                  variantIndex: index,
-                );
-              },
+            Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerDown: (_) => _pauseForInteraction(),
+              onPointerUp: (_) => _resumeAfterInteraction(),
+              onPointerCancel: (_) => _resumeAfterInteraction(),
+              child: NotificationListener<ScrollNotification>(
+                onNotification: _handleScrollNotification,
+                child: PageView.builder(
+                  controller: widget.controller,
+                  itemCount: widget.advertisements.length > 1
+                      ? widget.advertisements.length + 1
+                      : 1,
+                  onPageChanged: _handlePageChanged,
+                  itemBuilder: (context, pageIndex) {
+                    final advertisementIndex =
+                        pageIndex % widget.advertisements.length;
+                    final expandedImage =
+                        _valueAt(widget.imagePaths, advertisementIndex);
+                    final compactImage = _valueAt(
+                          widget.compactImagePaths,
+                          advertisementIndex,
+                        ) ??
+                        expandedImage;
+                    return _AdvertisementPage(
+                      key: ValueKey<String>(
+                        compact
+                            ? 'sticky-ad-compact-content'
+                            : 'sticky-ad-expanded-content',
+                      ),
+                      message: widget.advertisements[advertisementIndex],
+                      imagePath: compact ? compactImage : expandedImage,
+                      onTap: widget.onAdvertisementTap == null
+                          ? null
+                          : () => widget.onAdvertisementTap!(
+                                advertisementIndex,
+                              ),
+                      collapseProgress: progress,
+                      variantIndex: advertisementIndex,
+                    );
+                  },
+                ),
+              ),
             ),
             if (widget.advertisements.length > 1)
               PositionedDirectional(

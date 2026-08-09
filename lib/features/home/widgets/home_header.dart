@@ -13,6 +13,7 @@ class HomeHeader extends StatelessWidget {
   const HomeHeader({
     required this.onOpenSearch,
     required this.onOpenFilters,
+    this.onOpenSettings,
     this.onOpenNotifications,
     this.unreadNotificationCount = 0,
     super.key,
@@ -20,6 +21,7 @@ class HomeHeader extends StatelessWidget {
 
   final VoidCallback onOpenSearch;
   final VoidCallback onOpenFilters;
+  final VoidCallback? onOpenSettings;
   final VoidCallback? onOpenNotifications;
   final int unreadNotificationCount;
 
@@ -69,9 +71,9 @@ class HomeHeader extends StatelessWidget {
                               _HeaderIconButton(
                                 keyName: 'home-menu-button',
                                 tooltip: AppLocaleText.pick(context,
-                                    ar: 'الأقسام', en: 'Categories'),
-                                icon: Icons.menu_rounded,
-                                onPressed: onOpenFilters,
+                                    ar: 'الإعدادات', en: 'Settings'),
+                                icon: Icons.settings_rounded,
+                                onPressed: onOpenSettings,
                               ),
                               const Spacer(),
                               Stack(
@@ -273,7 +275,7 @@ class _HeaderIconButton extends StatelessWidget {
   final String keyName;
   final String tooltip;
   final IconData icon;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {

@@ -17,6 +17,7 @@ import '../directory/categories_overview_page.dart';
 import '../directory/category_list_page.dart';
 import '../directory/member_details_page.dart';
 import '../notifications/notification_center_page.dart';
+import '../settings/app_settings_page.dart';
 import '../shared/widgets/directory_loading_skeleton.dart';
 import '../shared/widgets/directory_status_banner.dart';
 import '../shared/widgets/inline_advertisement_banner.dart';
@@ -41,15 +42,6 @@ class HomeDashboardPage extends StatefulWidget {
 
 class _HomeDashboardPageState extends State<HomeDashboardPage>
     with AutomaticKeepAliveClientMixin<HomeDashboardPage> {
-  static const ServiceCategory _transportHub = ServiceCategory(
-    id: 'featured-transport-hub',
-    name: 'خدمات النقل',
-    slug: 'transport-hub',
-    iconName: 'local_taxi',
-    sortOrder: -1,
-    displayGroup: CategoryDisplayGroup.transport,
-  );
-
   final DirectoryDataStore _directoryStore = DirectoryDataStore.instance;
   final AppNotificationStore _notificationStore = AppNotificationStore.instance;
   final PageController _adPageController = PageController();
@@ -110,7 +102,7 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
     ];
 
     final services = _serviceCategories;
-    final result = <ServiceCategory>[_transportHub];
+    final result = <ServiceCategory>[];
 
     for (final slug in preferredSlugs) {
       for (final category in services) {
@@ -176,7 +168,8 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
                   children: [
                     HomeHeader(
                       onOpenSearch: widget.onOpenSearch,
-                      onOpenFilters: () => _openCategoriesOverview(),
+                      onOpenFilters: widget.onOpenSearch,
+                      onOpenSettings: _openSettings,
                       onOpenNotifications: _openNotificationCenter,
                       unreadNotificationCount: _notificationStore.unreadCount,
                     ),
@@ -211,7 +204,8 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
           SliverToBoxAdapter(
             child: HomeHeader(
               onOpenSearch: widget.onOpenSearch,
-              onOpenFilters: () => _openCategoriesOverview(),
+              onOpenFilters: widget.onOpenSearch,
+              onOpenSettings: _openSettings,
               onOpenNotifications: _openNotificationCenter,
               unreadNotificationCount: _notificationStore.unreadCount,
             ),
@@ -337,11 +331,7 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
             category: category,
             accentIndex: index,
             emphasized: index == 0,
-            onTap: category.id == _transportHub.id
-                ? () => _openCategoriesOverview(
-                      initialGroup: CategoryDisplayGroup.transport,
-                    )
-                : () => _openCategory(category),
+            onTap: () => _openCategory(category),
           );
         },
       ),
@@ -380,6 +370,15 @@ class _HomeDashboardPageState extends State<HomeDashboardPage>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _openSettings() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => const AppSettingsPage(),
       ),
     );
   }
