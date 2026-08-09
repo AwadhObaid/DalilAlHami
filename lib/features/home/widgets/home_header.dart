@@ -129,66 +129,26 @@ class HomeHeader extends StatelessWidget {
                           const SizedBox(height: AppSpacing.xxs),
                           Expanded(
                             child: Center(
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 38,
-                                    height: 38,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.white.withValues(
-                                        alpha: 0.14,
-                                      ),
-                                      borderRadius: BorderRadius.circular(
-                                        AppRadius.sm,
-                                      ),
-                                      border: Border.all(
-                                        color: AppColors.white.withValues(
-                                          alpha: 0.2,
-                                        ),
-                                      ),
+                              child: Semantics(
+                                image: true,
+                                label:
+                                    'دليل الحامي - دليل الأنشطة والخدمات المحلية',
+                                child: Transform.translate(
+                                  offset: const Offset(0, -23),
+                                  child: SizedBox(
+                                    key: const ValueKey<String>(
+                                      'home-brand-logo',
                                     ),
-                                    child: const Icon(
-                                      Icons.location_on_rounded,
-                                      color: AppColors.white,
-                                      size: 24,
+                                    width: 260,
+                                    height: 124,
+                                    child: Image.asset(
+                                      'assets/home_header_logo.png',
+                                      fit: BoxFit.contain,
+                                      alignment: Alignment.center,
+                                      filterQuality: FilterQuality.high,
                                     ),
                                   ),
-                                  const SizedBox(width: AppSpacing.xs),
-                                  Flexible(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'دليل الحامي',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: AppTextStyles.headlineLarge
-                                              .copyWith(
-                                            color: AppColors.white,
-                                            fontSize: 24,
-                                            height: 1.05,
-                                          ),
-                                        ),
-                                        const SizedBox(
-                                          height: AppSpacing.xxs,
-                                        ),
-                                        Text(
-                                          'دليل الأنشطة والخدمات المحلية',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style:
-                                              AppTextStyles.bodySmall.copyWith(
-                                            color: AppColors.white
-                                                .withValues(alpha: 0.86),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                ),
                               ),
                             ),
                           ),

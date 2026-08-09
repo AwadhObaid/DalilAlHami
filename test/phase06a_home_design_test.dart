@@ -31,7 +31,10 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('دليل الحامي'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('home-brand-logo')),
+        findsOneWidget,
+      );
       expect(
         find.byKey(const ValueKey<String>('home-search-launcher')),
         findsOneWidget,
