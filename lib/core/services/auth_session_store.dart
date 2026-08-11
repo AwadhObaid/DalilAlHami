@@ -17,6 +17,7 @@ class AuthSessionStore extends ChangeNotifier with WidgetsBindingObserver {
   Object? _lastError;
   AccountProfile? _accountProfile;
   bool _isRefreshingAccountProfile = false;
+  String? _refreshingAccountProfileUserId;
   DateTime? _lastAccountProfileRefreshAt;
   bool _initialized = false;
 
@@ -61,6 +62,8 @@ class AuthSessionStore extends ChangeNotifier with WidgetsBindingObserver {
         if (previousUserId != currentUserId) {
           _accountProfile = null;
           _lastAccountProfileRefreshAt = null;
+          _isRefreshingAccountProfile = false;
+          _refreshingAccountProfileUserId = null;
         }
         notifyListeners();
         if (currentUserId != null) {
@@ -86,7 +89,15 @@ class AuthSessionStore extends ChangeNotifier with WidgetsBindingObserver {
       return null;
     }
 
-    if (_isRefreshingAccountProfile) {
+    final currentUser = user;
+    if (currentUser == null) {
+      return null;
+    }
+
+    final requestedUserId = currentUser.id;
+
+    if (_isRefreshingAccountProfile &&
+        _refreshingAccountProfileUserId == requestedUserId) {
       return _accountProfile;
     }
 
@@ -98,13 +109,10 @@ class AuthSessionStore extends ChangeNotifier with WidgetsBindingObserver {
       }
     }
 
-    final currentUser = user;
-    if (currentUser == null) {
-      return null;
-    }
-
     _isRefreshingAccountProfile = true;
+    _refreshingAccountProfileUserId = requestedUserId;
     notifyListeners();
+
     try {
       final rows = await SupabaseService.client
           .from('profiles')
@@ -112,24 +120,37 @@ class AuthSessionStore extends ChangeNotifier with WidgetsBindingObserver {
             'id, full_name, email, phone, avatar_url, role, is_active, '
             'deleted_at, suspension_reason',
           )
-          .eq('id', currentUser.id)
+          .eq('id', requestedUserId)
           .limit(1);
+
+      if (user?.id != requestedUserId) {
+        return _accountProfile;
+      }
 
       if (rows.isEmpty) {
         return _accountProfile;
       }
 
       final profile = AccountProfile.fromMap(rows.first);
+      if (profile.id != requestedUserId || user?.id != requestedUserId) {
+        return _accountProfile;
+      }
+
       _accountProfile = profile;
       _lastAccountProfileRefreshAt = now;
       return profile;
     } catch (error) {
-      _lastError = error;
-      debugPrint('Account access refresh failed: $error');
+      if (user?.id == requestedUserId) {
+        _lastError = error;
+        debugPrint('Account access refresh failed: $error');
+      }
       return _accountProfile;
     } finally {
-      _isRefreshingAccountProfile = false;
-      notifyListeners();
+      if (_refreshingAccountProfileUserId == requestedUserId) {
+        _isRefreshingAccountProfile = false;
+        _refreshingAccountProfileUserId = null;
+        notifyListeners();
+      }
     }
   }
 
@@ -150,6 +171,8 @@ class AuthSessionStore extends ChangeNotifier with WidgetsBindingObserver {
     _session = null;
     _accountProfile = null;
     _lastAccountProfileRefreshAt = null;
+    _isRefreshingAccountProfile = false;
+    _refreshingAccountProfileUserId = null;
     notifyListeners();
   }
 

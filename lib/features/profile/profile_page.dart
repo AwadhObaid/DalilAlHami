@@ -55,11 +55,14 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isLoading = true;
   bool _isSaving = false;
   bool _isEditing = false;
+  String? _activeUserId;
+  String? _loadRequestUserId;
   String? _loadError;
 
   @override
   void initState() {
     super.initState();
+    _activeUserId = _authStore.user?.id;
     _directoryStore.addListener(_handleDirectoryChanged);
     _authStore.addListener(_handleAuthChanged);
     _loadAccount();
@@ -84,31 +87,59 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _handleAuthChanged() {
-    if (!mounted || _authStore.isAuthenticated) {
+    if (!mounted) {
       return;
     }
 
+    final currentUserId = _authStore.user?.id;
+    if (_activeUserId == currentUserId) {
+      return;
+    }
+
+    _activeUserId = currentUserId;
+    _loadRequestUserId = null;
+
     setState(() {
-      _isLoading = false;
+      _isLoading = currentUserId != null;
       _isSaving = false;
       _isEditing = false;
+      _profile = null;
       _business = null;
       _businessBeforeCreate = null;
+      _selectedCategoryId = null;
       _selectedImagePath = null;
       _selectedGalleryPaths = const <String>[];
       _selectedBusinessLocation = null;
-      _loadError = 'انتهت جلسة تسجيل الدخول.';
+      _businessNameController.clear();
+      _phoneController.clear();
+      _whatsappController.clear();
+      _addressController.text = 'الحامي';
+      _descriptionController.clear();
+      _loadError = currentUserId == null ? 'انتهت جلسة تسجيل الدخول.' : null;
     });
+
+    if (currentUserId != null) {
+      _loadAccount();
+    }
   }
 
   Future<void> _loadAccount() async {
-    if (!_authStore.isAuthenticated) {
-      setState(() {
-        _isLoading = false;
-        _loadError = 'انتهت جلسة تسجيل الدخول.';
-      });
+    final requestedUserId = _authStore.user?.id;
+    if (requestedUserId == null) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _loadError = 'انتهت جلسة تسجيل الدخول.';
+        });
+      }
       return;
     }
+
+    if (_loadRequestUserId == requestedUserId) {
+      return;
+    }
+
+    _loadRequestUserId = requestedUserId;
 
     setState(() {
       _isLoading = true;
@@ -120,15 +151,17 @@ class _ProfilePageState extends State<ProfilePage> {
         await _directoryStore.load();
       }
 
+      if (!mounted || _authStore.user?.id != requestedUserId) {
+        return;
+      }
+
       final snapshot = await _repository.loadCurrentAccount(
         preferredBusinessId: widget.businessId,
       );
 
-      if (!mounted) {
-        return;
-      }
-      if (!_authStore.isAuthenticated) {
-        _handleAuthChanged();
+      if (!mounted ||
+          _authStore.user?.id != requestedUserId ||
+          snapshot.profile.id != requestedUserId) {
         return;
       }
 
@@ -143,7 +176,7 @@ class _ProfilePageState extends State<ProfilePage> {
         _isEditing = widget.startInCreateMode;
       });
     } catch (error) {
-      if (!mounted) {
+      if (!mounted || _authStore.user?.id != requestedUserId) {
         return;
       }
 
@@ -151,6 +184,10 @@ class _ProfilePageState extends State<ProfilePage> {
         _isLoading = false;
         _loadError = _messageForError(error);
       });
+    } finally {
+      if (_loadRequestUserId == requestedUserId) {
+        _loadRequestUserId = null;
+      }
     }
   }
 

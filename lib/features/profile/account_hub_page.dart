@@ -44,6 +44,8 @@ class _AccountHubPageState extends State<AccountHubPage>
 
   bool _isSigningOut = false;
   bool _isCheckingOwnedBusiness = false;
+  String? _activeUserId;
+  String? _ownedBusinessRequestUserId;
   int? _ownedBusinessCount;
   AccountProfile? _accountProfile;
   String? _accountAccessMessage;
@@ -54,6 +56,7 @@ class _AccountHubPageState extends State<AccountHubPage>
   @override
   void initState() {
     super.initState();
+    _activeUserId = _authStore.user?.id;
     _authStore.addListener(_handleChanged);
     _directoryStore.addListener(_handleChanged);
 
@@ -87,19 +90,39 @@ class _AccountHubPageState extends State<AccountHubPage>
       return;
     }
 
-    if (!_authStore.isAuthenticated) {
+    final currentUserId = _authStore.user?.id;
+
+    if (_activeUserId != currentUserId) {
+      _activeUserId = currentUserId;
+
+      setState(() {
+        _ownedBusinessCount = null;
+        _accountProfile = _authStore.accountProfile;
+        _accountAccessMessage = null;
+        _isCheckingOwnedBusiness = false;
+        _ownedBusinessRequestUserId = null;
+      });
+
+      if (currentUserId != null) {
+        _refreshOwnedBusinessState();
+      }
+      return;
+    }
+
+    if (currentUserId == null) {
       setState(() {
         _ownedBusinessCount = null;
         _accountProfile = null;
         _accountAccessMessage = null;
         _isCheckingOwnedBusiness = false;
+        _ownedBusinessRequestUserId = null;
       });
       return;
     }
 
     final liveProfile = _authStore.accountProfile;
     setState(() {
-      if (liveProfile != null) {
+      if (liveProfile != null && liveProfile.id == currentUserId) {
         _accountProfile = liveProfile;
         if (!liveProfile.canUseAccount) {
           _ownedBusinessCount = 0;
@@ -118,24 +141,44 @@ class _AccountHubPageState extends State<AccountHubPage>
   }
 
   Future<void> _refreshOwnedBusinessState() async {
-    if (!_authStore.isAuthenticated || _isCheckingOwnedBusiness) {
+    final requestedUserId = _authStore.user?.id;
+    if (requestedUserId == null) {
+      return;
+    }
+
+    if (_isCheckingOwnedBusiness &&
+        _ownedBusinessRequestUserId == requestedUserId) {
       return;
     }
 
     if (mounted) {
       setState(() {
         _isCheckingOwnedBusiness = true;
+        _ownedBusinessRequestUserId = requestedUserId;
       });
     }
 
     try {
       final liveProfile = await _authStore.refreshAccountProfile(force: true);
-      if (liveProfile != null && !liveProfile.canUseAccount) {
-        throw AccountSuspendedFailure(liveProfile);
+
+      if (!mounted || _authStore.user?.id != requestedUserId) {
+        return;
       }
+
+      if (liveProfile != null) {
+        if (liveProfile.id != requestedUserId) {
+          return;
+        }
+        if (!liveProfile.canUseAccount) {
+          throw AccountSuspendedFailure(liveProfile);
+        }
+      }
+
       final snapshot = await _accountRepository.loadCurrentAccount();
 
-      if (!mounted) {
+      if (!mounted ||
+          _authStore.user?.id != requestedUserId ||
+          snapshot.profile.id != requestedUserId) {
         return;
       }
 
@@ -145,7 +188,9 @@ class _AccountHubPageState extends State<AccountHubPage>
         _accountAccessMessage = null;
       });
     } on AccountSuspendedFailure catch (error) {
-      if (!mounted) {
+      if (!mounted ||
+          _authStore.user?.id != requestedUserId ||
+          error.profile.id != requestedUserId) {
         return;
       }
 
@@ -155,7 +200,7 @@ class _AccountHubPageState extends State<AccountHubPage>
         _accountAccessMessage = error.message;
       });
     } catch (_) {
-      if (!mounted) {
+      if (!mounted || _authStore.user?.id != requestedUserId) {
         return;
       }
 
@@ -165,9 +210,10 @@ class _AccountHubPageState extends State<AccountHubPage>
         _accountAccessMessage = null;
       });
     } finally {
-      if (mounted) {
+      if (mounted && _ownedBusinessRequestUserId == requestedUserId) {
         setState(() {
           _isCheckingOwnedBusiness = false;
+          _ownedBusinessRequestUserId = null;
         });
       }
     }

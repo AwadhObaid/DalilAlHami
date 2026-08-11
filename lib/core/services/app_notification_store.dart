@@ -17,6 +17,8 @@ class AppNotificationStore extends ChangeNotifier {
   int _unreadCount = 0;
   bool _initialized = false;
   bool _refreshing = false;
+  String? _activeUserId;
+  String? _refreshingUserId;
 
   int get unreadCount => _unreadCount;
 
@@ -30,11 +32,17 @@ class AppNotificationStore extends ChangeNotifier {
       return;
     }
 
+    _activeUserId = SupabaseService.client.auth.currentUser?.id;
+
     _authSubscription = SupabaseService.client.auth.onAuthStateChange.listen(
       (state) {
-        if (state.session == null) {
+        final nextUserId = state.session?.user.id;
+        if (_activeUserId != nextUserId) {
+          _activeUserId = nextUserId;
           _setUnreadCount(0);
-        } else {
+        }
+
+        if (nextUserId != null) {
           unawaited(refreshUnreadCount());
         }
       },
@@ -47,23 +55,50 @@ class AppNotificationStore extends ChangeNotifier {
   }
 
   Future<void> refreshUnreadCount() async {
-    if (_refreshing ||
-        !SupabaseService.isInitialized ||
-        SupabaseService.client.auth.currentUser == null) {
-      if (!SupabaseService.isInitialized ||
-          SupabaseService.client.auth.currentUser == null) {
-        _setUnreadCount(0);
-      }
+    if (!SupabaseService.isInitialized) {
+      _activeUserId = null;
+      _setUnreadCount(0);
+      return;
+    }
+
+    final requestedUserId = SupabaseService.client.auth.currentUser?.id;
+    if (requestedUserId == null) {
+      _activeUserId = null;
+      _setUnreadCount(0);
+      return;
+    }
+
+    if (_activeUserId != requestedUserId) {
+      _activeUserId = requestedUserId;
+      _setUnreadCount(0);
+    }
+
+    if (_refreshing && _refreshingUserId == requestedUserId) {
       return;
     }
 
     _refreshing = true;
+    _refreshingUserId = requestedUserId;
+
     try {
-      _setUnreadCount(await _repository.unreadCount());
+      final unread = await _repository.unreadCount();
+
+      if (_activeUserId != requestedUserId ||
+          SupabaseService.client.auth.currentUser?.id != requestedUserId) {
+        return;
+      }
+
+      _setUnreadCount(unread);
     } catch (error, stackTrace) {
-      debugPrint('Notification unread refresh failed: $error\n$stackTrace');
+      if (_activeUserId == requestedUserId &&
+          SupabaseService.client.auth.currentUser?.id == requestedUserId) {
+        debugPrint('Notification unread refresh failed: $error\n$stackTrace');
+      }
     } finally {
-      _refreshing = false;
+      if (_refreshingUserId == requestedUserId) {
+        _refreshing = false;
+        _refreshingUserId = null;
+      }
     }
   }
 
