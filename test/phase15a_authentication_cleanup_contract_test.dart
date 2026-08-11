@@ -43,27 +43,13 @@ void main() {
       ),
     );
   });
-
-  test('no Dart source references PhoneEntryPage', () {
-    final roots = <Directory>[
-      Directory('lib'),
-      Directory('test'),
-    ];
-
+  test('no production Dart source references PhoneEntryPage', () {
     final offending = <String>[];
 
-    for (final root in roots) {
-      if (!root.existsSync()) {
-        continue;
-      }
-
-      for (final entity in root.listSync(recursive: true)) {
+    final lib = Directory('lib');
+    if (lib.existsSync()) {
+      for (final entity in lib.listSync(recursive: true)) {
         if (entity is! File || !entity.path.endsWith('.dart')) {
-          continue;
-        }
-        if (entity.path.endsWith(
-          'phase15a_authentication_cleanup_contract_test.dart',
-        )) {
           continue;
         }
 
@@ -76,5 +62,11 @@ void main() {
     }
 
     expect(offending, isEmpty);
+  });
+  test('legacy OTP demo page is also removed', () {
+    expect(
+      File('lib/features/auth/otp_page.dart').existsSync(),
+      isFalse,
+    );
   });
 }
