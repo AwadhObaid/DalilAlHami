@@ -54,6 +54,16 @@ function safeSearch(value: unknown): string {
     .slice(0, 80)
 }
 
+function uuidArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  const pattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  return [...new Set(value.map((item) => text(item)).filter((item) => pattern.test(item)))]
+    .slice(0, 100)
+}
+
 function errorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message
@@ -368,6 +378,7 @@ Deno.serve(async (request: Request) => {
           + 'business_id, delivery_status, delivery_attempt_count, '
           + 'delivery_success_count, error_message, created_at',
         )
+        .is('admin_hidden_at', null)
         .order('created_at', { ascending: false })
         .limit(limit)
       if (error) {
@@ -423,6 +434,44 @@ Deno.serve(async (request: Request) => {
           target_user_name: userNames.get(text(row.target_user_id)) ?? null,
           business_name: businessNames.get(text(row.business_id)) ?? null,
         })),
+      })
+    }
+
+    if (action === 'hide_history') {
+      const notificationIds = uuidArray(body.notification_ids)
+      if (notificationIds.length === 0) {
+        return response(400, { message: 'اختر إشعارًا واحدًا على الأقل من السجل.' })
+      }
+
+      const { data, error } = await service
+        .from('app_notifications')
+        .update({ admin_hidden_at: new Date().toISOString() })
+        .in('id', notificationIds)
+        .is('admin_hidden_at', null)
+        .select('id')
+      if (error) {
+        throw error
+      }
+
+      return response(200, {
+        message: 'تم تنظيف السجل المحدد دون حذف إشعارات المستخدمين.',
+        hidden_count: (data ?? []).length,
+      })
+    }
+
+    if (action === 'clear_history') {
+      const { data, error } = await service
+        .from('app_notifications')
+        .update({ admin_hidden_at: new Date().toISOString() })
+        .is('admin_hidden_at', null)
+        .select('id')
+      if (error) {
+        throw error
+      }
+
+      return response(200, {
+        message: 'تم تنظيف سجل الإشعارات دون حذف إشعارات المستخدمين.',
+        hidden_count: (data ?? []).length,
       })
     }
 

@@ -26,6 +26,10 @@ typedef AdminNotificationSender = Future<AdminNotificationSendResult> Function({
   String? targetUserId,
   String? businessId,
 });
+typedef AdminNotificationHistoryHider = Future<int> Function(
+  List<String> notificationIds,
+);
+typedef AdminNotificationHistoryClearer = Future<int> Function();
 
 class AdminNotificationManagementPage extends StatefulWidget {
   const AdminNotificationManagementPage({
@@ -35,6 +39,8 @@ class AdminNotificationManagementPage extends StatefulWidget {
     this.historyLoader,
     this.businessesLoader,
     this.sender,
+    this.historyHider,
+    this.historyClearer,
   });
 
   final AdminNotificationProfileLoader? profileLoader;
@@ -42,6 +48,8 @@ class AdminNotificationManagementPage extends StatefulWidget {
   final AdminNotificationHistoryLoader? historyLoader;
   final AdminNotificationBusinessesLoader? businessesLoader;
   final AdminNotificationSender? sender;
+  final AdminNotificationHistoryHider? historyHider;
+  final AdminNotificationHistoryClearer? historyClearer;
 
   @override
   State<AdminNotificationManagementPage> createState() =>
@@ -58,6 +66,8 @@ class _AdminNotificationManagementPageState
 
   bool _loading = true;
   bool _sending = false;
+  bool _historyMutating = false;
+  final Set<String> _selectedHistoryIds = <String>{};
   String? _errorMessage;
   AdminNotificationAudience _audience = AdminNotificationAudience.public;
   AdminNotificationNavigation _navigation =
@@ -115,6 +125,10 @@ class _AdminNotificationManagementPageState
         _users = results[0] as List<AdminNotificationUserOption>;
         _history = results[1] as List<AdminNotificationHistoryItem>;
         _businesses = results[2] as List<AdminAdvertisementBusinessOption>;
+        final visibleHistoryIds = _history.map((item) => item.id).toSet();
+        _selectedHistoryIds.removeWhere(
+          (id) => !visibleHistoryIds.contains(id),
+        );
         _targetUserId = _users.any((user) => user.id == _targetUserId)
             ? _targetUserId
             : null;
@@ -236,6 +250,173 @@ class _AdminNotificationManagementPageState
     }
   }
 
+  Future<bool> _confirmHistoryAction({
+    required String title,
+    required String message,
+    required String confirmKey,
+    String confirmLabel = 'حذف',
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton.icon(
+            key: ValueKey<String>(confirmKey),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            icon: const Icon(Icons.delete_outline_rounded),
+            label: Text(confirmLabel),
+          ),
+        ],
+      ),
+    );
+    return confirmed == true;
+  }
+
+  void _toggleHistorySelection(String notificationId) {
+    setState(() {
+      if (!_selectedHistoryIds.add(notificationId)) {
+        _selectedHistoryIds.remove(notificationId);
+      }
+    });
+  }
+
+  void _selectAllHistory() {
+    setState(() {
+      _selectedHistoryIds
+        ..clear()
+        ..addAll(_history.map((item) => item.id));
+    });
+  }
+
+  void _clearHistorySelection() {
+    if (_selectedHistoryIds.isEmpty) {
+      return;
+    }
+    setState(_selectedHistoryIds.clear);
+  }
+
+  Future<void> _hideHistoryItem(AdminNotificationHistoryItem item) async {
+    if (_historyMutating) {
+      return;
+    }
+    final confirmed = await _confirmHistoryAction(
+      title: AppLocaleText.runtime('حذف من سجل الإدارة'),
+      message:
+          'سيُخفى هذا السجل من لوحة الإدارة فقط، ولن يُحذف الإشعار من المستخدمين.',
+      confirmKey: 'admin-notification-history-hide-confirm',
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    await _hideHistoryIds(<String>[item.id]);
+  }
+
+  Future<void> _hideSelectedHistory() async {
+    if (_historyMutating || _selectedHistoryIds.isEmpty) {
+      return;
+    }
+    final ids = _selectedHistoryIds.toList(growable: false);
+    final confirmed = await _confirmHistoryAction(
+      title: AppLocaleText.runtime('حذف السجلات المحددة'),
+      message:
+          'سيُخفى ${ids.length} سجل من لوحة الإدارة فقط دون حذف إشعارات المستخدمين.',
+      confirmKey: 'admin-notification-history-hide-selected-confirm',
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    await _hideHistoryIds(ids);
+  }
+
+  Future<void> _hideHistoryIds(List<String> ids) async {
+    setState(() => _historyMutating = true);
+    try {
+      final executor = widget.historyHider ?? _repository.hideHistory;
+      await executor(ids);
+      if (!mounted) {
+        return;
+      }
+      final idSet = ids.toSet();
+      setState(() {
+        _history = _history
+            .where((item) => !idSet.contains(item.id))
+            .toList(growable: false);
+        _selectedHistoryIds.removeAll(idSet);
+      });
+      _showMessage('تم تنظيف سجل الإدارة دون حذف إشعارات المستخدمين.');
+    } on AdminAccessDenied catch (error) {
+      if (mounted) {
+        _showMessage(error.message);
+      }
+    } on AdminNotificationRepositoryFailure catch (error) {
+      if (mounted) {
+        _showMessage(error.message);
+      }
+    } catch (_) {
+      if (mounted) {
+        _showMessage('تعذر تنظيف سجل الإشعارات. أعد المحاولة.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _historyMutating = false);
+      }
+    }
+  }
+
+  Future<void> _clearAdminHistory() async {
+    if (_historyMutating || _history.isEmpty) {
+      return;
+    }
+    final confirmed = await _confirmHistoryAction(
+      title: AppLocaleText.runtime('مسح سجل الإشعارات'),
+      message:
+          'سيُمسح سجل الإدارة بالكامل من العرض فقط، وستبقى الإشعارات لدى المستخدمين.',
+      confirmKey: 'admin-notification-history-clear-confirm',
+      confirmLabel: AppLocaleText.runtime('مسح السجل'),
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    setState(() => _historyMutating = true);
+    try {
+      final executor = widget.historyClearer ?? _repository.clearHistory;
+      await executor();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _history = const <AdminNotificationHistoryItem>[];
+        _selectedHistoryIds.clear();
+      });
+      _showMessage('تم مسح سجل الإدارة دون حذف إشعارات المستخدمين.');
+    } on AdminAccessDenied catch (error) {
+      if (mounted) {
+        _showMessage(error.message);
+      }
+    } on AdminNotificationRepositoryFailure catch (error) {
+      if (mounted) {
+        _showMessage(error.message);
+      }
+    } catch (_) {
+      if (mounted) {
+        _showMessage('تعذر مسح سجل الإشعارات. أعد المحاولة.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _historyMutating = false);
+      }
+    }
+  }
+
   void _showMessage(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -252,7 +433,7 @@ class _AdminNotificationManagementPageState
         actions: [
           IconButton(
             tooltip: AppLocaleText.runtime('تحديث'),
-            onPressed: _loading || _sending ? null : _load,
+            onPressed: _loading || _sending || _historyMutating ? null : _load,
             icon: const Icon(Icons.refresh_rounded),
           ),
         ],
@@ -293,21 +474,100 @@ class _AdminNotificationManagementPageState
           Row(
             children: [
               Expanded(
-                child: Text('آخر الإشعارات المرسلة',
-                    style: AppTextStyles.titleLarge),
+                child: Text(
+                  'آخر الإشعارات المرسلة',
+                  style: AppTextStyles.titleLarge,
+                ),
               ),
               Text('${_history.length} سجل', style: AppTextStyles.bodySmall),
+              if (_history.isNotEmpty) ...[
+                const SizedBox(width: AppSpacing.xs),
+                IconButton(
+                  key: const ValueKey<String>(
+                    'admin-notification-history-clear',
+                  ),
+                  tooltip: AppLocaleText.runtime('مسح سجل الإدارة'),
+                  onPressed: _historyMutating ? null : _clearAdminHistory,
+                  icon: const Icon(Icons.delete_sweep_outlined),
+                ),
+              ],
             ],
           ),
+          if (_selectedHistoryIds.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Container(
+              key: const ValueKey<String>(
+                'admin-notification-history-selection-bar',
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: AppSpacing.xs,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.primarySoft,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: AppColors.outline),
+              ),
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: AppSpacing.xs,
+                runSpacing: AppSpacing.xs,
+                children: [
+                  Text(
+                    'تم تحديد ${_selectedHistoryIds.length}',
+                    style: AppTextStyles.labelMedium,
+                  ),
+                  TextButton.icon(
+                    key: const ValueKey<String>(
+                      'admin-notification-history-select-all',
+                    ),
+                    onPressed: _historyMutating ? null : _selectAllHistory,
+                    icon: const Icon(Icons.select_all_rounded),
+                    label: const Text('تحديد الكل'),
+                  ),
+                  FilledButton.tonalIcon(
+                    key: const ValueKey<String>(
+                      'admin-notification-history-hide-selected',
+                    ),
+                    onPressed: _historyMutating ? null : _hideSelectedHistory,
+                    icon: const Icon(Icons.delete_outline_rounded),
+                    label: const Text('حذف المحدد'),
+                  ),
+                  IconButton(
+                    key: const ValueKey<String>(
+                      'admin-notification-history-selection-close',
+                    ),
+                    tooltip: AppLocaleText.runtime('إلغاء التحديد'),
+                    onPressed: _historyMutating ? null : _clearHistorySelection,
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.sm),
           if (_history.isEmpty)
             const _AdminNotificationEmptyHistory()
           else
             ..._history.map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: _AdminNotificationHistoryCard(item: item),
-              ),
+              (item) {
+                final selected = _selectedHistoryIds.contains(item.id);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: _AdminNotificationHistoryCard(
+                    item: item,
+                    selected: selected,
+                    selectionMode: _selectedHistoryIds.isNotEmpty,
+                    onTap: () {
+                      if (_selectedHistoryIds.isNotEmpty) {
+                        _toggleHistorySelection(item.id);
+                      }
+                    },
+                    onLongPress: () => _toggleHistorySelection(item.id),
+                    onDelete: () => _hideHistoryItem(item),
+                  ),
+                );
+              },
             ),
         ],
       ),
@@ -541,9 +801,21 @@ class _AdminNotificationManagementPageState
 }
 
 class _AdminNotificationHistoryCard extends StatelessWidget {
-  const _AdminNotificationHistoryCard({required this.item});
+  const _AdminNotificationHistoryCard({
+    required this.item,
+    required this.selected,
+    required this.selectionMode,
+    required this.onTap,
+    required this.onLongPress,
+    required this.onDelete,
+  });
 
   final AdminNotificationHistoryItem item;
+  final bool selected;
+  final bool selectionMode;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -565,77 +837,113 @@ class _AdminNotificationHistoryCard extends StatelessWidget {
         ? 'جميع المستخدمين'
         : item.targetUserName ?? 'مستخدم محدد';
 
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
+    return Material(
+      color: selected ? AppColors.primarySoft : AppColors.surface,
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      child: InkWell(
+        key: ValueKey<String>('admin-notification-history-item-${item.id}'),
+        onTap: onTap,
+        onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: AppColors.outline),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(
+              color: selected ? AppColors.primaryTeal : AppColors.outline,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(item.title, style: AppTextStyles.titleSmall),
+              Row(
+                children: [
+                  if (selectionMode) ...[
+                    Checkbox(
+                      key: ValueKey<String>(
+                        'admin-notification-history-select-${item.id}',
+                      ),
+                      value: selected,
+                      onChanged: (_) => onTap(),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                  ],
+                  Expanded(
+                    child: Text(item.title, style: AppTextStyles.titleSmall),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xs,
+                      vertical: AppSpacing.xxs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: Text(
+                      statusLabel,
+                      style:
+                          AppTextStyles.labelSmall.copyWith(color: statusColor),
+                    ),
+                  ),
+                  if (!selectionMode) ...[
+                    const SizedBox(width: AppSpacing.xs),
+                    IconButton(
+                      key: ValueKey<String>(
+                        'admin-notification-history-delete-${item.id}',
+                      ),
+                      tooltip: AppLocaleText.runtime('حذف من سجل الإدارة'),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: onDelete,
+                      icon: const Icon(Icons.delete_outline_rounded),
+                    ),
+                  ],
+                ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xs,
-                  vertical: AppSpacing.xxs,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                ),
-                child: Text(
-                  statusLabel,
-                  style: AppTextStyles.labelSmall.copyWith(color: statusColor),
-                ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                item.body,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.bodyMedium,
               ),
+              const SizedBox(height: AppSpacing.sm),
+              Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
+                children: [
+                  _HistoryMeta(icon: Icons.people_rounded, label: targetLabel),
+                  _HistoryMeta(
+                    icon: Icons.send_to_mobile_rounded,
+                    label: '${item.successCount}/${item.attemptCount}',
+                  ),
+                  _HistoryMeta(
+                    icon: Icons.schedule_rounded,
+                    label: _dateLabel(item.createdAt),
+                  ),
+                ],
+              ),
+              if (item.businessName != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                _HistoryMeta(
+                  icon: Icons.storefront_rounded,
+                  label: item.businessName!,
+                ),
+              ],
+              if (item.errorMessage != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  item.errorMessage!,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style:
+                      AppTextStyles.bodySmall.copyWith(color: AppColors.danger),
+                ),
+              ],
             ],
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            item.body,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.bodyMedium,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.xs,
-            children: [
-              _HistoryMeta(icon: Icons.people_rounded, label: targetLabel),
-              _HistoryMeta(
-                icon: Icons.send_to_mobile_rounded,
-                label: '${item.successCount}/${item.attemptCount}',
-              ),
-              _HistoryMeta(
-                icon: Icons.schedule_rounded,
-                label: _dateLabel(item.createdAt),
-              ),
-            ],
-          ),
-          if (item.businessName != null) ...[
-            const SizedBox(height: AppSpacing.xs),
-            _HistoryMeta(
-              icon: Icons.storefront_rounded,
-              label: item.businessName!,
-            ),
-          ],
-          if (item.errorMessage != null) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              item.errorMessage!,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.bodySmall.copyWith(color: AppColors.danger),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }

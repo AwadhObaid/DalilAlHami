@@ -73,12 +73,72 @@ class NotificationRepository {
     }
   }
 
+  Future<bool> dismiss(String notificationId) async {
+    _requireSession();
+    try {
+      final response = await _client.rpc(
+        'dismiss_my_notification',
+        params: <String, dynamic>{
+          'p_notification_id': notificationId,
+        },
+      );
+      return response == true;
+    } on PostgrestException catch (error) {
+      throw NotificationRepositoryFailure(_friendlyMutationMessage(error));
+    }
+  }
+
+  Future<int> dismissMany(List<String> notificationIds) async {
+    _requireSession();
+    final ids = notificationIds
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    if (ids.isEmpty) {
+      return 0;
+    }
+
+    try {
+      final response = await _client.rpc(
+        'dismiss_my_notifications',
+        params: <String, dynamic>{
+          'p_notification_ids': ids,
+        },
+      );
+      return int.tryParse('$response') ?? 0;
+    } on PostgrestException catch (error) {
+      throw NotificationRepositoryFailure(_friendlyMutationMessage(error));
+    }
+  }
+
+  Future<int> dismissAll() async {
+    _requireSession();
+    try {
+      final response = await _client.rpc('dismiss_all_my_notifications');
+      return int.tryParse('$response') ?? 0;
+    } on PostgrestException catch (error) {
+      throw NotificationRepositoryFailure(_friendlyMutationMessage(error));
+    }
+  }
+
   void _requireSession() {
     if (!SupabaseService.isInitialized || _client.auth.currentUser == null) {
       throw const NotificationRepositoryFailure(
         'سجّل الدخول لعرض مركز الإشعارات.',
       );
     }
+  }
+
+  String _friendlyMutationMessage(PostgrestException error) {
+    final text = error.message.trim();
+    if (text.contains('suspended') || text.contains('deleted')) {
+      return 'الحساب غير نشط حاليًا.';
+    }
+    if (text.contains('Authentication')) {
+      return 'سجّل الدخول لإدارة مركز الإشعارات.';
+    }
+    return 'تعذر حذف الإشعار من مركز الإشعارات. أعد المحاولة.';
   }
 
   String _friendlyMessage(PostgrestException error) {

@@ -81,6 +81,24 @@ class AppNotificationStore extends ChangeNotifier {
     return changed;
   }
 
+  Future<bool> dismiss(String notificationId) async {
+    final visible = await _repository.dismiss(notificationId);
+    await refreshUnreadCount();
+    return visible;
+  }
+
+  Future<int> dismissMany(List<String> notificationIds) async {
+    final changed = await _repository.dismissMany(notificationIds);
+    await refreshUnreadCount();
+    return changed;
+  }
+
+  Future<int> dismissAll() async {
+    final changed = await _repository.dismissAll();
+    _setUnreadCount(0);
+    return changed;
+  }
+
   void notifyPushReceived() {
     unawaited(refreshUnreadCount());
   }

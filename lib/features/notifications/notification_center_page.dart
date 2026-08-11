@@ -14,6 +14,13 @@ import '../../models/app_notification.dart';
 typedef NotificationCenterLoader = Future<List<AppNotification>> Function();
 typedef NotificationReadExecutor = Future<bool> Function(String notificationId);
 typedef NotificationsReadAllExecutor = Future<int> Function();
+typedef NotificationDismissExecutor = Future<bool> Function(
+  String notificationId,
+);
+typedef NotificationsDismissManyExecutor = Future<int> Function(
+  List<String> notificationIds,
+);
+typedef NotificationsDismissAllExecutor = Future<int> Function();
 
 class NotificationCenterPage extends StatefulWidget {
   const NotificationCenterPage({
@@ -21,11 +28,17 @@ class NotificationCenterPage extends StatefulWidget {
     this.loader,
     this.readExecutor,
     this.readAllExecutor,
+    this.dismissExecutor,
+    this.dismissManyExecutor,
+    this.dismissAllExecutor,
   });
 
   final NotificationCenterLoader? loader;
   final NotificationReadExecutor? readExecutor;
   final NotificationsReadAllExecutor? readAllExecutor;
+  final NotificationDismissExecutor? dismissExecutor;
+  final NotificationsDismissManyExecutor? dismissManyExecutor;
+  final NotificationsDismissAllExecutor? dismissAllExecutor;
 
   @override
   State<NotificationCenterPage> createState() => _NotificationCenterPageState();
@@ -36,9 +49,13 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
   final AppNotificationStore _store = AppNotificationStore.instance;
 
   List<AppNotification> _items = const <AppNotification>[];
+  final Set<String> _selectedIds = <String>{};
   bool _loading = true;
   bool _markingAll = false;
+  bool _mutating = false;
   String? _errorMessage;
+
+  bool get _selectionMode => _selectedIds.isNotEmpty;
 
   @override
   void initState() {
@@ -118,6 +135,184 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
     }
   }
 
+  Future<bool> _confirmDismiss({
+    required String title,
+    required String message,
+    required String confirmKey,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton.icon(
+            key: ValueKey<String>(confirmKey),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            icon: const Icon(Icons.delete_outline_rounded),
+            label: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+    return confirmed == true;
+  }
+
+  Future<void> _dismissOne(AppNotification item) async {
+    if (_mutating) {
+      return;
+    }
+    final confirmed = await _confirmDismiss(
+      title: 'حذف الإشعار',
+      message: 'سيُحذف هذا الإشعار من مركز إشعارات حسابك فقط.',
+      confirmKey: 'notification-delete-confirm',
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    setState(() => _mutating = true);
+    try {
+      final executor = widget.dismissExecutor ?? _store.dismiss;
+      await executor(item.id);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _items = _items
+            .where((value) => value.id != item.id)
+            .toList(growable: false);
+        _selectedIds.remove(item.id);
+      });
+      _showMessage('تم حذف الإشعار من مركز إشعاراتك.');
+    } on NotificationRepositoryFailure catch (error) {
+      if (mounted) {
+        _showMessage(error.message);
+      }
+    } catch (_) {
+      if (mounted) {
+        _showMessage('تعذر حذف الإشعار. أعد المحاولة.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _mutating = false);
+      }
+    }
+  }
+
+  Future<void> _dismissSelected() async {
+    if (_mutating || _selectedIds.isEmpty) {
+      return;
+    }
+
+    final ids = _selectedIds.toList(growable: false);
+    final confirmed = await _confirmDismiss(
+      title: 'حذف الإشعارات المحددة',
+      message: 'سيتم حذف ${ids.length} إشعار من مركز إشعارات حسابك فقط.',
+      confirmKey: 'notification-delete-selected-confirm',
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    setState(() => _mutating = true);
+    try {
+      final executor = widget.dismissManyExecutor ?? _store.dismissMany;
+      await executor(ids);
+      if (!mounted) {
+        return;
+      }
+      final idSet = ids.toSet();
+      setState(() {
+        _items = _items
+            .where((item) => !idSet.contains(item.id))
+            .toList(growable: false);
+        _selectedIds.clear();
+      });
+      _showMessage('تم حذف الإشعارات المحددة.');
+    } on NotificationRepositoryFailure catch (error) {
+      if (mounted) {
+        _showMessage(error.message);
+      }
+    } catch (_) {
+      if (mounted) {
+        _showMessage('تعذر حذف الإشعارات المحددة. أعد المحاولة.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _mutating = false);
+      }
+    }
+  }
+
+  Future<void> _dismissAll() async {
+    if (_mutating || _items.isEmpty) {
+      return;
+    }
+
+    final confirmed = await _confirmDismiss(
+      title: 'مسح جميع الإشعارات',
+      message: 'سيتم مسح جميع الإشعارات الظاهرة من مركز إشعارات حسابك فقط.',
+      confirmKey: 'notification-clear-all-confirm',
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    setState(() => _mutating = true);
+    try {
+      final executor = widget.dismissAllExecutor ?? _store.dismissAll;
+      await executor();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _items = const <AppNotification>[];
+        _selectedIds.clear();
+      });
+      _showMessage('تم مسح جميع الإشعارات.');
+    } on NotificationRepositoryFailure catch (error) {
+      if (mounted) {
+        _showMessage(error.message);
+      }
+    } catch (_) {
+      if (mounted) {
+        _showMessage('تعذر مسح الإشعارات. أعد المحاولة.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _mutating = false);
+      }
+    }
+  }
+
+  void _toggleSelection(String notificationId) {
+    setState(() {
+      if (!_selectedIds.add(notificationId)) {
+        _selectedIds.remove(notificationId);
+      }
+    });
+  }
+
+  void _selectAll() {
+    setState(() {
+      _selectedIds
+        ..clear()
+        ..addAll(_items.map((item) => item.id));
+    });
+  }
+
+  void _clearSelection() {
+    if (_selectedIds.isEmpty) {
+      return;
+    }
+    setState(_selectedIds.clear);
+  }
+
   Future<void> _openItem(AppNotification item) async {
     if (!item.isRead) {
       try {
@@ -169,21 +364,55 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
       appBar: AppBar(
-        title: const Text('مركز الإشعارات'),
-        actions: [
-          TextButton.icon(
-            key: const ValueKey<String>('notification-mark-all-read'),
-            onPressed: _markingAll || unreadCount == 0 ? null : _markAllRead,
-            icon: _markingAll
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.done_all_rounded),
-            label: const Text('قراءة الكل'),
-          ),
-        ],
+        title: Text(
+          _selectionMode ? 'تم تحديد ${_selectedIds.length}' : 'مركز الإشعارات',
+          overflow: TextOverflow.ellipsis,
+        ),
+        leading: _selectionMode
+            ? IconButton(
+                key: const ValueKey<String>('notification-selection-close'),
+                tooltip: 'إلغاء التحديد',
+                onPressed: _mutating ? null : _clearSelection,
+                icon: const Icon(Icons.close_rounded),
+              )
+            : null,
+        actions: _selectionMode
+            ? [
+                IconButton(
+                  key: const ValueKey<String>('notification-select-all'),
+                  tooltip: 'تحديد الكل',
+                  onPressed: _mutating ? null : _selectAll,
+                  icon: const Icon(Icons.select_all_rounded),
+                ),
+                IconButton(
+                  key: const ValueKey<String>('notification-delete-selected'),
+                  tooltip: 'حذف المحدد',
+                  onPressed: _mutating ? null : _dismissSelected,
+                  icon: const Icon(Icons.delete_outline_rounded),
+                ),
+              ]
+            : [
+                TextButton.icon(
+                  key: const ValueKey<String>('notification-mark-all-read'),
+                  onPressed: _markingAll || _mutating || unreadCount == 0
+                      ? null
+                      : _markAllRead,
+                  icon: _markingAll
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.done_all_rounded),
+                  label: const Text('قراءة الكل'),
+                ),
+                IconButton(
+                  key: const ValueKey<String>('notification-clear-all'),
+                  tooltip: 'مسح الكل',
+                  onPressed: _mutating || _items.isEmpty ? null : _dismissAll,
+                  icon: const Icon(Icons.delete_sweep_outlined),
+                ),
+              ],
       ),
       body: _buildBody(unreadCount),
     );
@@ -235,9 +464,15 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
             );
           }
           final item = _items[index - 1];
+          final selected = _selectedIds.contains(item.id);
           return _NotificationCard(
             item: item,
-            onTap: () => _openItem(item),
+            selected: selected,
+            selectionMode: _selectionMode,
+            onTap: () =>
+                _selectionMode ? _toggleSelection(item.id) : _openItem(item),
+            onLongPress: () => _toggleSelection(item.id),
+            onDelete: () => _dismissOne(item),
           );
         },
       ),
@@ -294,32 +529,61 @@ class _NotificationSummaryCard extends StatelessWidget {
 }
 
 class _NotificationCard extends StatelessWidget {
-  const _NotificationCard({required this.item, required this.onTap});
+  const _NotificationCard({
+    required this.item,
+    required this.selected,
+    required this.selectionMode,
+    required this.onTap,
+    required this.onLongPress,
+    required this.onDelete,
+  });
 
   final AppNotification item;
+  final bool selected;
+  final bool selectionMode;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
     AppColors.bindToTheme(context);
     return Material(
-      color: item.isRead ? AppColors.surface : AppColors.surfaceTint,
+      color: selected
+          ? AppColors.primarySoft
+          : item.isRead
+              ? AppColors.surface
+              : AppColors.surfaceTint,
       borderRadius: BorderRadius.circular(AppRadius.lg),
       child: InkWell(
         key: ValueKey<String>('notification-item-${item.id}'),
         onTap: onTap,
+        onLongPress: onLongPress,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(
-              color: item.isRead ? AppColors.outline : AppColors.lightTeal,
+              color: selected
+                  ? AppColors.primaryTeal
+                  : item.isRead
+                      ? AppColors.outline
+                      : AppColors.lightTeal,
+              width: selected ? 1.5 : 1,
             ),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (selectionMode) ...[
+                Checkbox(
+                  key: ValueKey<String>('notification-select-${item.id}'),
+                  value: selected,
+                  onChanged: (_) => onTap(),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+              ],
               Container(
                 width: 42,
                 height: 42,
@@ -384,7 +648,21 @@ class _NotificationCard extends StatelessWidget {
                           style: AppTextStyles.bodySmall,
                         ),
                         const Spacer(),
-                        if (item.intent != null &&
+                        if (!selectionMode)
+                          IconButton(
+                            key: ValueKey<String>(
+                              'notification-delete-${item.id}',
+                            ),
+                            tooltip: 'حذف الإشعار',
+                            visualDensity: VisualDensity.compact,
+                            onPressed: onDelete,
+                            icon: const Icon(
+                              Icons.delete_outline_rounded,
+                              size: 20,
+                            ),
+                          ),
+                        if (!selectionMode &&
+                            item.intent != null &&
                             item.intent!.target !=
                                 PushNotificationTarget.notifications)
                           const Icon(

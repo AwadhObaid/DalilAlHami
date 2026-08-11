@@ -63,6 +63,32 @@ class AdminNotificationRepository {
         .toList(growable: false);
   }
 
+  Future<int> hideHistory(List<String> notificationIds) async {
+    final ids = notificationIds
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    if (ids.isEmpty) {
+      return 0;
+    }
+
+    final response = await _invoke(<String, dynamic>{
+      'action': 'hide_history',
+      'notification_ids': ids,
+    });
+    final map = _asMap(response);
+    return int.tryParse('${map['hidden_count']}') ?? 0;
+  }
+
+  Future<int> clearHistory() async {
+    final response = await _invoke(<String, dynamic>{
+      'action': 'clear_history',
+    });
+    final map = _asMap(response);
+    return int.tryParse('${map['hidden_count']}') ?? 0;
+  }
+
   Future<AdminNotificationSendResult> send({
     required String title,
     required String body,
