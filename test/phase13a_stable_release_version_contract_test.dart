@@ -21,7 +21,7 @@ void main() {
     expect(beta.compareTo(stable), lessThan(0));
   });
 
-  test('stable package version and GitHub tag compare as the same semantic release', () {
+  test('build metadata does not change semantic release ordering', () {
     final packageVersion = AppSemanticVersion.tryParse('1.0.7+9');
     final githubTag = AppSemanticVersion.tryParse('v1.0.7');
 
@@ -31,16 +31,30 @@ void main() {
     expect(packageVersion.normalized, '1.0.7');
   });
 
-  test('pubspec is promoted exactly to stable 1.0.7 build 9', () {
+  test(
+      'current pubspec remains stable and is not older than first stable 1.0.7',
+      () {
     final pubspec = File('pubspec.yaml').readAsStringSync();
 
+    final versionLine = RegExp(
+      r'^version:\s+([0-9]+\.[0-9]+\.[0-9]+)(?:\+([0-9]+))?\s*$',
+      multiLine: true,
+    ).firstMatch(pubspec);
+
     expect(
-      RegExp(
-        r'^version:\s+1\.0\.7\+9\s*$',
-        multiLine: true,
-      ).hasMatch(pubspec),
-      isTrue,
+      versionLine,
+      isNotNull,
+      reason:
+          'pubspec must contain a stable semantic version, not a prerelease.',
     );
+
+    final current = AppSemanticVersion.tryParse(versionLine!.group(1)!);
+    final firstStable = AppSemanticVersion.tryParse('1.0.7');
+
+    expect(current, isNotNull);
+    expect(firstStable, isNotNull);
+    expect(current!.isPrerelease, isFalse);
+    expect(current.compareTo(firstStable!), greaterThanOrEqualTo(0));
 
     expect(
       RegExp(

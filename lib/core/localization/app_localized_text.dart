@@ -168,8 +168,7 @@ abstract final class _EnglishCatalog {
         'Your rating was saved and will sync when the connection returns.',
     'سجّل الدخول أولًا حتى تتمكن من تقييم النشاط.':
         'Sign in first to rate this business.',
-    'هذا الحساب غير متاح لإضافة تقييمات.':
-        'This account cannot add ratings.',
+    'هذا الحساب غير متاح لإضافة تقييمات.': 'This account cannot add ratings.',
     'التقييم غير متاح لهذا النشاط حاليًا.':
         'Rating is not available for this business right now.',
     'اختر تقييمًا من نجمة إلى خمس نجوم.':
@@ -389,20 +388,7 @@ abstract final class _EnglishCatalog {
         'Send an add request to the administration via WhatsApp',
     'أدخل رقم هاتف صحيحًا.': 'Enter a valid phone number.',
     'تسجيل الدخول': 'Sign in',
-    'مرحبًا بك في دليل الحامي': 'Welcome to Al Hami Guide',
-    'أدخل رقم هاتفك للمتابعة وإدارة نشاطك داخل الدليل.':
-        'Enter your phone number to continue and manage your businesses.',
     'رقم الهاتف': 'Phone number',
-    'إرسال رمز التحقق': 'Send verification code',
-    'هذه شاشة تحقق تجريبية حاليًا، وسيتم ربطها لاحقًا بخدمة المصادقة.':
-        'This is currently a demo verification screen and will later be connected to authentication.',
-    'أدخل رمزًا مكونًا من 4 أرقام.': 'Enter a 4-digit code.',
-    'التحقق من الرمز': 'Verify code',
-    'أدخل رمز التحقق': 'Enter the verification code',
-    'تم إرسال الرمز إلى ': 'The code was sent to ',
-    'تأكيد الدخول': 'Confirm sign-in',
-    'تمت إعادة إرسال الرمز التجريبي.': 'The demo code was resent.',
-    'إعادة إرسال الرمز': 'Resend code',
     'تم تفعيل الإشعارات العامة.': 'Public notifications are enabled.',
     'تم إيقاف الإشعارات العامة على هذا الجهاز.':
         'Public notifications are disabled on this device.',
