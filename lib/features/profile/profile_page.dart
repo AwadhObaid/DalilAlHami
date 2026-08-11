@@ -856,53 +856,37 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         Positioned(
           top: 42,
-          child: Stack(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.surface,
-                    width: 4,
+          child: InkWell(
+            key: const ValueKey<String>('business-header-logo'),
+            onTap: isEditable && !_isSaving ? _pickImage : null,
+            customBorder: const CircleBorder(),
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.surface,
+                  width: 4,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 10,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 10,
-                    ),
-                  ],
-                ),
-                child: CircleAvatar(
-                  radius: 57,
-                  backgroundColor: AppColors.surfaceMuted,
-                  backgroundImage: imageProvider,
-                  child: imageProvider == null
-                      ? Icon(
-                          Icons.storefront,
-                          size: 58,
-                          color: AppColors.textMuted,
-                        )
-                      : null,
-                ),
+                ],
               ),
-              if (isEditable)
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: InkWell(
-                    onTap: _isSaving ? null : _pickImage,
-                    child: const CircleAvatar(
-                      radius: 19,
-                      backgroundColor: AppColors.lightTeal,
-                      child: Icon(
-                        Icons.camera_alt,
-                        size: 17,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+              child: CircleAvatar(
+                radius: 57,
+                backgroundColor: AppColors.surfaceMuted,
+                backgroundImage: imageProvider,
+                child: imageProvider == null
+                    ? Icon(
+                        Icons.storefront,
+                        size: 58,
+                        color: AppColors.textMuted,
+                      )
+                    : null,
+              ),
+            ),
           ),
         ),
       ],
