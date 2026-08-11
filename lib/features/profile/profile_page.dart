@@ -35,6 +35,7 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final AccountRepository _repository = AccountRepository();
   final DirectoryDataStore _directoryStore = DirectoryDataStore.instance;
+  final AuthSessionStore _authStore = AuthSessionStore.instance;
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _businessNameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
@@ -60,6 +61,7 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _directoryStore.addListener(_handleDirectoryChanged);
+    _authStore.addListener(_handleAuthChanged);
     _loadAccount();
   }
 
@@ -71,6 +73,7 @@ class _ProfilePageState extends State<ProfilePage> {
     _addressController.dispose();
     _descriptionController.dispose();
     _directoryStore.removeListener(_handleDirectoryChanged);
+    _authStore.removeListener(_handleAuthChanged);
     super.dispose();
   }
 
@@ -80,8 +83,26 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  void _handleAuthChanged() {
+    if (!mounted || _authStore.isAuthenticated) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = false;
+      _isSaving = false;
+      _isEditing = false;
+      _business = null;
+      _businessBeforeCreate = null;
+      _selectedImagePath = null;
+      _selectedGalleryPaths = const <String>[];
+      _selectedBusinessLocation = null;
+      _loadError = 'انتهت جلسة تسجيل الدخول.';
+    });
+  }
+
   Future<void> _loadAccount() async {
-    if (!AuthSessionStore.instance.isAuthenticated) {
+    if (!_authStore.isAuthenticated) {
       setState(() {
         _isLoading = false;
         _loadError = 'انتهت جلسة تسجيل الدخول.';
@@ -104,6 +125,10 @@ class _ProfilePageState extends State<ProfilePage> {
       );
 
       if (!mounted) {
+        return;
+      }
+      if (!_authStore.isAuthenticated) {
+        _handleAuthChanged();
         return;
       }
 
@@ -457,8 +482,9 @@ class _ProfilePageState extends State<ProfilePage> {
     return SingleChildScrollView(
       child: Column(
         children: [
-          if (_directoryStore.pendingSyncOperationCount > 0 ||
-              _directoryStore.failedSyncOperationCount > 0)
+          if (_authStore.isAuthenticated &&
+              (_directoryStore.pendingSyncOperationCount > 0 ||
+                  _directoryStore.failedSyncOperationCount > 0))
             _buildQueueStatusBanner(),
           _isEditing ? _buildEditForm() : _buildProfileView(),
         ],

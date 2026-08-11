@@ -1278,6 +1278,69 @@ class LocalDirectoryDatabase {
     );
   }
 
+  /// Removes stale local mutations superseded by a newer delete tombstone.
+  Future<int> purgeSupersededBusinessSyncOperations({
+    required String userId,
+    String? entityId,
+  }) async {
+    final database = await this.database;
+    final normalizedEntityId = entityId?.trim();
+    final hasEntityFilter =
+        normalizedEntityId != null && normalizedEntityId.isNotEmpty;
+    final arguments = <Object?>[
+      userId,
+      if (hasEntityFilter) normalizedEntityId,
+    ];
+
+    await database.rawDelete(
+      '''
+      DELETE FROM $_syncConflictsTable
+      WHERE rowid IN (
+        SELECT conflict.rowid
+        FROM $_syncConflictsTable AS conflict
+        WHERE conflict.user_id = ?
+          ${hasEntityFilter ? 'AND conflict.entity_id = ?' : ''}
+          AND conflict.status = 'pending'
+          AND EXISTS (
+            SELECT 1
+            FROM $_syncQueueTable AS deletion
+            WHERE deletion.user_id = conflict.user_id
+              AND deletion.entity_type = 'business'
+              AND deletion.entity_id = conflict.entity_id
+              AND deletion.operation_type = 'delete'
+              AND deletion.status IN ('pending', 'processing', 'completed')
+          )
+      )
+      ''',
+      arguments,
+    );
+
+    return database.rawDelete(
+      '''
+      DELETE FROM $_syncQueueTable
+      WHERE rowid IN (
+        SELECT candidate.rowid
+        FROM $_syncQueueTable AS candidate
+        WHERE candidate.user_id = ?
+          ${hasEntityFilter ? 'AND candidate.entity_id = ?' : ''}
+          AND candidate.entity_type = 'business'
+          AND candidate.operation_type IN ('update', 'submit_for_review')
+          AND candidate.status IN ('pending', 'failed')
+          AND EXISTS (
+            SELECT 1
+            FROM $_syncQueueTable AS deletion
+            WHERE deletion.user_id = candidate.user_id
+              AND deletion.entity_type = 'business'
+              AND deletion.entity_id = candidate.entity_id
+              AND deletion.operation_type = 'delete'
+              AND deletion.status IN ('pending', 'processing', 'completed')
+          )
+      )
+      ''',
+      arguments,
+    );
+  }
+
   Future<SyncQueueItem> enqueueSyncOperation(
     SyncQueueEnqueueRequest request,
   ) async {
@@ -1285,6 +1348,35 @@ class LocalDirectoryDatabase {
     final database = await this.database;
 
     return database.transaction((transaction) async {
+      if (request.entityType == SyncQueueEntityType.business &&
+          request.operationType == SyncQueueOperationType.deleteEntity &&
+          request.entityId != null &&
+          request.entityId!.trim().isNotEmpty) {
+        final businessId = request.entityId!.trim();
+
+        await transaction.delete(
+          _syncConflictsTable,
+          where: '''
+            user_id = ?
+            AND entity_type = 'business'
+            AND entity_id = ?
+            AND status = 'pending'
+          ''',
+          whereArgs: <Object?>[request.userId, businessId],
+        );
+
+        await transaction.delete(
+          _syncQueueTable,
+          where: '''
+            user_id = ?
+            AND entity_type = 'business'
+            AND entity_id = ?
+            AND operation_type IN ('update', 'submit_for_review')
+            AND status IN ('pending', 'failed')
+          ''',
+          whereArgs: <Object?>[request.userId, businessId],
+        );
+      }
       final existingRows = await transaction.query(
         _syncQueueTable,
         where: 'user_id = ? AND deduplication_key = ?',
@@ -1340,6 +1432,7 @@ class LocalDirectoryDatabase {
     required DateTime now,
     int limit = 20,
   }) async {
+    await purgeSupersededBusinessSyncOperations(userId: userId);
     final database = await this.database;
     final rows = await database.query(
       _syncQueueTable,
@@ -1364,6 +1457,7 @@ class LocalDirectoryDatabase {
     required String userId,
     int limit = 100,
   }) async {
+    await purgeSupersededBusinessSyncOperations(userId: userId);
     final database = await this.database;
     final rows = await database.query(
       _syncQueueTable,
@@ -1699,6 +1793,7 @@ class LocalDirectoryDatabase {
     String? operationId,
     DateTime? now,
   }) async {
+    await purgeSupersededBusinessSyncOperations(userId: userId);
     final database = await this.database;
     final utcNow = (now ?? DateTime.now()).toUtc();
     final where = StringBuffer("user_id = ? AND status = 'failed'");
@@ -1728,6 +1823,7 @@ class LocalDirectoryDatabase {
   Future<SyncQueueSummary> readSyncQueueSummary({
     required String userId,
   }) async {
+    await purgeSupersededBusinessSyncOperations(userId: userId);
     final database = await this.database;
     final rows = await database.rawQuery(
       '''
