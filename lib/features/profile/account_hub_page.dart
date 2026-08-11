@@ -17,6 +17,7 @@ import '../shared/widgets/page_header.dart';
 import '../settings/app_settings_page.dart';
 import 'account_profile_page.dart';
 import 'background_sync_settings_page.dart';
+import 'contact_admin_page.dart';
 import 'favorite_businesses_page.dart';
 import 'owned_businesses_page.dart';
 import 'profile_page.dart';
@@ -288,6 +289,22 @@ class _AccountHubPageState extends State<AccountHubPage>
           color: AppColors.primaryTeal,
           onTap: _openAppSettings,
         ),
+        const SizedBox(height: AppSpacing.sm),
+        _AccountActionCard(
+          icon: Icons.support_agent_rounded,
+          title: AppLocaleText.pick(
+            context,
+            ar: 'التواصل مع الإدارة',
+            en: 'Contact administration',
+          ),
+          subtitle: AppLocaleText.pick(
+            context,
+            ar: 'استفسار أو اقتراح أو بلاغ عبر واتساب',
+            en: 'Inquiry, suggestion, or report via WhatsApp',
+          ),
+          color: AppColors.whatsapp,
+          onTap: _openContactAdmin,
+        ),
         const SizedBox(height: AppSpacing.md),
         _buildConnectionCard(),
       ],
@@ -458,6 +475,22 @@ class _AccountHubPageState extends State<AccountHubPage>
           subtitle: 'حجم الخط والإشعارات واللغة',
           color: AppColors.primaryTeal,
           onTap: _openAppSettings,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        _AccountActionCard(
+          icon: Icons.support_agent_rounded,
+          title: AppLocaleText.pick(
+            context,
+            ar: 'التواصل مع الإدارة',
+            en: 'Contact administration',
+          ),
+          subtitle: AppLocaleText.pick(
+            context,
+            ar: 'استفسار أو اقتراح أو بلاغ عبر واتساب',
+            en: 'Inquiry, suggestion, or report via WhatsApp',
+          ),
+          color: AppColors.whatsapp,
+          onTap: _openContactAdmin,
         ),
         const SizedBox(height: AppSpacing.md),
         _buildConnectionCard(),
@@ -646,6 +679,15 @@ class _AccountHubPageState extends State<AccountHubPage>
       context,
       MaterialPageRoute<void>(
         builder: (context) => const AppSettingsPage(),
+      ),
+    );
+  }
+
+  Future<void> _openContactAdmin() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => const ContactAdminPage(),
       ),
     );
   }
