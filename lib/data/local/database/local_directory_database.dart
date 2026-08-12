@@ -1278,7 +1278,13 @@ class LocalDirectoryDatabase {
     );
   }
 
-  /// Removes stale local mutations superseded by a newer delete tombstone.
+  /// Removes stale local mutations superseded by an authoritative delete tombstone.
+  ///
+  /// A create can be locally marked failed after the server already accepted it
+  /// when a later post-create step fails. If that entity is then deleted
+  /// successfully, retrying the stale create replays the old server receipt and
+  /// targets a business that no longer exists. A completed delete is therefore
+  /// authoritative for stale pending/failed creates of the same entity id.
   Future<int> purgeSupersededBusinessSyncOperations({
     required String userId,
     String? entityId,
@@ -1315,7 +1321,32 @@ class LocalDirectoryDatabase {
       arguments,
     );
 
-    return database.rawDelete(
+    final purgedCreateCount = await database.rawDelete(
+      '''
+      DELETE FROM $_syncQueueTable
+      WHERE rowid IN (
+        SELECT candidate.rowid
+        FROM $_syncQueueTable AS candidate
+        WHERE candidate.user_id = ?
+          ${hasEntityFilter ? 'AND candidate.entity_id = ?' : ''}
+          AND candidate.entity_type = 'business'
+          AND candidate.operation_type = 'create'
+          AND candidate.status IN ('pending', 'failed')
+          AND EXISTS (
+            SELECT 1
+            FROM $_syncQueueTable AS deletion
+            WHERE deletion.user_id = candidate.user_id
+              AND deletion.entity_type = 'business'
+              AND deletion.entity_id = candidate.entity_id
+              AND deletion.operation_type = 'delete'
+              AND deletion.status = 'completed'
+          )
+      )
+      ''',
+      arguments,
+    );
+
+    final purgedMutationCount = await database.rawDelete(
       '''
       DELETE FROM $_syncQueueTable
       WHERE rowid IN (
@@ -1339,6 +1370,8 @@ class LocalDirectoryDatabase {
       ''',
       arguments,
     );
+
+    return purgedCreateCount + purgedMutationCount;
   }
 
   Future<SyncQueueItem> enqueueSyncOperation(
