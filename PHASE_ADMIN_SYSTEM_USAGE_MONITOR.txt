@@ -1,0 +1,42 @@
+Dalil Al Hami - Admin System & Usage Monitor v1
+================================================
+
+Scope
+-----
+- Add an admin-only page: "مراقبة النظام والاستهلاك".
+- Overview tab:
+  * PostgreSQL database usage against the current Free reference limit (500 MB).
+  * Supabase Storage usage against the current Free reference limit (1 GB).
+  * Registered/active accounts and core content counts.
+  * Explicit Egress placeholder: no fabricated estimate.
+- Database tab:
+  * PostgreSQL database size.
+  * Per-table total relation size.
+  * Approximate row counts from pg_stat_user_tables.
+- Storage tab:
+  * Per-bucket file count and byte size.
+  * Top 10 largest stored files.
+- Security:
+  * RPC is SECURITY INVOKER.
+  * auth.uid() + public.is_admin() gate.
+  * anon cannot execute.
+  * No service_role, access token, or secret is embedded in the APK.
+
+Remote Supabase status
+----------------------
+The production project was already updated through the connected Supabase
+management tool during implementation. These remote migration versions exist:
+- 20260813133843 admin_system_usage_monitor_foundation
+- 20260813133959 fix_admin_system_usage_notifications_table
+- 20260813134252 harden_admin_system_usage_snapshot
+
+The first two local files are history markers; the third file is the final
+authoritative RPC definition. Do NOT create duplicate migrations with new
+versions for the same change.
+
+Known deliberate limitation
+----------------------------
+Official monthly Egress/billing usage is not derivable reliably from PostgreSQL.
+The page therefore labels Egress as unavailable instead of guessing. A later
+server-side Management API integration can add that metric without exposing
+credentials in the APK.

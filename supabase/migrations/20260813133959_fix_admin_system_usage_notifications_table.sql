@@ -1,0 +1,8 @@
+-- Dalil Al Hami
+-- Remote migration history marker.
+--
+-- Version 20260813133959 corrected the initial notification table reference.
+-- It was subsequently superseded by the RLS-safe implementation in
+-- 20260813134252_harden_admin_system_usage_snapshot.sql.
+--
+-- Keep this file so local migration history stays aligned with production.

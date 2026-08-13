@@ -1,0 +1,10 @@
+-- Dalil Al Hami
+-- Remote migration history marker.
+--
+-- Version 20260813133843 was applied to the linked production project while
+-- developing the admin system usage monitor. Its function body was immediately
+-- superseded by 20260813133959 and then hardened by 20260813134252.
+--
+-- Keep this file so local migration history stays aligned with the linked
+-- Supabase project. The final authoritative function is defined in:
+-- 20260813134252_harden_admin_system_usage_snapshot.sql

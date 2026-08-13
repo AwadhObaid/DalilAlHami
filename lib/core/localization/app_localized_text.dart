@@ -719,6 +719,9 @@ abstract final class _EnglishCatalog {
     'المحتوى والروابط وفترات العرض وترتيب الظهور':
         'Content, links, display periods, and display order',
     'إدارة الصور والوسائط': 'Manage images and media',
+    'مراقبة النظام والاستهلاك': 'System and usage monitoring',
+    'قاعدة البيانات والتخزين وحدود الخطة المجانية':
+        'Database, storage, and Free plan limits',
     'مراجعة صور الأنشطة وتنظيف الملفات غير المستخدمة':
         'Review business photos and clean unused files',
     'معرض وتنظيف': 'Gallery & cleanup',

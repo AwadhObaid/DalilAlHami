@@ -13,6 +13,7 @@ import 'admin_business_management_page.dart';
 import 'admin_business_review_page.dart';
 import 'admin_category_management_page.dart';
 import 'admin_media_management_page.dart';
+import 'admin_system_usage_page.dart';
 import 'admin_notification_management_page.dart';
 import 'admin_user_management_page.dart';
 
@@ -271,6 +272,16 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           ),
           const SizedBox(height: AppSpacing.sm),
           _AdminModuleCard(
+            key: const ValueKey<String>('admin-system-usage-action'),
+            icon: Icons.analytics_rounded,
+            title: 'مراقبة النظام والاستهلاك',
+            subtitle: 'قاعدة البيانات والتخزين وحدود الخطة المجانية',
+            badge: 'Free',
+            color: AppColors.primaryTeal,
+            onTap: _openSystemUsage,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _AdminModuleCard(
             key: const ValueKey<String>('admin-manage-users-action'),
             icon: Icons.manage_accounts_rounded,
             title: 'إدارة المستخدمين',
@@ -354,6 +365,14 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       return;
     }
     await _loadDashboard();
+  }
+
+  Future<void> _openSystemUsage() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const AdminSystemUsagePage(),
+      ),
+    );
   }
 
   Future<void> _openNotificationManagement() async {
