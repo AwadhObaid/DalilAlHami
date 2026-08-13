@@ -145,6 +145,7 @@ class AppGitHubRelease {
     }
 
     Uri? apkDownloadUri;
+    Uri? fallbackApkDownloadUri;
     final assets = json['assets'];
     if (assets is List<dynamic>) {
       for (final asset in assets) {
@@ -152,18 +153,23 @@ class AppGitHubRelease {
           continue;
         }
         final name = (asset['name'] as String?)?.trim() ?? '';
-        if (!name.toLowerCase().endsWith('.apk')) {
+        final normalizedName = name.toLowerCase();
+        if (!normalizedName.endsWith('.apk')) {
           continue;
         }
         final candidate = Uri.tryParse(
           (asset['browser_download_url'] as String?)?.trim() ?? '',
         );
         if (candidate != null && candidate.hasScheme) {
-          apkDownloadUri = candidate;
-          break;
+          fallbackApkDownloadUri ??= candidate;
+          if (normalizedName.endsWith('-universal.apk')) {
+            apkDownloadUri = candidate;
+            break;
+          }
         }
       }
     }
+    apkDownloadUri ??= fallbackApkDownloadUri;
 
     final rawTitle = (json['name'] as String?)?.trim() ?? '';
     return AppGitHubRelease(
