@@ -1,5 +1,6 @@
 import '../core/location/business_location.dart';
 import 'business_gallery_image.dart';
+import 'business_contact_number.dart';
 
 class Business {
   const Business({
@@ -24,6 +25,7 @@ class Business {
     this.deletedAt,
     this.syncVersion = 0,
     this.galleryImages = const <BusinessGalleryImage>[],
+    this.contactNumbers = const <BusinessContactNumber>[],
   });
 
   final String id;
@@ -47,6 +49,7 @@ class Business {
   final DateTime? deletedAt;
   final int syncVersion;
   final List<BusinessGalleryImage> galleryImages;
+  final List<BusinessContactNumber> contactNumbers;
 
   BusinessLocation? get location =>
       BusinessLocation.fromNullable(latitude, longitude);
@@ -160,6 +163,7 @@ class Business {
     bool clearDeletedAt = false,
     int? syncVersion,
     List<BusinessGalleryImage>? galleryImages,
+    List<BusinessContactNumber>? contactNumbers,
   }) {
     return Business(
       id: id ?? this.id,
@@ -183,6 +187,7 @@ class Business {
       deletedAt: clearDeletedAt ? null : deletedAt ?? this.deletedAt,
       syncVersion: syncVersion ?? this.syncVersion,
       galleryImages: galleryImages ?? this.galleryImages,
+      contactNumbers: contactNumbers ?? this.contactNumbers,
     );
   }
 
@@ -280,6 +285,9 @@ class Business {
       ),
       syncVersion: _readInteger(data['sync_version']),
       galleryImages: BusinessGalleryImage.readList(data['business_images']),
+      contactNumbers: BusinessContactNumber.readList(
+        data['business_contact_numbers'],
+      ),
     );
   }
 

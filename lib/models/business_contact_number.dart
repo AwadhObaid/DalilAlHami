@@ -9,6 +9,8 @@ class BusinessContactNumber {
     this.sortOrder = 0,
     this.createdAt,
     this.updatedAt,
+    this.deletedAt,
+    this.syncVersion = 0,
   });
 
   static const int maxPerBusiness = 5;
@@ -22,9 +24,13 @@ class BusinessContactNumber {
   final int sortOrder;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final DateTime? deletedAt;
+  final int syncVersion;
 
   String get trimmedPhoneNumber => phoneNumber.trim();
   bool get hasPhoneNumber => trimmedPhoneNumber.isNotEmpty;
+  bool get isDeleted => deletedAt != null;
+
   String get displayLabel {
     final value = label.trim();
     if (value.isNotEmpty) return value;
@@ -41,18 +47,24 @@ class BusinessContactNumber {
     int? sortOrder,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) =>
-      BusinessContactNumber(
-        id: id ?? this.id,
-        businessId: businessId ?? this.businessId,
-        phoneNumber: phoneNumber ?? this.phoneNumber,
-        label: label ?? this.label,
-        isPrimary: isPrimary ?? this.isPrimary,
-        supportsWhatsApp: supportsWhatsApp ?? this.supportsWhatsApp,
-        sortOrder: sortOrder ?? this.sortOrder,
-        createdAt: createdAt ?? this.createdAt,
-        updatedAt: updatedAt ?? this.updatedAt,
-      );
+    DateTime? deletedAt,
+    bool clearDeletedAt = false,
+    int? syncVersion,
+  }) {
+    return BusinessContactNumber(
+      id: id ?? this.id,
+      businessId: businessId ?? this.businessId,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      label: label ?? this.label,
+      isPrimary: isPrimary ?? this.isPrimary,
+      supportsWhatsApp: supportsWhatsApp ?? this.supportsWhatsApp,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: clearDeletedAt ? null : (deletedAt ?? this.deletedAt),
+      syncVersion: syncVersion ?? this.syncVersion,
+    );
+  }
 
   factory BusinessContactNumber.fromSupabase(Map<String, dynamic> data) {
     return BusinessContactNumber(
@@ -65,6 +77,50 @@ class BusinessContactNumber {
       sortOrder: _readInt(data['sort_order']),
       createdAt: _readDateTime(data['created_at']),
       updatedAt: _readDateTime(data['updated_at']),
+      deletedAt: _readDateTime(data['deleted_at']),
+      syncVersion: _readInt(data['sync_version']),
+    );
+  }
+
+  Map<String, dynamic> toMap() => <String, dynamic>{
+        'id': id,
+        'business_id': businessId,
+        'phone_number': phoneNumber,
+        'label': label,
+        'is_primary': isPrimary,
+        'supports_whatsapp': supportsWhatsApp,
+        'sort_order': sortOrder,
+        'created_at': createdAt?.toIso8601String(),
+        'updated_at': updatedAt?.toIso8601String(),
+        'deleted_at': deletedAt?.toIso8601String(),
+        'sync_version': syncVersion,
+      };
+
+  static List<BusinessContactNumber> readList(
+    Object? value, {
+    bool includeDeleted = false,
+  }) {
+    if (value is! List) return const <BusinessContactNumber>[];
+
+    final contacts = value
+        .whereType<Map>()
+        .map(
+          (item) => BusinessContactNumber.fromSupabase(
+            item.map((key, value) => MapEntry(key.toString(), value)),
+          ),
+        )
+        .where((item) => item.id.isNotEmpty && item.hasPhoneNumber)
+        .where((item) => includeDeleted || !item.isDeleted)
+        .toList(growable: false)
+      ..sort((a, b) {
+        if (a.isPrimary != b.isPrimary) return a.isPrimary ? -1 : 1;
+        final order = a.sortOrder.compareTo(b.sortOrder);
+        if (order != 0) return order;
+        return a.phoneNumber.compareTo(b.phoneNumber);
+      });
+
+    return List<BusinessContactNumber>.unmodifiable(
+      contacts.take(maxPerBusiness),
     );
   }
 
@@ -76,6 +132,6 @@ class BusinessContactNumber {
   static DateTime? _readDateTime(Object? value) {
     final text = value?.toString().trim();
     if (text == null || text.isEmpty) return null;
-    return DateTime.tryParse(text);
+    return DateTime.tryParse(text)?.toUtc();
   }
 }

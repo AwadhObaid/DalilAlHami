@@ -1,0 +1,51 @@
+Dalil Al Hami - Phase 17A.2
+Multi Contact Sync & Offline Cache
+
+Remote deployment synchronized
+==============================
+Remote migrations:
+- 20260814171945_business_contact_numbers_directory_sync
+- 20260814172015_harden_business_contact_number_delete_sync
+
+Verified production state
+=========================
+- 16 businesses remain approved.
+- 0 businesses became pending during deployment.
+- Legacy business phone/whatsapp state fingerprint stayed unchanged.
+- 24 active contact numbers remain across 16 businesses.
+- Contact sync_version range after backfill: 491..514.
+- get_directory_changes(490) returns 16 changed businesses and 24 contacts.
+- get_directory_changes remains intentionally callable by anon/authenticated.
+- Internal trigger functions are NOT callable by anon/authenticated.
+- Hard delete of a contact bumps the parent business directory sync version.
+- Existing v1.0.10 compatibility fields remain unchanged.
+
+Local implementation
+====================
+- Business.contactNumbers.
+- BusinessContactNumber deletedAt + syncVersion.
+- SQLite schema 11.
+- contact_numbers_json offline persistence.
+- Direct Supabase nested contact selection.
+- No UI changes in Phase 17A.2.
+
+Status
+======
+Remote backend deployed.
+Local migration history synchronized by the Phase 17A.2 sync package.
+Do not commit/tag/push until final local verification passes.
+Phase 17A.2 contact-cache recovery
+==================================
+Runtime QA found an upgrade-only compatibility case:
+an older client could advance last_sync_version after the backend began
+returning business_contact_numbers, even though that old client ignored the
+new nested field. When Schema 11 was later installed, contact_numbers_json was
+empty but the sync cursor was already current, so no backfill was requested.
+
+SQLite Schema 12 fixes this once:
+- Schema < 11 still adds contact_numbers_json.
+- Schema < 12 resets only the directory last_sync_version to 0 and clears
+  last_synced_at.
+- The next normal sync requests one full directory snapshot and backfills
+  contact numbers.
+- Account cache, sync queue, user state and Supabase are not reset.

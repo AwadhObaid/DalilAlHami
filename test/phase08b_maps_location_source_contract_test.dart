@@ -41,7 +41,7 @@ void main() {
     expect(business, contains('BusinessLocation? get location'));
     expect(account, contains("'latitude': latitude"));
     expect(account, contains("'longitude': longitude"));
-    expect(database, contains('schemaVersion = 10'));
+    expect(database, contains('schemaVersion = 12'));
     expect(database, contains('latitude REAL'));
     expect(database, contains('longitude REAL'));
     expect(gateway, contains('owner_set_business_location'));

@@ -6,6 +6,7 @@ import '../../../core/constants/app_catalog.dart';
 import '../../../models/account_business.dart';
 import '../../../models/account_profile.dart';
 import '../../../models/business.dart';
+import '../../../models/business_contact_number.dart';
 import '../../../models/business_gallery_image.dart';
 import '../../../models/directory_advertisement.dart';
 import '../../../models/service_category.dart';
@@ -48,7 +49,7 @@ class LocalDirectoryDatabase {
 
   static final LocalDirectoryDatabase instance = LocalDirectoryDatabase();
 
-  static const int schemaVersion = 10;
+  static const int schemaVersion = 12;
 
   static const String _categoriesTable = 'directory_categories';
   static const String _businessesTable = 'directory_businesses';
@@ -160,6 +161,7 @@ class LocalDirectoryDatabase {
         latitude REAL,
         longitude REAL,
         gallery_json TEXT NOT NULL DEFAULT '[]',
+        contact_numbers_json TEXT NOT NULL DEFAULT '[]',
         is_featured INTEGER NOT NULL DEFAULT 0,
         is_remote INTEGER NOT NULL DEFAULT 0,
         created_at TEXT,
@@ -404,6 +406,38 @@ class LocalDirectoryDatabase {
       );
     }
 
+    if (oldVersion < 11) {
+      await _addColumnIfMissing(
+        database,
+        tableName: _businessesTable,
+        columnName: 'contact_numbers_json',
+        definition: "TEXT NOT NULL DEFAULT '[]'",
+      );
+    }
+
+    if (oldVersion < 12) {
+      // Phase 17A.2 recovery:
+      // Older clients could advance the global directory sync version after
+      // the backend started returning business_contact_numbers, while those
+      // clients silently ignored that new nested field. A schema-11 cache
+      // could therefore contain an empty contact_numbers_json together with
+      // a last_sync_version that was already at the current server version.
+      //
+      // Reset only the directory cursor once during the v12 upgrade. The next
+      // normal synchronization becomes a full snapshot and backfills contact
+      // numbers. Account caches and the offline mutation queue are untouched.
+      await _writeMetadata(
+        database,
+        _lastSyncVersionKey,
+        '0',
+      );
+      await _writeMetadata(
+        database,
+        _lastSyncedAtKey,
+        '',
+      );
+    }
+
     await database.execute(
       '''
       CREATE INDEX IF NOT EXISTS directory_businesses_category_id_idx
@@ -456,6 +490,7 @@ class LocalDirectoryDatabase {
         latitude REAL,
         longitude REAL,
         gallery_json TEXT NOT NULL DEFAULT '[]',
+        contact_numbers_json TEXT NOT NULL DEFAULT '[]',
         is_featured INTEGER NOT NULL DEFAULT 0,
         is_remote INTEGER NOT NULL DEFAULT 0,
         created_at TEXT,
@@ -2019,6 +2054,9 @@ class LocalDirectoryDatabase {
       'gallery_json': jsonEncode(
         business.galleryImages.map((image) => image.toMap()).toList(),
       ),
+      'contact_numbers_json': jsonEncode(
+        business.contactNumbers.map((contact) => contact.toMap()).toList(),
+      ),
       'is_featured': business.isFeatured ? 1 : 0,
       'is_remote': business.isRemote ? 1 : 0,
       'created_at': business.createdAt?.toIso8601String(),
@@ -2047,6 +2085,9 @@ class LocalDirectoryDatabase {
       latitude: _readDouble(row['latitude']),
       longitude: _readDouble(row['longitude']),
       galleryImages: _galleryImagesFromJson(row['gallery_json']),
+      contactNumbers: _contactNumbersFromJson(
+        row['contact_numbers_json'],
+      ),
       isFeatured: _readBoolean(row['is_featured']),
       isRemote: _readBoolean(row['is_remote']),
       createdAt: DateTime.tryParse(
@@ -2140,6 +2181,18 @@ class LocalDirectoryDatabase {
       return BusinessGalleryImage.readList(jsonDecode(text));
     } catch (_) {
       return const <BusinessGalleryImage>[];
+    }
+  }
+
+  static List<BusinessContactNumber> _contactNumbersFromJson(Object? value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) {
+      return const <BusinessContactNumber>[];
+    }
+    try {
+      return BusinessContactNumber.readList(jsonDecode(text));
+    } catch (_) {
+      return const <BusinessContactNumber>[];
     }
   }
 
