@@ -1,0 +1,25 @@
+Dalil Al Hami - Phase 17A.1
+Multiple Contact Numbers Foundation
+
+- public.business_contact_numbers
+- Maximum 5 active contacts per business
+- One active primary number maximum
+- Label + WhatsApp flag + sort order
+- RLS for public/owner/admin
+- Smart backfill of legacy multi-number phone text
+- Legacy phone/whatsapp compatibility preserved
+- Dart model + read repository
+- No UI changes
+- No commit/tag/push
+Remote Migration History
+========================
+Phase 17A.1 was deployed directly through the connected Supabase management
+tool because Supabase CLI was not installed on the Windows development device.
+
+Remote/local synchronized migrations:
+- 20260814162027_business_contact_numbers_foundation.sql
+- 20260814162245_harden_business_contact_numbers_internal_functions.sql
+
+The hardening migration removes direct anon/authenticated RPC execution rights
+from internal contact helper/trigger functions. Table access remains controlled
+by RLS.
