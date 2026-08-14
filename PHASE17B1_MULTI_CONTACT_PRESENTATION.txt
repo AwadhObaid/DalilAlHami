@@ -1,0 +1,27 @@
+Dalil Al Hami - Phase 17B.1
+Multiple Contact Numbers - Public Presentation & Actions
+
+Scope
+=====
+- Uses the normalized Business.contactNumbers introduced in Phase 17A.
+- One callable number: call directly.
+- Multiple callable numbers: show an Arabic bottom sheet to choose a number.
+- Phone digits render LTR inside the RTL Arabic interface.
+- The primary normalized number becomes the preferred call contact.
+- WhatsApp uses the first normalized supports_whatsapp number.
+- Legacy phone/whatsapp remain fallbacks for transition compatibility.
+- Search includes normalized contact numbers.
+- Member details display every normalized contact number and its label.
+- Directory cards and home cards use the same multi-number call behavior.
+- Copy action also asks which number to copy when more than one exists.
+
+Out of scope
+============
+- Editing contact numbers.
+- Adding/removing/reordering contact numbers.
+- Admin/owner contact management.
+- App version bump.
+- Supabase/database schema changes.
+- Git commit/tag/push.
+
+Those management features belong to Phase 17B.2.

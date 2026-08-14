@@ -200,6 +200,7 @@ class _OverviewTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView(
@@ -316,6 +317,7 @@ class _DatabaseTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView(
@@ -395,6 +397,7 @@ class _StorageTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return RefreshIndicator(
       onRefresh: onRefresh,
       child: ListView(
@@ -511,6 +514,7 @@ class _UsageProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final ratio = limitBytes <= 0 ? 0.0 : usedBytes / limitBytes;
     final progress = ratio.clamp(0.0, 1.0).toDouble();
     final color = _usageColor(ratio);
@@ -605,6 +609,7 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -655,6 +660,7 @@ class _CountGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     final items = <({IconData icon, String label, int value})>[
       (
         icon: Icons.people_alt_outlined,
@@ -760,6 +766,7 @@ class _MetricListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -800,6 +807,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -826,6 +834,7 @@ class _EmptyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -849,6 +858,7 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.bindToTheme(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),

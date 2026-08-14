@@ -102,15 +102,73 @@ class Business {
 
   String get displayDetails => details.trim();
 
-  bool get hasPhone => phone.trim().isNotEmpty;
+  List<BusinessContactNumber> get activeContactNumbers =>
+      BusinessContactNumber.readList(
+        contactNumbers
+            .map((contact) => contact.toMap())
+            .toList(growable: false),
+      );
+
+  List<BusinessContactNumber> get effectiveContactNumbers {
+    final normalizedContacts = activeContactNumbers;
+    if (normalizedContacts.isNotEmpty) {
+      return normalizedContacts;
+    }
+
+    final legacyPhone = phone.trim();
+    if (legacyPhone.isEmpty) {
+      return const <BusinessContactNumber>[];
+    }
+
+    final legacyWhatsApp = whatsapp.trim();
+    return List<BusinessContactNumber>.unmodifiable(
+      <BusinessContactNumber>[
+        BusinessContactNumber(
+          id: 'legacy-phone-$id',
+          businessId: id,
+          phoneNumber: legacyPhone,
+          label: 'الرئيسي',
+          isPrimary: true,
+          supportsWhatsApp:
+              legacyWhatsApp.isEmpty || legacyWhatsApp == legacyPhone,
+        ),
+      ],
+    );
+  }
+
+  BusinessContactNumber? get primaryContactNumber {
+    final contacts = effectiveContactNumbers;
+    return contacts.isEmpty ? null : contacts.first;
+  }
+
+  BusinessContactNumber? get whatsappContactNumber {
+    for (final contact in effectiveContactNumbers) {
+      if (contact.supportsWhatsApp) {
+        return contact;
+      }
+    }
+    return null;
+  }
+
+  String get phoneContact =>
+      primaryContactNumber?.trimmedPhoneNumber ?? phone.trim();
+
+  bool get hasPhone => phoneContact.isNotEmpty;
+
+  bool get hasMultiplePhoneNumbers => effectiveContactNumbers.length > 1;
 
   bool get hasWhatsApp => whatsappContact.isNotEmpty;
 
   bool get isDeleted => deletedAt != null;
 
   String get whatsappContact {
-    final value = whatsapp.trim();
-    return value.isNotEmpty ? value : phone.trim();
+    final normalized = whatsappContactNumber?.trimmedPhoneNumber ?? '';
+    if (normalized.isNotEmpty) {
+      return normalized;
+    }
+
+    final legacyWhatsApp = whatsapp.trim();
+    return legacyWhatsApp.isNotEmpty ? legacyWhatsApp : phoneContact;
   }
 
   bool matchesSearch(String query) {
@@ -124,7 +182,11 @@ class Business {
         _normalizeSearchText(place).contains(normalizedQuery) ||
         _normalizeSearchText(details).contains(normalizedQuery) ||
         phone.contains(normalizedQuery) ||
-        whatsapp.contains(normalizedQuery);
+        whatsapp.contains(normalizedQuery) ||
+        effectiveContactNumbers.any(
+          (contact) => contact.trimmedPhoneNumber.contains(normalizedQuery),
+        ) ||
+        whatsappContact.contains(normalizedQuery);
   }
 
   bool belongsToCategory({

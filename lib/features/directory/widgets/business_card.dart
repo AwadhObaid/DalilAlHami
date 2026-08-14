@@ -8,6 +8,7 @@ import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/utils/launch_actions.dart';
 import '../../../models/business.dart';
+import '../../shared/utils/business_contact_actions.dart';
 import 'business_favorite_button.dart';
 import 'business_image.dart';
 
@@ -103,10 +104,7 @@ class BusinessCard extends StatelessWidget {
                           color: AppColors.primaryTeal,
                           enabled: business.hasPhone,
                           onPressed: () {
-                            LaunchActions.makePhoneCall(
-                              context,
-                              business.phone,
-                            );
+                            BusinessContactActions.call(context, business);
                           },
                         ),
                       ),

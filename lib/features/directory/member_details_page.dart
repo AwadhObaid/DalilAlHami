@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart' hide Text;
 
 import 'package:hami_guide/core/localization/app_localized_text.dart';
-import 'package:flutter/services.dart';
-
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/launch_actions.dart';
 import '../../models/business.dart';
+import '../shared/utils/business_contact_actions.dart';
 import 'widgets/business_favorite_button.dart';
 import 'widgets/business_gallery_section.dart';
 import 'widgets/business_image.dart';
@@ -242,7 +241,7 @@ class MemberDetailsPage extends StatelessWidget {
             color: AppColors.primaryTeal,
             enabled: business.hasPhone,
             onPressed: () {
-              LaunchActions.makePhoneCall(context, business.phone);
+              BusinessContactActions.call(context, business);
             },
           ),
         ),
@@ -308,25 +307,14 @@ class MemberDetailsPage extends StatelessWidget {
             value: business.displayPlace,
           ),
           const Divider(),
-          _InformationRow(
-            icon: Icons.phone_outlined,
-            label: 'رقم الاتصال',
-            value: business.hasPhone ? business.phone.trim() : 'غير متوفر',
-            onTap: business.hasPhone
-                ? () {
-                    LaunchActions.makePhoneCall(
-                      context,
-                      business.phone,
-                    );
-                  }
-                : null,
-          ),
+          ..._buildContactNumberRows(context),
           const Divider(),
           _InformationRow(
             icon: Icons.chat_bubble_outline_rounded,
             label: 'رقم واتساب',
             value:
                 business.hasWhatsApp ? business.whatsappContact : 'غير متوفر',
+            valueTextDirection: business.hasWhatsApp ? TextDirection.ltr : null,
             onTap: business.hasWhatsApp
                 ? () {
                     LaunchActions.openWhatsApp(
@@ -341,6 +329,48 @@ class MemberDetailsPage extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  List<Widget> _buildContactNumberRows(BuildContext context) {
+    final contacts = business.effectiveContactNumbers;
+    if (contacts.isEmpty) {
+      return const <Widget>[
+        _InformationRow(
+          icon: Icons.phone_outlined,
+          label: 'رقم الاتصال',
+          value: 'غير متوفر',
+        ),
+      ];
+    }
+
+    final rows = <Widget>[];
+    for (var index = 0; index < contacts.length; index++) {
+      if (index > 0) {
+        rows.add(const Divider());
+      }
+
+      final contact = contacts[index];
+      rows.add(
+        _InformationRow(
+          icon: contact.isPrimary
+              ? Icons.phone_in_talk_rounded
+              : Icons.phone_outlined,
+          label: contact.supportsWhatsApp
+              ? '${contact.displayLabel} • واتساب'
+              : contact.displayLabel,
+          value: contact.trimmedPhoneNumber,
+          valueTextDirection: TextDirection.ltr,
+          onTap: () {
+            LaunchActions.makePhoneCall(
+              context,
+              contact.trimmedPhoneNumber,
+            );
+          },
+        ),
+      );
+    }
+
+    return rows;
   }
 
   Widget _buildDescriptionCard() {
@@ -420,10 +450,7 @@ class MemberDetailsPage extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: business.hasPhone
                     ? () {
-                        LaunchActions.makePhoneCall(
-                          context,
-                          business.phone,
-                        );
+                        BusinessContactActions.call(context, business);
                       }
                     : null,
                 icon: const Icon(Icons.phone_rounded),
@@ -456,31 +483,8 @@ class MemberDetailsPage extends StatelessWidget {
     );
   }
 
-  Future<void> _copyPhone(BuildContext context) async {
-    if (!business.hasPhone) {
-      LaunchActions.showMessage(
-        context,
-        'لا يتوفر رقم اتصال لنسخه.',
-      );
-      return;
-    }
-
-    await Clipboard.setData(
-      ClipboardData(text: business.phone.trim()),
-    );
-
-    if (!context.mounted) {
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'تم نسخ رقم التواصل.',
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
+  Future<void> _copyPhone(BuildContext context) {
+    return BusinessContactActions.copy(context, business);
   }
 }
 
@@ -550,12 +554,14 @@ class _InformationRow extends StatelessWidget {
     required this.label,
     required this.value,
     this.onTap,
+    this.valueTextDirection,
   });
 
   final IconData icon;
   final String label;
   final String value;
   final VoidCallback? onTap;
+  final TextDirection? valueTextDirection;
 
   @override
   Widget build(BuildContext context) {
@@ -582,6 +588,7 @@ class _InformationRow extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
                   value,
+                  textDirection: valueTextDirection,
                   style: AppTextStyles.bodyLarge.copyWith(
                     fontWeight: FontWeight.w600,
                   ),

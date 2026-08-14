@@ -355,7 +355,10 @@ void main() {
         final snapshot = await upgradedDatabase.readSnapshot();
         expect(snapshot.categories, hasLength(1));
         expect(snapshot.categories.single.name, 'قسم محفوظ');
-        expect(snapshot.lastSyncVersion, 7);
+        // Schema 12 intentionally resets only the directory cursor so the
+        // next synchronization requests a full snapshot and backfills
+        // normalized business contact numbers.
+        expect(snapshot.lastSyncVersion, 0);
 
         await upgradedDatabase.enqueueSyncOperation(
           SyncQueueEnqueueRequest(

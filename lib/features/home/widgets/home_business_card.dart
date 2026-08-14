@@ -6,8 +6,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../core/theme/app_shadows.dart';
 import '../../../core/theme/app_text_styles.dart';
-import '../../../core/utils/launch_actions.dart';
 import '../../../models/business.dart';
+import '../../shared/utils/business_contact_actions.dart';
 import '../../directory/widgets/business_favorite_button.dart';
 import '../../directory/widgets/business_image.dart';
 
@@ -166,10 +166,7 @@ class _BusinessContent extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: business.hasPhone
                     ? () {
-                        LaunchActions.makePhoneCall(
-                          context,
-                          business.phone,
-                        );
+                        BusinessContactActions.call(context, business);
                       }
                     : null,
                 style: OutlinedButton.styleFrom(
