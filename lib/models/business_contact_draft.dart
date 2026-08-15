@@ -9,6 +9,9 @@ class BusinessContactDraft {
     required this.sortOrder,
   });
 
+  static const int minPhoneDigits = 5;
+  static const int maxPhoneDigits = 20;
+
   static const List<String> allowedLabels = <String>[
     'الرئيسي',
     'جوال',
@@ -204,7 +207,7 @@ class BusinessContactDraft {
       final phone = item.phoneNumber.trim();
       final key = normalizePhoneKey(phone);
       final digitCount = key.replaceAll('+', '').length;
-      if (digitCount < 5) {
+      if (digitCount < minPhoneDigits || digitCount > maxPhoneDigits) {
         throw const BusinessContactDraftValidationException(
           'تأكد من صحة جميع أرقام التواصل.',
         );

@@ -1,0 +1,80 @@
+Phase 17C.1 — Multi-contact Data Integrity & Legacy Reconciliation
+
+Baseline after Phase 17B.2 finalization
+=======================================
+Base commit:
+ef2c2b78798bc14798108141ac7ddca74264d8f3
+
+Base tag:
+v0.17.3-phase17b2-multi-contact-management
+
+App version:
+1.0.10+12 (unchanged)
+
+Read-only production audit before Phase 17C.1
+=============================================
+Businesses with active contact rows : 28
+Active contact rows                 : 42
+Businesses over 5 contacts          : 0
+Businesses with zero primary        : 0
+Businesses with multiple primary    : 0
+Businesses with multiple WhatsApp   : 0
+Contacts under 5 numeric digits     : 0
+Contacts over 20 numeric digits     : 0
+Normalized duplicate groups         : 0
+Legacy phone projection mismatches  : 2
+Legacy WhatsApp mismatches          : 0
+
+The two known legacy phone mismatches are old imported businesses whose
+businesses.phone still contains concatenated historic phone strings while the
+new business_contact_numbers rows already contain the correct primary number.
+
+Scope
+=====
+1. Preserve business_contact_numbers as the authoritative source.
+2. Add an explicit internal projection-write guard so updating
+   businesses.phone / businesses.whatsapp from contact rows can never trigger
+   destructive legacy re-parsing.
+3. Reconcile legacy phone/WhatsApp columns from active contact rows.
+4. Align client/server validation to 5..20 numeric digits.
+5. Add hard migration postconditions for:
+   - 1..5 active contacts
+   - exactly one primary
+   - at most one WhatsApp
+   - 5..20 numeric digits
+   - no normalized duplicates
+   - zero legacy projection mismatches
+
+Not in scope
+============
+- App version bump
+- Git commit/tag/push
+- GitHub Release
+- DalilAlHami-Releases changes
+- Reapplying Phase 17B.2 migrations
+- New user-facing features
+Deployment reconciliation
+========================
+Supabase production migration:
+20260815123254 phase17c1_contact_integrity_legacy_reconciliation
+
+Post-deploy production audit:
+- Active contact rows: 42
+- Businesses with active contacts: 28
+- Businesses over 5 contacts: 0
+- Invalid primary-count businesses: 0
+- Multiple WhatsApp businesses: 0
+- Contacts under 5 numeric digits: 0
+- Contacts over 20 numeric digits: 0
+- Normalized duplicate groups: 0
+- Legacy primary-phone projection mismatches: 0 (was 2)
+- Legacy WhatsApp projection mismatches: 0
+
+Function audit:
+- refresh_business_legacy_contact_fields projection guard: present
+- sync_legacy_business_fields_to_contacts projection guard: present
+- enforce_business_contact_number_limit 5..20 guard: present
+- replace_business_contacts_from_payload 5..20 guard: present
+
+The two historic legacy phone projections were reconciled without changing
+the authoritative active contact-number sets.
