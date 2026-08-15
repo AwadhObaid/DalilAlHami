@@ -1,0 +1,61 @@
+Dalil Al Hami - Native Android App Share
+
+Baseline
+========
+Commit:
+eea9987ab2ee30e874490f4ecb7ad8f265bf88a4
+
+Tag:
+v0.17.4-phase17c1-contact-integrity-reconciliation
+
+App version:
+1.0.10+12 (unchanged)
+
+Purpose
+=======
+Add a "مشاركة التطبيق" action under:
+إعدادات التطبيق -> حول التطبيق
+
+The action opens Android's native sharing chooser and shares:
+- App name
+- A short Arabic or English message matching the current app locale
+- Permanent direct-download link:
+  https://github.com/AwadhObaid/DalilAlHami-Releases/releases/latest/download/DalilAlHami.apk
+
+Implementation
+==============
+Flutter:
+- AppShareService over a MethodChannel.
+- No third-party sharing package.
+- Settings tile with error feedback.
+
+Android:
+- MainActivity handles the method channel.
+- Uses Intent.ACTION_SEND, text/plain, EXTRA_TEXT and EXTRA_SUBJECT.
+- Uses Intent.createChooser so Android shows the installed compatible apps.
+
+Safety / scope
+==============
+- No pubspec dependency changes.
+- No pubspec.lock changes.
+- No app version bump.
+- No Supabase changes.
+- No Git commit/tag/push.
+- No release repository changes.
+- Phase 17C.2 remains postponed until this standalone feature is completed.
+
+Expected local changed paths: exactly 5.
+Direct-download policy
+======================
+The shared URL must never send ordinary users to the GitHub Releases page.
+Every Stable release must contain an asset with the exact fixed name:
+
+DalilAlHami.apk
+
+GitHub then resolves:
+releases/latest/download/DalilAlHami.apk
+
+to the APK asset of the newest Stable release automatically.
+The current v1.0.10 alias is provisioned by the Direct Download v2 QA script.
+The release publishing automation will be hardened after Device QA so future
+Stable releases create the fixed-name asset automatically.

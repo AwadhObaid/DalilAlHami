@@ -7,6 +7,7 @@ import 'package:hami_guide/core/localization/app_localized_text.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/services/app_preferences_store.dart';
+import '../../core/services/app_share_service.dart';
 import '../../core/services/app_update_service.dart';
 import '../../core/services/firebase_push_notification_service.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -23,6 +24,7 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
   final FirebasePushNotificationService _pushService =
       FirebasePushNotificationService.instance;
   final AppUpdateService _updateService = AppUpdateService();
+  final AppShareService _shareService = const AppShareService();
 
   AuthorizationStatus? _authorizationStatus;
   AppUpdateCheckResult? _updateResult;
@@ -146,6 +148,44 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
           context,
           ar: 'تعذر فتح رابط تنزيل التحديث.',
           en: 'Could not open the update download link.',
+        ),
+        isError: true,
+      );
+    }
+  }
+
+  Future<void> _shareApp() async {
+    final shareText = AppLocaleText.pick(
+      context,
+      ar: AppShareService.arabicShareText,
+      en: AppShareService.englishShareText,
+    );
+    final subject = AppLocaleText.pick(
+      context,
+      ar: 'دليل الحامي',
+      en: 'Dalil Al Hami',
+    );
+    final chooserTitle = AppLocaleText.pick(
+      context,
+      ar: 'مشاركة تطبيق دليل الحامي',
+      en: 'Share Dalil Al Hami',
+    );
+
+    try {
+      await _shareService.shareApp(
+        text: shareText,
+        subject: subject,
+        chooserTitle: chooserTitle,
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      _showMessage(
+        AppLocaleText.pick(
+          context,
+          ar: 'تعذر فتح نافذة المشاركة. حاول مرة أخرى.',
+          en: 'Could not open the share sheet. Please try again.',
         ),
         isError: true,
       );
@@ -492,6 +532,21 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                   leading: Icon(Icons.apps_rounded),
                   title: Text('دليل الحامي'),
                   subtitle: Text('دليل الخدمات والأنشطة المحلية'),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  key: const ValueKey<String>('settings-share-app'),
+                  onTap: _shareApp,
+                  leading: const Icon(Icons.share_rounded),
+                  title: const Text('مشاركة التطبيق'),
+                  subtitle: Text(
+                    AppLocaleText.pick(
+                      context,
+                      ar: 'أرسل رابط دليل الحامي عبر تطبيقات التواصل',
+                      en: 'Share the Dalil Al Hami link with others',
+                    ),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
                 ),
                 const Divider(height: 1),
                 ListTile(
