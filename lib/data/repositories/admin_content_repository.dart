@@ -71,6 +71,9 @@ class AdminContentRepository {
             'categories!businesses_category_id_fkey(id, name_ar, slug), '
             'business_images(id, business_id, storage_path, public_url, '
             'alt_text, sort_order, is_primary, created_at, updated_at, '
+            'deleted_at, sync_version), '
+            'business_contact_numbers(id, business_id, phone_number, label, '
+            'is_primary, supports_whatsapp, sort_order, created_at, updated_at, '
             'deleted_at, sync_version)',
           )
           .order('updated_at', ascending: false),
@@ -154,8 +157,9 @@ class AdminContentRepository {
   ) async {
     await _adminRepository.loadCurrentAdminProfile();
     try {
+      final useMultiContact = draft.contactNumbers.isNotEmpty;
       final response = await _client.rpc(
-        'admin_upsert_business',
+        useMultiContact ? 'admin_upsert_business_v2' : 'admin_upsert_business',
         params: <String, dynamic>{
           'p_business_id': draft.id,
           'p_category_id': draft.categoryId,
@@ -168,6 +172,10 @@ class AdminContentRepository {
           'p_longitude': draft.longitude,
           'p_logo_url': _nullable(draft.logoUrl),
           'p_cover_url': _nullable(draft.coverUrl),
+          if (useMultiContact)
+            'p_contacts': draft.contactNumbers
+                .map((item) => item.toPayloadMap())
+                .toList(growable: false),
         },
       );
       final result = AdminContentMutationResult.fromRpc(response);

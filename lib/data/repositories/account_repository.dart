@@ -7,10 +7,37 @@ import '../../core/location/business_location.dart';
 import '../../core/services/supabase_service.dart';
 import '../../models/account_business.dart';
 import '../../models/account_profile.dart';
+import '../../models/business_contact_draft.dart';
+import '../../models/business_contact_number.dart';
 import '../directory_data_store.dart';
 import '../local/database/local_directory_database.dart';
 import '../sync_queue/supabase_sync_queue_gateway.dart';
 import '../sync_queue/sync_queue_item.dart';
+
+/// Resolves the optimistic-concurrency base version for an owned-business
+/// mutation.
+///
+/// The edit UI can stay alive across a successful background create/update and
+/// therefore hand back an older sync version (commonly 0 immediately after a
+/// create). The owned-business cache is refreshed from the successful server
+/// snapshot. Never downgrade either known version: use the newest valid value.
+int resolveOwnedBusinessMutationBaseSyncVersion({
+  int? cachedSyncVersion,
+  int? requestedSyncVersion,
+}) {
+  var resolved = 0;
+
+  for (final candidate in <int?>[
+    cachedSyncVersion,
+    requestedSyncVersion,
+  ]) {
+    if (candidate != null && candidate >= 0 && candidate > resolved) {
+      resolved = candidate;
+    }
+  }
+
+  return resolved;
+}
 
 class AccountSnapshot {
   const AccountSnapshot({
@@ -278,6 +305,7 @@ class AccountRepository {
     required String businessName,
     required String businessPhone,
     required String whatsapp,
+    List<BusinessContactDraft> contactNumbers = const <BusinessContactDraft>[],
     required String description,
     required String address,
     double? latitude,
@@ -292,9 +320,24 @@ class AccountRepository {
     final normalizedBusinessName = businessName.trim();
     final normalizedAddress =
         address.trim().isEmpty ? 'الحامي' : address.trim();
-    final normalizedBusinessPhone = businessPhone.trim();
+    late final List<BusinessContactDraft> normalizedContacts;
+    try {
+      normalizedContacts = BusinessContactDraft.normalizeAndValidate(
+        contactNumbers.isNotEmpty
+            ? contactNumbers
+            : BusinessContactDraft.fromLegacyFields(
+                legacyPhone: businessPhone,
+                legacyWhatsApp: whatsapp,
+                defaultWhatsAppToPrimary: true,
+              ),
+      );
+    } on BusinessContactDraftValidationException catch (error) {
+      throw AccountFailure(error.message);
+    }
+    final normalizedBusinessPhone =
+        BusinessContactDraft.primaryPhone(normalizedContacts);
     final normalizedWhatsApp =
-        whatsapp.trim().isEmpty ? normalizedBusinessPhone : whatsapp.trim();
+        BusinessContactDraft.whatsappPhone(normalizedContacts);
 
     try {
       BusinessLocation.validatePair(latitude, longitude);
@@ -328,6 +371,12 @@ class AccountRepository {
             userId: user.id,
             businessId: savedBusinessId,
           );
+    final resolvedBaseSyncVersion = isCreate
+        ? 0
+        : resolveOwnedBusinessMutationBaseSyncVersion(
+            cachedSyncVersion: cachedBusiness?.syncVersion,
+            requestedSyncVersion: baseSyncVersion,
+          );
     final localLogoPath = selectedImagePath?.trim().isNotEmpty == true
         ? selectedImagePath!.trim()
         : null;
@@ -338,6 +387,14 @@ class AccountRepository {
           .take(5),
     );
 
+    final localContacts = <BusinessContactNumber>[
+      for (var index = 0; index < normalizedContacts.length; index++)
+        normalizedContacts[index].toLocalContactNumber(
+          businessId: savedBusinessId,
+          index: index,
+        ),
+    ];
+
     final localBusiness = AccountBusiness(
       id: savedBusinessId,
       ownerId: user.id,
@@ -347,6 +404,7 @@ class AccountRepository {
       description: description.trim(),
       phone: normalizedBusinessPhone,
       whatsapp: normalizedWhatsApp,
+      contactNumbers: List<BusinessContactNumber>.unmodifiable(localContacts),
       address: normalizedAddress,
       status: 'local_pending',
       isActive: true,
@@ -355,7 +413,7 @@ class AccountRepository {
       localGalleryPaths: localGalleryPaths,
       latitude: latitude,
       longitude: longitude,
-      syncVersion: baseSyncVersion ?? 0,
+      syncVersion: resolvedBaseSyncVersion,
     );
     await _database.upsertOwnedBusinessCache(localBusiness);
 
@@ -365,6 +423,9 @@ class AccountRepository {
       'description': description.trim(),
       'phone': normalizedBusinessPhone,
       'whatsapp': normalizedWhatsApp,
+      'contact_numbers': normalizedContacts
+          .map((item) => item.toPayloadMap())
+          .toList(growable: false),
       'address': normalizedAddress,
       'latitude': latitude,
       'longitude': longitude,
@@ -372,7 +433,7 @@ class AccountRepository {
         SupabaseSyncQueueGateway.localLogoPathKey: localLogoPath,
       if (localGalleryPaths.isNotEmpty)
         SupabaseSyncQueueGateway.localGalleryPathsKey: localGalleryPaths,
-      if (!isCreate) '_base_sync_version': baseSyncVersion ?? 0,
+      if (!isCreate) '_base_sync_version': resolvedBaseSyncVersion,
       'submit_for_review': true,
     };
 
@@ -499,6 +560,9 @@ class AccountRepository {
           'categories!businesses_category_id_fkey(id, name_ar, slug), '
           'business_images(id, business_id, storage_path, public_url, '
           'alt_text, sort_order, is_primary, created_at, updated_at, '
+          'deleted_at, sync_version), '
+          'business_contact_numbers(id, business_id, phone_number, label, '
+          'is_primary, supports_whatsapp, sort_order, created_at, updated_at, '
           'deleted_at, sync_version)',
         )
         .eq('owner_id', userId)

@@ -7,7 +7,9 @@ import '../../core/location/business_location.dart';
 import '../../core/services/media_upload_service.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../models/admin_content_management.dart';
+import '../../models/business_contact_draft.dart';
 import '../shared/widgets/admin_media_field.dart';
+import '../shared/widgets/business_contact_editor.dart';
 import '../shared/widgets/business_gallery_manager.dart';
 import '../shared/widgets/business_location_picker.dart';
 
@@ -37,6 +39,10 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
   late final TextEditingController _descriptionController;
   late final TextEditingController _phoneController;
   late final TextEditingController _whatsappController;
+  List<BusinessContactDraft> _contactDrafts = <BusinessContactDraft>[
+    BusinessContactDraft.emptyPrimary(),
+  ];
+  int _contactEditorRevision = 0;
   late final TextEditingController _addressController;
   late final TextEditingController _logoController;
   late final TextEditingController _coverController;
@@ -57,6 +63,12 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
         TextEditingController(text: business?.description ?? '');
     _phoneController = TextEditingController(text: business?.phone ?? '');
     _whatsappController = TextEditingController(text: business?.whatsapp ?? '');
+    _contactDrafts = BusinessContactDraft.fromExisting(
+      contacts: business?.contactNumbers ?? const [],
+      legacyPhone: business?.phone ?? '',
+      legacyWhatsApp: business?.whatsapp ?? '',
+    );
+    _contactEditorRevision++;
     _addressController =
         TextEditingController(text: business?.address ?? 'الحامي');
     _businessLocation = BusinessLocation.fromNullable(
@@ -93,6 +105,17 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
       return;
     }
 
+    late final List<BusinessContactDraft> contacts;
+    try {
+      contacts = BusinessContactDraft.normalizeAndValidate(_contactDrafts);
+    } on BusinessContactDraftValidationException catch (error) {
+      _showError(error.message);
+      return;
+    }
+
+    _phoneController.text = BusinessContactDraft.primaryPhone(contacts);
+    _whatsappController.text = BusinessContactDraft.whatsappPhone(contacts);
+
     setState(() => _saving = true);
     try {
       final result = await widget.onSave(
@@ -103,6 +126,7 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
           description: _descriptionController.text,
           phone: _phoneController.text,
           whatsapp: _whatsappController.text,
+          contactNumbers: contacts,
           address: _addressController.text,
           latitude: _businessLocation?.latitude,
           longitude: _businessLocation?.longitude,
@@ -201,31 +225,19 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
                   : null,
             ),
             const SizedBox(height: AppSpacing.sm),
-            TextFormField(
-              key: const ValueKey<String>('admin-business-phone-field'),
-              controller: _phoneController,
-              keyboardType: TextInputType.phone,
-              textDirection: TextDirection.ltr,
-              decoration: InputDecoration(
-                labelText: AppLocaleText.runtime('رقم الهاتف'),
-                prefixIcon: Icon(Icons.phone_rounded),
+            BusinessContactEditor(
+              key: ValueKey<String>(
+                'admin-business-contact-editor-$_contactEditorRevision',
               ),
-              textInputAction: TextInputAction.next,
-              validator: (value) => (value?.trim().length ?? 0) < 5
-                  ? AppLocaleText.runtime('أدخل رقم هاتف صحيحًا.')
-                  : null,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            TextFormField(
-              key: const ValueKey<String>('admin-business-whatsapp-field'),
-              controller: _whatsappController,
-              keyboardType: TextInputType.phone,
-              textDirection: TextDirection.ltr,
-              decoration: InputDecoration(
-                labelText: AppLocaleText.runtime('واتساب — اختياري'),
-                prefixIcon: Icon(Icons.chat_rounded),
-              ),
-              textInputAction: TextInputAction.next,
+              initialValue: _contactDrafts,
+              enabled: !_saving,
+              onChanged: (value) {
+                _contactDrafts = value;
+                _phoneController.text =
+                    BusinessContactDraft.primaryPhone(value);
+                _whatsappController.text =
+                    BusinessContactDraft.whatsappPhone(value);
+              },
             ),
             const SizedBox(height: AppSpacing.sm),
             TextFormField(

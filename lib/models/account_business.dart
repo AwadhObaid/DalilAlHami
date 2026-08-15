@@ -1,4 +1,5 @@
 import '../core/location/business_location.dart';
+import 'business_contact_number.dart';
 import 'business_gallery_image.dart';
 
 class AccountBusiness {
@@ -18,6 +19,7 @@ class AccountBusiness {
     this.localLogoPath,
     this.galleryImages = const <BusinessGalleryImage>[],
     this.localGalleryPaths = const <String>[],
+    this.contactNumbers = const <BusinessContactNumber>[],
     this.latitude,
     this.longitude,
     this.rejectionReason,
@@ -40,6 +42,7 @@ class AccountBusiness {
   final String? localLogoPath;
   final List<BusinessGalleryImage> galleryImages;
   final List<String> localGalleryPaths;
+  final List<BusinessContactNumber> contactNumbers;
   final double? latitude;
   final double? longitude;
   final String? rejectionReason;
@@ -87,6 +90,7 @@ class AccountBusiness {
     String? localLogoPath,
     List<BusinessGalleryImage>? galleryImages,
     List<String>? localGalleryPaths,
+    List<BusinessContactNumber>? contactNumbers,
     double? latitude,
     double? longitude,
     bool clearLocation = false,
@@ -110,6 +114,7 @@ class AccountBusiness {
       localLogoPath: localLogoPath ?? this.localLogoPath,
       galleryImages: galleryImages ?? this.galleryImages,
       localGalleryPaths: localGalleryPaths ?? this.localGalleryPaths,
+      contactNumbers: contactNumbers ?? this.contactNumbers,
       latitude: clearLocation ? null : latitude ?? this.latitude,
       longitude: clearLocation ? null : longitude ?? this.longitude,
       rejectionReason: rejectionReason ?? this.rejectionReason,
@@ -144,6 +149,9 @@ class AccountBusiness {
       localLogoPath: _nullableText(data['local_logo_path']),
       galleryImages: BusinessGalleryImage.readList(data['business_images']),
       localGalleryPaths: _readStringList(data['local_gallery_paths']),
+      contactNumbers: BusinessContactNumber.readList(
+        data['business_contact_numbers'] ?? data['contact_numbers'],
+      ),
       latitude: _readDouble(data['latitude']),
       longitude: _readDouble(data['longitude']),
       rejectionReason: _nullableText(data['rejection_reason']),

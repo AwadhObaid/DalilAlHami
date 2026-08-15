@@ -121,8 +121,11 @@ class SupabaseSyncQueueGateway implements SyncQueueRemoteGateway {
   ) async {
     Object? response;
     try {
+      final rpcName = payload.containsKey('contact_numbers')
+          ? 'process_directory_sync_operation_v2'
+          : 'process_directory_sync_operation';
       response = await _client.rpc(
-        'process_directory_sync_operation',
+        rpcName,
         params: <String, dynamic>{
           'p_operation_id': item.id,
           'p_entity_type': item.entityType.databaseValue,

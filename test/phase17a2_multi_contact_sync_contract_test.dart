@@ -33,7 +33,12 @@ void main() {
     expect(contact, contains('final DateTime? deletedAt;'));
     expect(contact, contains('Map<String, dynamic> toMap()'));
 
-    expect(database, contains('schemaVersion = 12'));
+    // Phase 17B.2 advances the current SQLite schema to 13 for the owned
+    // business contact cache. The Phase 17A.2 recovery contract itself must
+    // still remain present as the oldVersion < 12 migration block.
+    expect(database, contains('schemaVersion = 13'));
+    expect(database, contains('if (oldVersion < 12)'));
+    expect(database, contains('Phase 17A.2 recovery:'));
     expect(database, contains('contact_numbers_json'));
     expect(repository, contains('business_contact_numbers('));
 

@@ -1,5 +1,6 @@
 import '../local/database/local_directory_database.dart';
 import 'sync_conflict.dart';
+import 'sync_queue_item.dart';
 import 'sync_queue_remote_gateway.dart';
 
 class SyncQueueBackoff {
@@ -177,13 +178,28 @@ class SyncQueueProcessor {
           continue;
         }
 
+        final resolvedEntityId = claimed.entityId ?? result.entityId ?? '';
+        final resolvedServerSyncVersion = result.serverSyncVersion;
+
         await _database.applySuccessfulBusinessSync(
           userId: _userId,
-          entityId: claimed.entityId ?? result.entityId ?? '',
+          entityId: resolvedEntityId,
           operationType: claimed.operationType,
           serverSnapshot: result.serverSnapshot,
-          serverSyncVersion: result.serverSyncVersion,
+          serverSyncVersion: resolvedServerSyncVersion,
         );
+
+        if (resolvedEntityId.isNotEmpty &&
+            resolvedServerSyncVersion != null &&
+            claimed.operationType != SyncQueueOperationType.deleteEntity) {
+          await _database.rebasePendingBusinessSyncOperations(
+            userId: _userId,
+            entityId: resolvedEntityId,
+            baseSyncVersion: resolvedServerSyncVersion,
+            excludeOperationId: claimed.id,
+          );
+        }
+
         await _database.markSyncOperationCompleted(
           claimed.id,
           userId: _userId,

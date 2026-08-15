@@ -11,6 +11,8 @@ import '../../data/directory_data_store.dart';
 import '../../data/repositories/account_repository.dart';
 import '../../models/account_business.dart';
 import '../../models/account_profile.dart';
+import '../../models/business_contact_draft.dart';
+import '../shared/widgets/business_contact_editor.dart';
 import '../shared/widgets/business_gallery_manager.dart';
 import '../shared/widgets/business_location_picker.dart';
 import 'widgets/add_business_button.dart';
@@ -40,6 +42,10 @@ class _ProfilePageState extends State<ProfilePage> {
   final TextEditingController _businessNameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _whatsappController = TextEditingController();
+  List<BusinessContactDraft> _contactDrafts = <BusinessContactDraft>[
+    BusinessContactDraft.emptyPrimary(),
+  ];
+  int _contactEditorRevision = 0;
   final TextEditingController _addressController =
       TextEditingController(text: 'الحامي');
   final TextEditingController _descriptionController = TextEditingController();
@@ -113,6 +119,10 @@ class _ProfilePageState extends State<ProfilePage> {
       _businessNameController.clear();
       _phoneController.clear();
       _whatsappController.clear();
+      _contactDrafts = <BusinessContactDraft>[
+        BusinessContactDraft.emptyPrimary()
+      ];
+      _contactEditorRevision++;
       _addressController.text = 'الحامي';
       _descriptionController.clear();
       _loadError = currentUserId == null ? 'انتهت جلسة تسجيل الدخول.' : null;
@@ -198,6 +208,12 @@ class _ProfilePageState extends State<ProfilePage> {
     _businessNameController.text = snapshot.business?.name ?? '';
     _phoneController.text = snapshot.business?.phone ?? '';
     _whatsappController.text = snapshot.business?.whatsapp ?? '';
+    _contactDrafts = BusinessContactDraft.fromExisting(
+      contacts: snapshot.business?.contactNumbers ?? const [],
+      legacyPhone: snapshot.business?.phone ?? '',
+      legacyWhatsApp: snapshot.business?.whatsapp ?? '',
+    );
+    _contactEditorRevision++;
     _addressController.text = snapshot.business?.address ?? 'الحامي';
     _descriptionController.text = snapshot.business?.description ?? '';
     _selectedImagePath = null;
@@ -234,15 +250,25 @@ class _ProfilePageState extends State<ProfilePage> {
       _selectedCategoryId,
     );
 
+    late final List<BusinessContactDraft> contacts;
+    try {
+      contacts = BusinessContactDraft.normalizeAndValidate(_contactDrafts);
+    } on BusinessContactDraftValidationException catch (error) {
+      _showMessage(error.message, isError: true);
+      return;
+    }
+
     if (_businessNameController.text.trim().isEmpty ||
-        _phoneController.text.trim().isEmpty ||
         selectedCategory == null) {
       _showMessage(
-        'أكمل الاسم التجاري ورقم الهاتف واختر التصنيف.',
+        'أكمل الاسم التجاري وأرقام التواصل واختر التصنيف.',
         isError: true,
       );
       return;
     }
+
+    _phoneController.text = BusinessContactDraft.primaryPhone(contacts);
+    _whatsappController.text = BusinessContactDraft.whatsappPhone(contacts);
 
     setState(() {
       _isSaving = true;
@@ -255,6 +281,7 @@ class _ProfilePageState extends State<ProfilePage> {
         businessName: _businessNameController.text,
         businessPhone: _phoneController.text,
         whatsapp: _whatsappController.text,
+        contactNumbers: contacts,
         description: _descriptionController.text,
         address: _addressController.text,
         latitude: _selectedBusinessLocation?.latitude,
@@ -417,6 +444,10 @@ class _ProfilePageState extends State<ProfilePage> {
     _businessNameController.clear();
     _phoneController.clear();
     _whatsappController.clear();
+    _contactDrafts = <BusinessContactDraft>[
+      BusinessContactDraft.emptyPrimary()
+    ];
+    _contactEditorRevision++;
     _addressController.text = 'الحامي';
     _descriptionController.clear();
     _selectedCategoryId = null;
@@ -545,19 +576,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   _businessNameController,
                   Icons.storefront_outlined,
                 ),
-                _buildCustomField(
-                  'رقم هاتف النشاط',
-                  _phoneController,
-                  Icons.phone_outlined,
-                  isPhone: true,
-                ),
                 _buildCategoryDropdown(),
-                _buildCustomField(
-                  'رقم الواتساب',
-                  _whatsappController,
-                  Icons.chat_outlined,
-                  isPhone: true,
-                ),
                 _buildCustomField(
                   'العنوان',
                   _addressController,
@@ -570,6 +589,21 @@ class _ProfilePageState extends State<ProfilePage> {
                   lines: 3,
                 ),
               ]),
+              const SizedBox(height: 12),
+              BusinessContactEditor(
+                key: ValueKey<String>(
+                  'profile-business-contact-editor-$_contactEditorRevision',
+                ),
+                initialValue: _contactDrafts,
+                enabled: !_isSaving,
+                onChanged: (value) {
+                  _contactDrafts = value;
+                  _phoneController.text =
+                      BusinessContactDraft.primaryPhone(value);
+                  _whatsappController.text =
+                      BusinessContactDraft.whatsappPhone(value);
+                },
+              ),
               const SizedBox(height: 12),
               BusinessLocationPicker(
                 location: _selectedBusinessLocation,
@@ -727,11 +761,27 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             child: Column(
               children: [
-                _buildInfoRow(
-                  Icons.phone,
-                  'رقم الهاتف',
-                  business.phone,
-                ),
+                if (business.contactNumbers.isEmpty)
+                  _buildInfoRow(
+                    Icons.phone,
+                    'رقم الهاتف',
+                    business.phone,
+                    valueTextDirection: TextDirection.ltr,
+                  )
+                else
+                  for (var index = 0;
+                      index < business.contactNumbers.length;
+                      index++) ...[
+                    if (index > 0) const Divider(),
+                    _buildInfoRow(
+                      Icons.phone,
+                      business.contactNumbers[index].supportsWhatsApp
+                          ? '${business.contactNumbers[index].displayLabel} • واتساب'
+                          : business.contactNumbers[index].displayLabel,
+                      business.contactNumbers[index].phoneNumber,
+                      valueTextDirection: TextDirection.ltr,
+                    ),
+                  ],
                 const Divider(),
                 _buildInfoRow(
                   Icons.location_on,
@@ -1008,8 +1058,9 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget _buildInfoRow(
     IconData icon,
     String label,
-    String value,
-  ) {
+    String value, {
+    TextDirection? valueTextDirection,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 9),
       child: Row(
@@ -1033,6 +1084,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 Text(
                   value.isEmpty ? 'غير محدد' : value,
+                  textDirection: valueTextDirection,
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,

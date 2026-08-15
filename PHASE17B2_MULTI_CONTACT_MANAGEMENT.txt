@@ -1,0 +1,22 @@
+Phase 17B.2 - Multi-contact Add/Edit/Admin Management
+
+Baseline: b8b376705b2c0423a7db53c5418d45fc2db3b465
+App version: 1.0.10+12 unchanged.
+
+Backend migrations already deployed:
+- 20260814205532 phase17b2_multi_contact_mutation_contract
+- 20260814213329 phase17b2_harden_multi_contact_mutations
+
+Scope:
+- Up to 5 contact numbers in user/admin create and edit.
+- Exactly one primary contact.
+- At most one WhatsApp-enabled contact.
+- Labels: الرئيسي، جوال، هاتف ثابت، المبيعات، الإدارة.
+- Add/remove/reorder, duplicate prevention, LTR phone entry.
+- SQLite schema 13 stores owned-business normalized contacts offline.
+- New queue writes use process_directory_sync_operation_v2.
+- Existing queued operations without contact_numbers continue using the legacy RPC.
+- Admin writes with contactNumbers use admin_upsert_business_v2.
+- Legacy phone/whatsapp fields remain for compatibility.
+- Old-client destructive multi-contact edits are blocked server-side.
+- No version bump and no commit/tag/push in the installer.

@@ -71,8 +71,10 @@ void main() {
 
     expect(find.text('محتوى الأنشطة'), findsOneWidget);
     expect(find.text('مطعم الحامي'), findsOneWidget);
-    expect(find.byKey(const ValueKey('admin-add-business-button')),
-        findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('admin-add-business-button')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(const ValueKey('admin-add-business-button')));
     await tester.pumpAndSettle();
@@ -81,15 +83,22 @@ void main() {
       find.byKey(const ValueKey('admin-business-name-field')),
       'مقهى الساحل',
     );
-    await tester.enterText(
-      find.byKey(const ValueKey('admin-business-phone-field')),
-      '777222222',
-    );
+
+    final firstContact =
+        find.byKey(const ValueKey<String>('business-contact-phone-0'));
+    expect(firstContact, findsOneWidget);
+    await tester.ensureVisible(firstContact);
+    await tester.enterText(firstContact, '777222222');
+
     await tester.tap(find.byKey(const ValueKey('admin-save-business-button')));
     await tester.pumpAndSettle();
 
     expect(submitted?.name, 'مقهى الساحل');
     expect(submitted?.categoryId, 'cat-1');
+    expect(submitted?.phone, '777222222');
+    expect(submitted?.contactNumbers, hasLength(1));
+    expect(submitted?.contactNumbers.single.phoneNumber, '777222222');
+    expect(submitted?.contactNumbers.single.isPrimary, isTrue);
     expect(tester.takeException(), isNull);
   });
 

@@ -49,7 +49,7 @@ class LocalDirectoryDatabase {
 
   static final LocalDirectoryDatabase instance = LocalDirectoryDatabase();
 
-  static const int schemaVersion = 12;
+  static const int schemaVersion = 13;
 
   static const String _categoriesTable = 'directory_categories';
   static const String _businessesTable = 'directory_businesses';
@@ -437,6 +437,16 @@ class LocalDirectoryDatabase {
         '',
       );
     }
+    if (oldVersion < 13) {
+      // Phase 17B.2: keep normalized owned-business contacts in the local
+      // account cache so add/edit management remains consistent offline.
+      await _addColumnIfMissing(
+        database,
+        tableName: _accountBusinessesTable,
+        columnName: 'contact_numbers_json',
+        definition: "TEXT NOT NULL DEFAULT '[]'",
+      );
+    }
 
     await database.execute(
       '''
@@ -756,6 +766,7 @@ class LocalDirectoryDatabase {
         description TEXT NOT NULL DEFAULT '',
         phone TEXT NOT NULL DEFAULT '',
         whatsapp TEXT NOT NULL DEFAULT '',
+        contact_numbers_json TEXT NOT NULL DEFAULT '[]',
         address TEXT NOT NULL DEFAULT 'الحامي',
         logo_url TEXT,
         local_logo_path TEXT,
@@ -823,6 +834,7 @@ class LocalDirectoryDatabase {
         description TEXT NOT NULL DEFAULT '',
         phone TEXT NOT NULL DEFAULT '',
         whatsapp TEXT NOT NULL DEFAULT '',
+        contact_numbers_json TEXT NOT NULL DEFAULT '[]',
         address TEXT NOT NULL DEFAULT 'الحامي',
         logo_url TEXT,
         local_logo_path TEXT,
@@ -1208,6 +1220,9 @@ class LocalDirectoryDatabase {
         'description': business.description,
         'phone': business.phone,
         'whatsapp': business.whatsapp,
+        'contact_numbers_json': jsonEncode(
+          business.contactNumbers.map((item) => item.toMap()).toList(),
+        ),
         'address': business.address,
         'logo_url': business.logoUrl,
         'local_logo_path': business.localLogoPath,
@@ -1276,6 +1291,7 @@ class LocalDirectoryDatabase {
       description: row['description']?.toString() ?? '',
       phone: row['phone']?.toString() ?? '',
       whatsapp: row['whatsapp']?.toString() ?? '',
+      contactNumbers: _contactNumbersFromJson(row['contact_numbers_json']),
       address: row['address']?.toString() ?? 'الحامي',
       status: row['status']?.toString() ?? 'draft',
       isActive: _readBoolean(row['is_active']),
@@ -1492,6 +1508,122 @@ class LocalDirectoryDatabase {
       }
 
       return SyncQueueItem.fromDatabaseRow(storedRows.first);
+    });
+  }
+
+  /// Rebases later actionable mutations after the server accepts an earlier
+  /// mutation for the same business.
+  ///
+  /// A create starts locally at sync version 0, while the server assigns the
+  /// authoritative version when it accepts that create. If an edit/delete was
+  /// queued before that receipt was applied, its original
+  /// `_base_sync_version` is stale. Rewrite only future actionable non-create
+  /// operations so optimistic concurrency compares against the newly accepted
+  /// server state.
+  Future<int> rebasePendingBusinessSyncOperations({
+    required String userId,
+    required String entityId,
+    required int baseSyncVersion,
+    String? excludeOperationId,
+  }) async {
+    final normalizedUserId = userId.trim();
+    final normalizedEntityId = entityId.trim();
+
+    if (normalizedUserId.isEmpty) {
+      throw ArgumentError.value(
+        userId,
+        'userId',
+        'User ID cannot be empty.',
+      );
+    }
+    if (normalizedEntityId.isEmpty) {
+      return 0;
+    }
+    if (baseSyncVersion < 0) {
+      throw ArgumentError.value(
+        baseSyncVersion,
+        'baseSyncVersion',
+        'Base sync version cannot be negative.',
+      );
+    }
+
+    final database = await this.database;
+    return database.transaction((transaction) async {
+      final where = StringBuffer(
+        '''
+        user_id = ?
+        AND entity_type = 'business'
+        AND entity_id = ?
+        AND operation_type <> 'create'
+        AND (
+          status = 'pending'
+          OR (status = 'failed' AND attempt_count < max_attempts)
+        )
+        ''',
+      );
+      final whereArgs = <Object?>[
+        normalizedUserId,
+        normalizedEntityId,
+      ];
+
+      final excluded = excludeOperationId?.trim();
+      if (excluded != null && excluded.isNotEmpty) {
+        where.write(' AND id <> ?');
+        whereArgs.add(excluded);
+      }
+
+      final rows = await transaction.query(
+        _syncQueueTable,
+        columns: <String>['id', 'payload_json'],
+        where: where.toString(),
+        whereArgs: whereArgs,
+      );
+
+      var updatedCount = 0;
+      for (final row in rows) {
+        final operationId = row['id']?.toString().trim() ?? '';
+        if (operationId.isEmpty) {
+          continue;
+        }
+
+        final decoded = jsonDecode(row['payload_json']?.toString() ?? '{}');
+        if (decoded is! Map) {
+          throw const FormatException(
+            'Queued business mutation payload must be a JSON object.',
+          );
+        }
+
+        final payload = Map<String, dynamic>.from(decoded);
+        if (_readInteger(payload['_base_sync_version']) == baseSyncVersion) {
+          continue;
+        }
+
+        payload['_base_sync_version'] = baseSyncVersion;
+        updatedCount += await transaction.update(
+          _syncQueueTable,
+          <String, Object?>{
+            'payload_json': jsonEncode(payload),
+          },
+          where: '''
+            id = ?
+            AND user_id = ?
+            AND entity_type = 'business'
+            AND entity_id = ?
+            AND operation_type <> 'create'
+            AND (
+              status = 'pending'
+              OR (status = 'failed' AND attempt_count < max_attempts)
+            )
+          ''',
+          whereArgs: <Object?>[
+            operationId,
+            normalizedUserId,
+            normalizedEntityId,
+          ],
+        );
+      }
+
+      return updatedCount;
     });
   }
 

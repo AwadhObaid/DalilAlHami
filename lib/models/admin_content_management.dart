@@ -1,3 +1,5 @@
+import 'business_contact_draft.dart';
+import 'business_contact_number.dart';
 import 'business_gallery_image.dart';
 
 class AdminCategoryItem {
@@ -102,6 +104,7 @@ class AdminBusinessItem {
     this.logoUrl,
     this.coverUrl,
     this.galleryImages = const <BusinessGalleryImage>[],
+    this.contactNumbers = const <BusinessContactNumber>[],
     this.rejectionReason,
     this.deletedAt,
   });
@@ -127,6 +130,7 @@ class AdminBusinessItem {
   final String? logoUrl;
   final String? coverUrl;
   final List<BusinessGalleryImage> galleryImages;
+  final List<BusinessContactNumber> contactNumbers;
   final String? rejectionReason;
   final DateTime? deletedAt;
 
@@ -181,6 +185,9 @@ class AdminBusinessItem {
       logoUrl: _nullableText(data['logo_url']),
       coverUrl: _nullableText(data['cover_url']),
       galleryImages: BusinessGalleryImage.readList(data['business_images']),
+      contactNumbers: BusinessContactNumber.readList(
+        data['business_contact_numbers'],
+      ),
       status: data['status']?.toString() ?? 'draft',
       rejectionReason: _nullableText(data['rejection_reason']),
       isFeatured: _readBoolean(data['is_featured']),
@@ -200,6 +207,7 @@ class AdminBusinessDraft {
     required this.phone,
     required this.whatsapp,
     required this.address,
+    this.contactNumbers = const <BusinessContactDraft>[],
     this.id,
     this.latitude,
     this.longitude,
@@ -214,6 +222,7 @@ class AdminBusinessDraft {
   final String phone;
   final String whatsapp;
   final String address;
+  final List<BusinessContactDraft> contactNumbers;
   final double? latitude;
   final double? longitude;
   final String? logoUrl;
