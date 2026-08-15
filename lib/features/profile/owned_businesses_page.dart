@@ -263,7 +263,7 @@ class OwnedBusinessCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            business.phone.isEmpty ? 'لا يوجد رقم هاتف' : business.phone,
+            business.hasPhone ? business.phoneContact : 'لا يوجد رقم هاتف',
             style: AppTextStyles.bodyMedium,
           ),
           const SizedBox(height: AppSpacing.sm),

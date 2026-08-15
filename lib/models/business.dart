@@ -109,32 +109,13 @@ class Business {
             .toList(growable: false),
       );
 
-  List<BusinessContactNumber> get effectiveContactNumbers {
-    final normalizedContacts = activeContactNumbers;
-    if (normalizedContacts.isNotEmpty) {
-      return normalizedContacts;
-    }
-
-    final legacyPhone = phone.trim();
-    if (legacyPhone.isEmpty) {
-      return const <BusinessContactNumber>[];
-    }
-
-    final legacyWhatsApp = whatsapp.trim();
-    return List<BusinessContactNumber>.unmodifiable(
-      <BusinessContactNumber>[
-        BusinessContactNumber(
-          id: 'legacy-phone-$id',
-          businessId: id,
-          phoneNumber: legacyPhone,
-          label: 'الرئيسي',
-          isPrimary: true,
-          supportsWhatsApp:
-              legacyWhatsApp.isEmpty || legacyWhatsApp == legacyPhone,
-        ),
-      ],
-    );
-  }
+  List<BusinessContactNumber> get effectiveContactNumbers =>
+      BusinessContactNumber.resolveEffective(
+        businessId: id,
+        contacts: activeContactNumbers,
+        legacyPhone: phone,
+        legacyWhatsApp: whatsapp,
+      );
 
   BusinessContactNumber? get primaryContactNumber {
     final contacts = effectiveContactNumbers;
@@ -150,8 +131,7 @@ class Business {
     return null;
   }
 
-  String get phoneContact =>
-      primaryContactNumber?.trimmedPhoneNumber ?? phone.trim();
+  String get phoneContact => primaryContactNumber?.trimmedPhoneNumber ?? '';
 
   bool get hasPhone => phoneContact.isNotEmpty;
 
@@ -165,6 +145,10 @@ class Business {
     final normalized = whatsappContactNumber?.trimmedPhoneNumber ?? '';
     if (normalized.isNotEmpty) {
       return normalized;
+    }
+
+    if (activeContactNumbers.isNotEmpty) {
+      return '';
     }
 
     final legacyWhatsApp = whatsapp.trim();
@@ -181,8 +165,6 @@ class Business {
         _normalizeSearchText(category).contains(normalizedQuery) ||
         _normalizeSearchText(place).contains(normalizedQuery) ||
         _normalizeSearchText(details).contains(normalizedQuery) ||
-        phone.contains(normalizedQuery) ||
-        whatsapp.contains(normalizedQuery) ||
         effectiveContactNumbers.any(
           (contact) => contact.trimmedPhoneNumber.contains(normalizedQuery),
         ) ||
@@ -277,6 +259,9 @@ class Business {
       'sync_version': syncVersion,
       'business_images':
           galleryImages.map((image) => image.toMap()).toList(growable: false),
+      'business_contact_numbers': contactNumbers
+          .map((contact) => contact.toMap())
+          .toList(growable: false),
     };
   }
 
@@ -309,6 +294,9 @@ class Business {
       ),
       syncVersion: _readInteger(map['sync_version']),
       galleryImages: BusinessGalleryImage.readList(map['business_images']),
+      contactNumbers: BusinessContactNumber.readList(
+        map['business_contact_numbers'] ?? map['contact_numbers'],
+      ),
     );
   }
 

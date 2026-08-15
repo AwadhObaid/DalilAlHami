@@ -105,7 +105,10 @@ class AdminRepository {
             'id, owner_id, category_id, name, description, phone, whatsapp, '
             'address, latitude, longitude, logo_url, cover_url, status, '
             'rejection_reason, is_featured, is_active, created_at, updated_at, '
-            'categories!businesses_category_id_fkey(id, name_ar, slug)',
+            'categories!businesses_category_id_fkey(id, name_ar, slug), '
+            'business_contact_numbers(id, business_id, phone_number, label, '
+            'is_primary, supports_whatsapp, sort_order, created_at, updated_at, '
+            'deleted_at, sync_version)',
           )
           .eq('status', 'pending')
           .order('created_at', ascending: true),
@@ -145,7 +148,10 @@ class AdminRepository {
           'id, owner_id, category_id, name, description, phone, whatsapp, '
           'address, latitude, longitude, logo_url, cover_url, status, '
           'rejection_reason, is_featured, is_active, created_at, updated_at, '
-          'categories!businesses_category_id_fkey(id, name_ar, slug)',
+          'categories!businesses_category_id_fkey(id, name_ar, slug), '
+          'business_contact_numbers(id, business_id, phone_number, label, '
+          'is_primary, supports_whatsapp, sort_order, created_at, updated_at, '
+          'deleted_at, sync_version)',
         )
         .eq('id', businessId)
         .single();

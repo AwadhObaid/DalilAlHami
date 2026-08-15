@@ -60,6 +60,67 @@ class AccountBusiness {
 
   bool get hasSyncFailure => status == 'sync_failed';
 
+  List<BusinessContactNumber> get activeContactNumbers =>
+      BusinessContactNumber.readList(
+        contactNumbers
+            .map((contact) => contact.toMap())
+            .toList(growable: false),
+      );
+
+  List<BusinessContactNumber> get effectiveContactNumbers =>
+      BusinessContactNumber.resolveEffective(
+        businessId: id,
+        contacts: activeContactNumbers,
+        legacyPhone: phone,
+        legacyWhatsApp: whatsapp,
+      );
+
+  BusinessContactNumber? get primaryContactNumber {
+    final contacts = effectiveContactNumbers;
+    return contacts.isEmpty ? null : contacts.first;
+  }
+
+  BusinessContactNumber? get whatsappContactNumber {
+    for (final contact in effectiveContactNumbers) {
+      if (contact.supportsWhatsApp) {
+        return contact;
+      }
+    }
+    return null;
+  }
+
+  String get phoneContact => primaryContactNumber?.trimmedPhoneNumber ?? '';
+
+  String get whatsappContact {
+    final normalized = whatsappContactNumber?.trimmedPhoneNumber ?? '';
+    if (normalized.isNotEmpty) {
+      return normalized;
+    }
+
+    if (activeContactNumbers.isNotEmpty) {
+      return '';
+    }
+
+    final legacyWhatsApp = whatsapp.trim();
+    return legacyWhatsApp.isNotEmpty ? legacyWhatsApp : phoneContact;
+  }
+
+  bool get hasPhone => phoneContact.isNotEmpty;
+
+  bool get hasWhatsApp => whatsappContact.isNotEmpty;
+
+  String get contactSearchText {
+    final values = effectiveContactNumbers
+        .map((contact) => contact.trimmedPhoneNumber)
+        .where((value) => value.isNotEmpty)
+        .toList(growable: true);
+    final whatsappNumber = whatsappContact;
+    if (whatsappNumber.isNotEmpty && !values.contains(whatsappNumber)) {
+      values.add(whatsappNumber);
+    }
+    return values.join(' ');
+  }
+
   String get statusLabel {
     return switch (status) {
       'local_pending' => 'بانتظار المزامنة',

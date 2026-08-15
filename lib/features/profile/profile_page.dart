@@ -202,16 +202,17 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _applySnapshot(AccountSnapshot snapshot) {
+    final business = snapshot.business;
     _profile = snapshot.profile;
-    _business = snapshot.business;
+    _business = business;
 
-    _businessNameController.text = snapshot.business?.name ?? '';
-    _phoneController.text = snapshot.business?.phone ?? '';
-    _whatsappController.text = snapshot.business?.whatsapp ?? '';
+    _businessNameController.text = business?.name ?? '';
+    _phoneController.text = business?.phoneContact ?? '';
+    _whatsappController.text = business?.whatsappContact ?? '';
     _contactDrafts = BusinessContactDraft.fromExisting(
-      contacts: snapshot.business?.contactNumbers ?? const [],
-      legacyPhone: snapshot.business?.phone ?? '',
-      legacyWhatsApp: snapshot.business?.whatsapp ?? '',
+      contacts: business?.activeContactNumbers ?? const [],
+      legacyPhone: business?.phone ?? '',
+      legacyWhatsApp: business?.whatsapp ?? '',
     );
     _contactEditorRevision++;
     _addressController.text = snapshot.business?.address ?? 'الحامي';
@@ -761,24 +762,26 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             child: Column(
               children: [
-                if (business.contactNumbers.isEmpty)
+                if (business.effectiveContactNumbers.isEmpty)
                   _buildInfoRow(
                     Icons.phone,
                     'رقم الهاتف',
-                    business.phone,
+                    'غير متوفر',
                     valueTextDirection: TextDirection.ltr,
                   )
                 else
                   for (var index = 0;
-                      index < business.contactNumbers.length;
+                      index < business.effectiveContactNumbers.length;
                       index++) ...[
                     if (index > 0) const Divider(),
                     _buildInfoRow(
                       Icons.phone,
-                      business.contactNumbers[index].supportsWhatsApp
-                          ? '${business.contactNumbers[index].displayLabel} • واتساب'
-                          : business.contactNumbers[index].displayLabel,
-                      business.contactNumbers[index].phoneNumber,
+                      business.effectiveContactNumbers[index].supportsWhatsApp
+                          ? '${business.effectiveContactNumbers[index].displayLabel} • واتساب'
+                          : business
+                              .effectiveContactNumbers[index].displayLabel,
+                      business
+                          .effectiveContactNumbers[index].trimmedPhoneNumber,
                       valueTextDirection: TextDirection.ltr,
                     ),
                   ],

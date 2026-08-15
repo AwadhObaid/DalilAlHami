@@ -124,6 +124,49 @@ class BusinessContactNumber {
     );
   }
 
+  static List<BusinessContactNumber> resolveEffective({
+    required String businessId,
+    required Iterable<BusinessContactNumber> contacts,
+    String legacyPhone = '',
+    String legacyWhatsApp = '',
+  }) {
+    final modernContacts = readList(
+      contacts.map((contact) => contact.toMap()).toList(growable: false),
+    );
+    if (modernContacts.isNotEmpty) {
+      return modernContacts;
+    }
+
+    final phone = legacyPhone.trim();
+    final whatsapp = legacyWhatsApp.trim();
+    if (phone.isEmpty) {
+      return const <BusinessContactNumber>[];
+    }
+
+    final phoneKey = _normalizePhoneKey(phone);
+    final whatsappKey = _normalizePhoneKey(whatsapp);
+    final sameNumber =
+        whatsapp.isNotEmpty && phoneKey.isNotEmpty && phoneKey == whatsappKey;
+
+    return List<BusinessContactNumber>.unmodifiable(
+      <BusinessContactNumber>[
+        BusinessContactNumber(
+          id: 'legacy-phone-$businessId',
+          businessId: businessId,
+          phoneNumber: phone,
+          label: 'الرئيسي',
+          isPrimary: true,
+          supportsWhatsApp: whatsapp.isEmpty || sameNumber,
+          sortOrder: 0,
+        ),
+      ],
+    );
+  }
+
+  static String _normalizePhoneKey(String value) {
+    return value.replaceAll(RegExp(r'[^0-9]'), '');
+  }
+
   static int _readInt(Object? value) {
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '') ?? 0;

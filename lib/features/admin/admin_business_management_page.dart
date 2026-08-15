@@ -143,7 +143,7 @@ class _AdminBusinessManagementPageState
       if (query.isEmpty) return true;
       return _normalize(
         '${business.name} ${business.categoryName} ${business.displayOwner} '
-        '${business.phone} ${business.address}',
+        '${business.contactSearchText} ${business.address}',
       ).contains(query);
     }).toList(growable: false);
   }
@@ -627,7 +627,7 @@ class _BusinessCard extends StatelessWidget {
                     ),
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
-                      '${business.phone} • ${business.address}',
+                      '${business.phoneContact} • ${business.address}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.bodySmall,

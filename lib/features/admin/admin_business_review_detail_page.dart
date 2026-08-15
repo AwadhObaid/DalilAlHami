@@ -243,8 +243,16 @@ class _AdminBusinessReviewDetailPageState
           icon: Icons.storefront_rounded,
           children: [
             _DetailRow(label: 'القسم', value: _business.categoryName),
-            _DetailRow(label: 'الهاتف', value: _business.phone),
-            _DetailRow(label: 'واتساب', value: _business.whatsapp),
+            if (_business.effectiveContactNumbers.isEmpty)
+              _DetailRow(label: 'رقم التواصل', value: 'غير متوفر')
+            else
+              for (final contact in _business.effectiveContactNumbers)
+                _DetailRow(
+                  label: contact.supportsWhatsApp
+                      ? '${contact.displayLabel} • واتساب'
+                      : contact.displayLabel,
+                  value: contact.trimmedPhoneNumber,
+                ),
             _DetailRow(label: 'العنوان', value: _business.address),
             if (_business.latitude != null && _business.longitude != null)
               _DetailRow(

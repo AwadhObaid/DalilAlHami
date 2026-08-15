@@ -61,10 +61,12 @@ class _AdminBusinessFormPageState extends State<AdminBusinessFormPage> {
     _nameController = TextEditingController(text: business?.name ?? '');
     _descriptionController =
         TextEditingController(text: business?.description ?? '');
-    _phoneController = TextEditingController(text: business?.phone ?? '');
-    _whatsappController = TextEditingController(text: business?.whatsapp ?? '');
+    _phoneController =
+        TextEditingController(text: business?.phoneContact ?? '');
+    _whatsappController =
+        TextEditingController(text: business?.whatsappContact ?? '');
     _contactDrafts = BusinessContactDraft.fromExisting(
-      contacts: business?.contactNumbers ?? const [],
+      contacts: business?.activeContactNumbers ?? const [],
       legacyPhone: business?.phone ?? '',
       legacyWhatsApp: business?.whatsapp ?? '',
     );

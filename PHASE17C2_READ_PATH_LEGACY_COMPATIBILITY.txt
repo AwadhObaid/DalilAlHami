@@ -1,0 +1,38 @@
+Dalil Al Hami - Phase 17C.2 Read-Path & Legacy Compatibility Hardening
+=======================================================================
+
+Baseline
+--------
+Commit: 2985fb0f4e7c0c84bf3e8cc3cc43bbadc0c7732f
+Tag: v0.17.5-app-share-direct-download
+App version: 1.0.10+12 (unchanged)
+
+Purpose
+-------
+Make business_contact_numbers/contactNumbers authoritative for business read
+paths covered by this phase, while preserving businesses.phone and
+businesses.whatsapp strictly as legacy fallback/projection fields.
+
+Implemented behavior
+--------------------
+- Central modern-first/legacy-fallback resolution in BusinessContactNumber.
+- Modern contacts always win when at least one valid modern contact exists.
+- Phase 17B.1 legacy cardinality is preserved: effectiveContactNumbers exposes one legacy phone row only.
+- A distinct legacy WhatsApp number remains available as WhatsApp/search fallback, not as a second contact row.
+- WhatsApp-only legacy records remain usable for WhatsApp/search while phoneContact stays empty.
+- Business search does not consume stale legacy projections when modern rows exist.
+- AccountBusiness exposes effective contact helpers for account/offline UI.
+- AdminBusinessItem exposes modern-first display/search helpers.
+- Admin review queries fetch business_contact_numbers.
+- Admin review model/search/detail use modern contacts first.
+- Profile/owned-business read UI uses effective contacts.
+- No SQLite schema migration is needed: contact_numbers_json already exists.
+- No backend migration or RPC change is introduced.
+
+Safety
+------
+- No version bump.
+- No Supabase/backend mutation.
+- No database migration.
+- No commit/tag/push during installation.
+- Legacy projection columns remain stored for compatibility.

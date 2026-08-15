@@ -119,7 +119,8 @@ class _AdminBusinessReviewPageState extends State<AdminBusinessReviewPage> {
     return _businesses.where((business) {
       final text = _normalize(
         '${business.name} ${business.categoryName} '
-        '${business.displayOwnerName} ${business.phone} ${business.address}',
+        '${business.displayOwnerName} ${business.contactSearchText} '
+        '${business.address}',
       );
       return text.contains(query);
     }).toList(growable: false);
