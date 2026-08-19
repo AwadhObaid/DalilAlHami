@@ -95,6 +95,18 @@ class ServiceCategory {
       'airport_shuttle' => Icons.airport_shuttle,
       'local_taxi' => Icons.local_taxi,
       'motorcycle' => Icons.motorcycle,
+      'work_outline' => Icons.work_outline,
+      'photo_camera' => Icons.photo_camera,
+      'eco' => Icons.eco,
+      'router' => Icons.router,
+      'business_center' => Icons.business_center,
+      'account_balance' => Icons.account_balance,
+      'card_giftcard' => Icons.card_giftcard,
+      'outdoor_grill' => Icons.outdoor_grill,
+      'inventory_2' => Icons.inventory_2,
+      'flight_takeoff' => Icons.flight_takeoff,
+      'volunteer_activism' => Icons.volunteer_activism,
+      'bakery_dining' => Icons.bakery_dining,
       _ => Icons.category,
     };
   }
