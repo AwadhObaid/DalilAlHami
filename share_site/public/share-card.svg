@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">دليل الحامي</title>
+  <desc id="desc">دليلك للخدمات والأنشطة المحلية في مدينة الحامي</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#075e61"/>
+      <stop offset="1" stop-color="#12a89d"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" rx="44" fill="url(#bg)"/>
+  <circle cx="150" cy="110" r="230" fill="#fff" opacity=".07"/>
+  <circle cx="1080" cy="570" r="260" fill="#fff" opacity=".08"/>
+  <g transform="translate(86 104)">
+    <rect width="188" height="188" rx="44" fill="#fff" opacity=".96"/>
+    <path d="M94 36c-38 0-68 30-68 68 0 52 68 108 68 108s68-56 68-108c0-38-30-68-68-68zm0 100a34 34 0 1 1 0-68 34 34 0 0 1 0 68z" fill="#097175" transform="translate(0 -18) scale(1 .92)"/>
+    <path d="M51 128h86v34H51z" fill="#f6c344"/>
+  </g>
+  <text x="1110" y="250" text-anchor="end" fill="#fff" font-family="Tahoma, Arial, sans-serif" font-size="82" font-weight="700">دليل الحامي</text>
+  <text x="1110" y="345" text-anchor="end" fill="#e9fffb" font-family="Tahoma, Arial, sans-serif" font-size="45">دليلك للخدمات والأنشطة المحلية</text>
+  <rect x="710" y="410" width="400" height="82" rx="24" fill="#f6c344"/>
+  <text x="910" y="466" text-anchor="middle" fill="#123f41" font-family="Tahoma, Arial, sans-serif" font-size="34" font-weight="700">مدينة الحامي</text>
+</svg>

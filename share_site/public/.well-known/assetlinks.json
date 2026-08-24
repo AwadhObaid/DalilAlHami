@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.awadhobaid.dalilalhami",
+      "sha256_cert_fingerprints": [
+        "5B:63:0A:18:CD:75:E7:A8:6D:53:0F:5F:FE:55:01:FE:B2:45:3B:76:13:7E:A5:DF:FF:37:15:08:07:96:91:24"
+      ]
+    }
+  }
+]

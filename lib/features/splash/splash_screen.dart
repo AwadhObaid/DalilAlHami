@@ -8,6 +8,7 @@ import 'package:hami_guide/core/localization/app_localized_text.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import '../../core/services/app_update_service.dart';
+import '../../core/services/business_app_link_service.dart';
 import '../../core/services/push_notification_navigation_service.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../data/directory_data_store.dart';
@@ -194,6 +195,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       PushNotificationNavigationService.instance.markShellReady();
+      BusinessAppLinkService.instance.markShellReady();
     });
   }
 

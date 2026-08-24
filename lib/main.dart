@@ -6,9 +6,10 @@ import 'app/hami_guide_app.dart';
 import 'core/services/app_notification_store.dart';
 import 'core/services/app_preferences_store.dart';
 import 'core/services/auth_session_store.dart';
-import 'core/services/background_sync_service.dart';
-import 'core/services/business_rating_store.dart';
 import 'core/services/automatic_sync_coordinator.dart';
+import 'core/services/background_sync_service.dart';
+import 'core/services/business_app_link_service.dart';
+import 'core/services/business_rating_store.dart';
 import 'core/services/firebase_push_notification_service.dart';
 import 'core/services/favorite_store.dart';
 import 'core/services/supabase_service.dart';
@@ -18,6 +19,8 @@ export 'app/hami_guide_app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  BusinessAppLinkService.instance.initialize();
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
