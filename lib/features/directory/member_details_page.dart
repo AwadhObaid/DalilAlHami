@@ -3,6 +3,7 @@ import 'package:flutter/material.dart' hide Text;
 import 'package:hami_guide/core/localization/app_localized_text.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
+import '../../core/services/business_share_service.dart';
 import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_text_styles.dart';
 import '../../core/utils/launch_actions.dart';
@@ -21,6 +22,8 @@ class MemberDetailsPage extends StatelessWidget {
   });
 
   final Business business;
+
+  static const BusinessShareService _shareService = BusinessShareService();
 
   @override
   Widget build(BuildContext context) {
@@ -86,6 +89,16 @@ class MemberDetailsPage extends StatelessWidget {
         BusinessFavoriteButton(
           businessId: business.id,
           size: 22,
+        ),
+        IconButton(
+          key: const ValueKey<String>('business-share-action'),
+          tooltip: AppLocaleText.pick(
+            context,
+            ar: 'مشاركة النشاط',
+            en: 'Share business',
+          ),
+          onPressed: () => _shareBusiness(context),
+          icon: const Icon(Icons.share_rounded),
         ),
         IconButton(
           tooltip: AppLocaleText.pick(context,
@@ -485,6 +498,23 @@ class MemberDetailsPage extends StatelessWidget {
 
   Future<void> _copyPhone(BuildContext context) {
     return BusinessContactActions.copy(context, business);
+  }
+
+  Future<void> _shareBusiness(BuildContext context) async {
+    try {
+      await _shareService.share(business);
+    } catch (_) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('تعذر فتح قائمة المشاركة. حاول مرة أخرى.'),
+          ),
+        );
+    }
   }
 }
 
